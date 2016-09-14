@@ -18,7 +18,7 @@ services:
 
 install:
   - git clone https://github.com/m6w6/ext-raphf;
-    pushd ext-pq;
+    pushd ext-raphf;
     phpize;
     ./configure;
     make;
