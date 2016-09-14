@@ -1,0 +1,43 @@
+{
+    "name": "amphp/postgres",
+    "description": "Asynchronous PostgreSQL client for Amp.",
+    "keywords": [
+        "database",
+        "db",
+        "postgresql",
+        "postgre",
+        "pgsql",
+        "asynchronous",
+        "async"
+    ],
+    "homepage": "http://amphp.org",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Aaron Piotrowski",
+            "email": "aaron@trowski.com"
+        }
+    ],
+    "require": {
+        "amphp/amp": "dev-master as 2.0",
+        "async-interop/event-loop-implementation": "^0.3"
+    },
+    "require-dev": {
+        "amphp/loop": "dev-master",
+        "phpunit/phpunit": "^5.0"
+    },
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Amp\\Postgres\\": "lib"
+        },
+        "files": [
+            "lib/functions.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Amp\\Postgres\\Test\\": "test"
+        }
+    }
+}
