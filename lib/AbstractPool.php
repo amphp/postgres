@@ -78,7 +78,7 @@ abstract class AbstractPool implements Pool {
                 if ($this->connections->count() >= $this->getMaxConnections()) {
                     // All possible connections busy, so wait until one becomes available.
                     $this->awaitable = new Deferred;
-                    yield $this->awaitable;
+                    yield $this->awaitable->getAwaitable();
                 } else {
                     // Max connection count has not been reached, so open another connection.
                     $this->awaitable = $this->createConnection();
