@@ -15,8 +15,11 @@ abstract class AbstractPool implements Pool {
     /** @var \SplObjectStorage */
     private $connections;
 
-    /** @var \Amp\Deferred|\Interop\Async\Awaitable|null */
+    /** @var \Interop\Async\Awaitable|null */
     private $awaitable;
+    
+    /** @var \Amp\Deferred|null */
+    private $deferred;
 
     /**
      * @return \Interop\Async\Awaitable<\Amp\Postgres\Connection>
@@ -65,7 +68,7 @@ abstract class AbstractPool implements Pool {
      * @resolve \Amp\Postgres\Connection
      */
     private function pop(): \Generator {
-        while (null !== $this->awaitable) {
+        while ($this->awaitable !== null) {
             try {
                 yield $this->awaitable; // Prevent simultaneous connection creation.
             } catch (\Throwable $exception) {
@@ -77,14 +80,15 @@ abstract class AbstractPool implements Pool {
             try {
                 if ($this->connections->count() >= $this->getMaxConnections()) {
                     // All possible connections busy, so wait until one becomes available.
-                    $this->awaitable = new Deferred;
-                    yield $this->awaitable->getAwaitable();
+                    $this->deferred = new Deferred;
+                    yield $this->awaitable = $this->deferred->getAwaitable();
                 } else {
                     // Max connection count has not been reached, so open another connection.
                     $this->awaitable = $this->createConnection();
                     $this->addConnection(yield $this->awaitable);
                 }
             } finally {
+                $this->deferred = null;
                 $this->awaitable = null;
             }
         }
@@ -105,8 +109,8 @@ abstract class AbstractPool implements Pool {
 
         $this->idle->push($connection);
 
-        if ($this->awaitable instanceof Deferred) {
-            $this->awaitable->resolve($connection);
+        if ($this->deferred instanceof Deferred) {
+            $this->deferred->resolve($connection);
         }
     }
     
