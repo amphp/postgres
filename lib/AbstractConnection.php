@@ -75,7 +75,14 @@ abstract class AbstractConnection implements Connection {
      * {@inheritdoc}
      */
     public function prepare(string $sql): Awaitable {
-        return new Coroutine($this->send([$this->executor, "prepare"], $sql, $sql));
+        return new Coroutine($this->send([$this->executor, "prepare"], $sql));
+    }
+    
+    /**
+     * {@inheritdoc}
+     */
+    public function listen(string $channel): Awaitable {
+        return new Coroutine($this->send([$this->executor, "listen"], $channel));
     }
 
     /**

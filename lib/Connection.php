@@ -13,4 +13,13 @@ interface Connection extends Executor {
      * @throws \Amp\Postgres\FailureException
      */
     public function transaction(int $isolation = Transaction::COMMITTED): Awaitable;
+    
+    /**
+     * @param string $channel Channel name.
+     *
+     * @return \Interop\Async\Awaitable<\Amp\Postgres\Listener>
+     *
+     * @throws \Amp\Postgres\FailureException
+     */
+    public function listen(string $channel): Awaitable;
 }

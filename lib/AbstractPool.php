@@ -192,6 +192,27 @@ abstract class AbstractPool implements Pool {
         
         return $statement;
     }
+    
+    /**
+     * {@inheritdoc}
+     */
+    public function listen(string $channel): Awaitable {
+        return new Coroutine($this->doListen($channel));
+    }
+    
+    public function doListen(string $channel): \Generator {
+        /** @var \Amp\Postgres\Connection $connection */
+        $connection = yield from $this->pop();
+    
+        try {
+            /** @var \Amp\Postgres\Statement $statement */
+            $listener = yield $connection->listen($channel);
+        } finally {
+            $this->push($connection);
+        }
+    
+        return $listener;
+    }
 
     /**
      * {@inheritdoc}

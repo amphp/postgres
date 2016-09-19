@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, function pipe };
+use Amp\{ CallableMaker, Coroutine, Deferred, Postponed, function pipe };
 use Interop\Async\{ Awaitable, Loop };
 
 class PgSqlExecutor implements Executor {
@@ -26,6 +26,12 @@ class PgSqlExecutor implements Executor {
     /** @var callable */
     private $createResult;
     
+    /** @var \Amp\Postponed[] */
+    private $listeners = [];
+    
+    /** @var callable */
+    private $unlisten;
+    
     /**
      * Connection constructor.
      *
@@ -36,21 +42,30 @@ class PgSqlExecutor implements Executor {
         $this->handle = $handle;
 
         $deferred = &$this->delayed;
+        $listeners = &$this->listeners;
         
-        $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, $handle) {
+        $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$listeners, $handle) {
             if (!\pg_consume_input($handle)) {
                 Loop::disable($watcher);
                 $deferred->fail(new FailureException(\pg_last_error($handle)));
                 return;
             }
+            
+            while ($result = \pg_get_notify($handle)) {
+                $channel = $result['message'];
+                if (isset($listeners[$channel])) {
+                    $notification = new Notification;
+                    $notification->channel = $channel;
+                    $notification->pid = $result['pid'];
+                    $notification->payload = $result['payload'];
+                    $listeners[$channel]->emit($notification);
+                }
+            }
 
             if (!\pg_connection_busy($handle)) {
                 Loop::disable($watcher);
                 $deferred->resolve(\pg_get_result($handle));
-                return;
             }
-
-            // Reading not done, listen again.
         });
 
         $this->await = Loop::onWritable($socket, static function ($watcher) use (&$deferred, $handle) {
@@ -71,6 +86,7 @@ class PgSqlExecutor implements Executor {
 
         $this->createResult = $this->callableFromInstanceMethod("createResult");
         $this->executeCallback = $this->callableFromInstanceMethod("sendExecute");
+        $this->unlisten = $this->callableFromInstanceMethod("unlisten");
     }
 
     /**
@@ -186,5 +202,38 @@ class PgSqlExecutor implements Executor {
         return pipe(new Coroutine($this->send("pg_send_prepare", $sql, $sql)), function () use ($sql) {
             return new PgSqlStatement($sql, $this->executeCallback);
         });
+    }
+    
+    /**
+     * {@inheritdoc}
+     */
+    public function listen(string $channel): Awaitable {
+        return pipe($this->query(\sprintf("LISTEN %s", $channel)), function (CommandResult $result) use ($channel) {
+            $postponed = new Postponed;
+            $this->listeners[$channel] = $postponed;
+            return new Listener($postponed->getObservable(), $channel, $this->unlisten);
+        });
+    }
+    
+    /**
+     * @param string $channel
+     *
+     * @return \Interop\Async\Awaitable
+     *
+     * @throws \Error
+     */
+    private function unlisten(string $channel): Awaitable {
+        if (!isset($this->listeners[$channel])) {
+            throw new \Error("Not listening on that channel");
+        }
+        
+        $postponed = $this->listeners[$channel];
+        unset($this->listeners[$channel]);
+        
+        $awaitable = $this->query(\sprintf("UNLISTEN %s", $channel));
+        $awaitable->when(function () use ($postponed) {
+            $postponed->resolve();
+        });
+        return $awaitable;
     }
 }

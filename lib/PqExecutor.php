@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, function pipe };
+use Amp\{ CallableMaker, Coroutine, Deferred, Postponed, function pipe };
 use Interop\Async\{ Awaitable, Loop };
 use pq;
 
@@ -23,12 +23,18 @@ class PqExecutor implements Executor {
 
     /** @var string */
     private $await;
+    
+    /** @var \Amp\Postponed[] */
+    private $listeners;
 
     /** @var callable */
     private $send;
     
     /** @var callable */
     private $fetch;
+    
+    /** @var callable */
+    private $unlisten;
     
     /** @var callable */
     private $release;
@@ -51,10 +57,7 @@ class PqExecutor implements Executor {
 
             if (!$handle->busy) {
                 $deferred->resolve($handle->getResult());
-                return;
             }
-
-            // Reading not done, listen again.
         });
 
         $this->await = Loop::onWritable($this->handle->socket, static function ($watcher) use (&$deferred, $handle) {
@@ -70,6 +73,7 @@ class PqExecutor implements Executor {
 
         $this->send = $this->callableFromInstanceMethod("send");
         $this->fetch = $this->callableFromInstanceMethod("fetch");
+        $this->unlisten = $this->callableFromInstanceMethod("unlisten");
         $this->release = $this->callableFromInstanceMethod("release");
     }
 
@@ -176,7 +180,7 @@ class PqExecutor implements Executor {
         }
         
         switch ($result->status) {
-            case pq\Result::TUPLES_OK: // No more rows in result set.
+            case pq\Result::TUPLES_OK: // End of result set.
                 return null;
             
             case pq\Result::SINGLE_TUPLE:
@@ -212,5 +216,49 @@ class PqExecutor implements Executor {
      */
     public function prepare(string $sql): Awaitable {
         return new Coroutine($this->send([$this->handle, "prepareAsync"], $sql, $sql));
+    }
+    
+    /**
+     * {@inheritdoc}
+     */
+    public function listen(string $channel): Awaitable {
+        $postponed = new Postponed;
+        $awaitable = new Coroutine($this->send(
+            [$this->handle, "listenAsync"],
+            $channel,
+            static function (string $channel, string $message, int $pid) use ($postponed) {
+                $notification = new Notification;
+                $notification->channel = $channel;
+                $notification->pid = $pid;
+                $notification->payload = $message;
+                $postponed->emit($notification);
+            }));
+        
+        return pipe($awaitable, function () use ($postponed, $channel) {
+            $this->listeners[$channel] = $postponed;
+            return new Listener($postponed->getObservable(), $channel, $this->unlisten);
+        });
+    }
+    
+    /**
+     * @param string $channel
+     *
+     * @return \Interop\Async\Awaitable
+     *
+     * @throws \Error
+     */
+    private function unlisten(string $channel): Awaitable {
+        if (!isset($this->listeners[$channel])) {
+            throw new \Error("Not listening on that channel");
+        }
+        
+        $postponed = $this->listeners[$channel];
+        unset($this->listeners[$channel]);
+        
+        $awaitable = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
+        $awaitable->when(function () use ($postponed) {
+            $postponed->resolve();
+        });
+        return $awaitable;
     }
 }
