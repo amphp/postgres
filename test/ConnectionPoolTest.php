@@ -6,8 +6,7 @@ use Amp\Postgres\ConnectionPool;
 use Amp\Success;
 use Interop\Async\Awaitable;
 
-class ConnectionPoolTest extends AbstractPoolTest
-{
+class ConnectionPoolTest extends AbstractPoolTest {
     /**
      * @param array $connections
      *

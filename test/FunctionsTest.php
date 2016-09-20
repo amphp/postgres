@@ -4,8 +4,13 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\{ Connection, function connect };
 
-class FunctionsTest extends \PHPUnit_Framework_TestCase
-{
+class FunctionsTest extends \PHPUnit_Framework_TestCase {
+    public function setUp() {
+        if (!\extension_loaded('pgsql') && !\extension_loaded('pq')) {
+            $this->markTestSkipped('This test requires either ext/pgsql or pecl/pq');
+        }
+    }
+
     public function testConnect() {
         \Amp\execute(function () {
             $connection = yield connect('host=localhost user=postgres', 1);

@@ -4,6 +4,9 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\{ Connection, PgSqlConnection };
 
+/**
+ * @requires extension pgsql
+ */
 class PgSqlConnectionTest extends AbstractConnectionTest {
     /** @var resource PostgreSQL connection resource. */
     protected $handle;

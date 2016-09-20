@@ -4,8 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\AggregatePool;
 
-class AggregatePoolTest extends AbstractPoolTest
-{
+class AggregatePoolTest extends AbstractPoolTest {
     /**
      * @param array $connections
      *
