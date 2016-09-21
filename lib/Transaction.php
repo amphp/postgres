@@ -87,6 +87,18 @@ class Transaction implements Executor, Operation {
 
         return $this->executor->execute($sql, ...$params);
     }
+    
+    
+    /**
+     * {@inheritdoc}
+     */
+    public function notify(string $channel, string $payload = ""): Awaitable {
+        if ($this->executor === null) {
+            throw new TransactionError("The transaction has been committed or rolled back");
+        }
+        
+        return $this->executor->notify($channel, $payload);
+    }
 
     /**
      * Commits the transaction and makes it inactive.
@@ -147,6 +159,8 @@ class Transaction implements Executor, Operation {
     /**
      * Creates a savepoint with the given identifier. WARNING: Identifier is not sanitized, do not pass untrusted data.
      *
+     * @param string $identifier Savepoint identifier.
+     *
      * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
@@ -156,10 +170,10 @@ class Transaction implements Executor, Operation {
     }
 
     /**
-     * @coroutine
-     *
      * Rolls back to the savepoint with the given identifier. WARNING: Identifier is not sanitized, do not pass
      * untrusted data.
+     *
+     * @param string $identifier Savepoint identifier.
      *
      * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
      *
@@ -170,10 +184,10 @@ class Transaction implements Executor, Operation {
     }
 
     /**
-     * @coroutine
-     *
      * Releases the savepoint with the given identifier. WARNING: Identifier is not sanitized, do not pass untrusted
      * data.
+     *
+     * @param string $identifier Savepoint identifier.
      *
      * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
      *

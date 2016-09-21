@@ -7,15 +7,6 @@ use Interop\Async\{ Awaitable, Loop };
 use pq;
 
 class PqConnection extends AbstractConnection {
-    /** @var \Amp\Postgres\PqConnection */
-    private $executor;
-    
-    /** @var \Amp\Deferred|null */
-    private $busy;
-    
-    /** @var callable */
-    private $release;
-    
     /**
      * @param string $connectionString
      * @param int|null $timeout

@@ -6,16 +6,6 @@ use Amp\{ Deferred, TimeoutException };
 use Interop\Async\{ Awaitable, Loop };
 
 class PgSqlConnection extends AbstractConnection {
-    
-    /** @var \Amp\Postgres\PqConnection */
-    private $executor;
-    
-    /** @var \Amp\Deferred|null */
-    private $busy;
-    
-    /** @var callable */
-    private $release;
-    
     /**
      * @param string $connectionString
      * @param int|null $timeout

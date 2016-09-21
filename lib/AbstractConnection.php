@@ -8,10 +8,10 @@ use Interop\Async\Awaitable;
 abstract class AbstractConnection implements Connection {
     use CallableMaker;
     
-    /** @var \Amp\Postgres\PqConnection */
+    /** @var \Amp\Postgres\Executor */
     private $executor;
     
-    /** @var \Amp\Deferred|null */
+    /** @var \Amp\Deferred|null Used to only allow one transaction at a time. */
     private $busy;
     
     /** @var callable */
@@ -39,8 +39,6 @@ abstract class AbstractConnection implements Connection {
      *
      * @return \Generator
      *
-     * @resolve resource
-     *
      * @throws \Amp\Postgres\FailureException
      */
     private function send(callable $method, ...$args): \Generator {
@@ -51,6 +49,9 @@ abstract class AbstractConnection implements Connection {
         return $method(...$args);
     }
     
+    /**
+     * Releases the transaction lock.
+     */
     private function release() {
         $busy = $this->busy;
         $this->busy = null;
@@ -76,6 +77,14 @@ abstract class AbstractConnection implements Connection {
      */
     public function prepare(string $sql): Awaitable {
         return new Coroutine($this->send([$this->executor, "prepare"], $sql));
+    }
+    
+    
+    /**
+     * {@inheritdoc}
+     */
+    public function notify(string $channel, string $payload = ""): Awaitable {
+        return new Coroutine($this->send([$this->executor, "notify"], $channel, $payload));
     }
     
     /**

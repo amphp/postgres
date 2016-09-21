@@ -5,7 +5,9 @@ namespace Amp\Postgres;
 use Amp\{ Observable, Observer };
 use Interop\Async\Awaitable;
 
-class Listener extends Observer {
+class Listener extends Observer implements Operation {
+    use Internal\Operation;
+    
     /** @var string */
     private $channel;
     
@@ -24,11 +26,22 @@ class Listener extends Observer {
     }
     
     /**
+     * @return string Channel name.
+     */
+    public function getChannel(): string {
+        return $this->channel;
+    }
+    
+    /**
      * Unlistens from the channel. No more values will be emitted on theis channel.
      *
      * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
      */
     public function unlisten(): Awaitable {
-        return ($this->unlisten)($this->channel);
+        $awaitable = ($this->unlisten)($this->channel);
+        $awaitable->when(function () {
+            $this->complete();
+        });
+        return $awaitable;
     }
 }

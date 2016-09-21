@@ -32,4 +32,12 @@ interface Executor {
      * @throws \Amp\Postgres\FailureException
      */
     public function prepare(string $sql): Awaitable;
+    
+    /**
+     * @param string $channel Channel name.
+     * @param string $payload Notification payload.
+     *
+     * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
+     */
+    public function notify(string $channel, string $payload = ""): Awaitable;
 }

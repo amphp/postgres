@@ -196,6 +196,26 @@ abstract class AbstractPool implements Pool {
     /**
      * {@inheritdoc}
      */
+    public function notify(string $channel, string $payload = ""): Awaitable {
+        return new Coroutine($this->doNotify($channel, $payload));
+    }
+    
+    private function doNotify(string $channel, string $payload): \Generator {
+        /** @var \Amp\Postgres\Connection $connection */
+        $connection = yield from $this->pop();
+        
+        try {
+            $result = yield $connection->notify($channel, $payload);
+        } finally {
+            $this->push($connection);
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * {@inheritdoc}
+     */
     public function listen(string $channel): Awaitable {
         return new Coroutine($this->doListen($channel));
     }
@@ -205,11 +225,16 @@ abstract class AbstractPool implements Pool {
         $connection = yield from $this->pop();
     
         try {
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var \Amp\Postgres\Listener $listener */
             $listener = yield $connection->listen($channel);
-        } finally {
+        } catch (\Throwable $exception) {
             $this->push($connection);
+            throw $exception;
         }
+        
+        $listener->onComplete(function () use ($connection) {
+            $this->push($connection);
+        });
     
         return $listener;
     }

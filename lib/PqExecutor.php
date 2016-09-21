@@ -13,7 +13,7 @@ class PqExecutor implements Executor {
     private $handle;
 
     /** @var \Amp\Deferred|null */
-    private $delayed;
+    private $deferred;
     
     /** @var \Amp\Deferred */
     private $busy;
@@ -46,16 +46,26 @@ class PqExecutor implements Executor {
      */
     public function __construct(pq\Connection $handle) {
         $this->handle = $handle;
-
-        $deferred = &$this->delayed;
+    
+        $deferred = &$this->deferred;
+        $listeners = &$this->listeners;
         
-        $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, $handle) {
-            if ($handle->poll() === pq\Connection::POLLING_FAILED) {
+        $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, $handle) {
+            $status = $handle->poll();
+            
+            if ($deferred === null) {
+                return; // No active query, only notification listeners.
+            }
+            
+            if ($status === pq\Connection::POLLING_FAILED) {
                 $deferred->fail(new FailureException($handle->errorMessage));
                 return;
             }
 
             if (!$handle->busy) {
+                if (empty($listeners)) {
+                    Loop::disable($watcher);
+                }
                 $deferred->resolve($handle->getResult());
             }
         });
@@ -109,7 +119,7 @@ class PqExecutor implements Executor {
                 throw new FailureException($this->handle->errorMessage, 0, $exception);
             }
     
-            $this->delayed = new Deferred;
+            $this->deferred = new Deferred;
     
             Loop::enable($this->poll);
             if (!$this->handle->flush()) {
@@ -117,11 +127,9 @@ class PqExecutor implements Executor {
             }
     
             try {
-                $result = yield $this->delayed->getAwaitable();
+                $result = yield $this->deferred->getAwaitable();
             } finally {
-                $this->delayed = null;
-                Loop::disable($this->poll);
-                Loop::disable($this->await);
+                $this->deferred = null;
             }
     
             if ($handle instanceof pq\Statement) {
@@ -167,15 +175,14 @@ class PqExecutor implements Executor {
         if (!$this->handle->busy) { // Results buffered.
             $result = $this->handle->getResult();
         } else {
-            $this->delayed = new Deferred;
+            $this->deferred = new Deferred;
     
             Loop::enable($this->poll);
     
             try {
-                $result = yield $this->delayed->getAwaitable();
+                $result = yield $this->deferred->getAwaitable();
             } finally {
-                $this->delayed = null;
-                Loop::disable($this->poll);
+                $this->deferred = null;
             }
         }
         
@@ -221,6 +228,13 @@ class PqExecutor implements Executor {
     /**
      * {@inheritdoc}
      */
+    public function notify(string $channel, string $payload = ""): Awaitable {
+        return new Coroutine($this->send([$this->handle, "notifyAsync"], $channel, $payload));
+    }
+    
+    /**
+     * {@inheritdoc}
+     */
     public function listen(string $channel): Awaitable {
         $postponed = new Postponed;
         $awaitable = new Coroutine($this->send(
@@ -236,6 +250,7 @@ class PqExecutor implements Executor {
         
         return pipe($awaitable, function () use ($postponed, $channel) {
             $this->listeners[$channel] = $postponed;
+            Loop::enable($this->poll);
             return new Listener($postponed->getObservable(), $channel, $this->unlisten);
         });
     }
@@ -254,7 +269,11 @@ class PqExecutor implements Executor {
         
         $postponed = $this->listeners[$channel];
         unset($this->listeners[$channel]);
-        
+    
+        if (empty($this->listeners) && $this->deferred === null) {
+            Loop::disable($this->poll);
+        }
+    
         $awaitable = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
         $awaitable->when(function () use ($postponed) {
             $postponed->resolve();

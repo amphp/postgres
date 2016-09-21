@@ -12,7 +12,7 @@ class PgSqlExecutor implements Executor {
     private $handle;
 
     /** @var \Amp\Deferred|null */
-    private $delayed;
+    private $deferred;
 
     /** @var string */
     private $poll;
@@ -41,29 +41,37 @@ class PgSqlExecutor implements Executor {
     public function __construct($handle, $socket) {
         $this->handle = $handle;
 
-        $deferred = &$this->delayed;
+        $deferred = &$this->deferred;
         $listeners = &$this->listeners;
         
         $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$listeners, $handle) {
-            if (!\pg_consume_input($handle)) {
+            $status = \pg_consume_input($handle);
+            
+            while ($result = \pg_get_notify($handle, \PGSQL_ASSOC)) {
+                $channel = $result["message"];
+                if (isset($listeners[$channel])) {
+                    $notification = new Notification;
+                    $notification->channel = $channel;
+                    $notification->pid = $result["pid"];
+                    $notification->payload = $result["payload"];
+                    $listeners[$channel]->emit($notification);
+                }
+            }
+            
+            if ($deferred === null) {
+                return; // No active query, only notification listeners.
+            }
+            
+            if (!$status) {
                 Loop::disable($watcher);
                 $deferred->fail(new FailureException(\pg_last_error($handle)));
                 return;
             }
-            
-            while ($result = \pg_get_notify($handle)) {
-                $channel = $result['message'];
-                if (isset($listeners[$channel])) {
-                    $notification = new Notification;
-                    $notification->channel = $channel;
-                    $notification->pid = $result['pid'];
-                    $notification->payload = $result['payload'];
-                    $listeners[$channel]->emit($notification);
-                }
-            }
 
             if (!\pg_connection_busy($handle)) {
-                Loop::disable($watcher);
+                if (empty($listeners)) {
+                    Loop::disable($watcher);
+                }
                 $deferred->resolve(\pg_get_result($handle));
             }
         });
@@ -114,9 +122,9 @@ class PgSqlExecutor implements Executor {
      * @throws \Amp\Postgres\FailureException
      */
     private function send(callable $function, ...$args): \Generator {
-        while ($this->delayed !== null) {
+        while ($this->deferred !== null) {
             try {
-                yield $this->delayed->getAwaitable();
+                yield $this->deferred->getAwaitable();
             } catch (\Throwable $exception) {
                 // Ignore failure from another operation.
             }
@@ -128,7 +136,7 @@ class PgSqlExecutor implements Executor {
             throw new FailureException(\pg_last_error($this->handle));
         }
 
-        $this->delayed = new Deferred;
+        $this->deferred = new Deferred;
 
         Loop::enable($this->poll);
         if (0 === $result) {
@@ -136,11 +144,9 @@ class PgSqlExecutor implements Executor {
         }
 
         try {
-            $result = yield $this->delayed->getAwaitable();
+            $result = yield $this->deferred->getAwaitable();
         } finally {
-            $this->delayed = null;
-            Loop::disable($this->poll);
-            Loop::disable($this->await);
+            $this->deferred = null;
         }
 
         return $result;
@@ -207,10 +213,22 @@ class PgSqlExecutor implements Executor {
     /**
      * {@inheritdoc}
      */
+    public function notify(string $channel, string $payload = ""): Awaitable {
+        if ($payload === "") {
+            return $this->query(\sprintf("NOTIFY %s"));
+        }
+        
+        return $this->query(\sprintf("NOTIFY %s, '%s'", $channel, $payload));
+    }
+    
+    /**
+     * {@inheritdoc}
+     */
     public function listen(string $channel): Awaitable {
         return pipe($this->query(\sprintf("LISTEN %s", $channel)), function (CommandResult $result) use ($channel) {
             $postponed = new Postponed;
             $this->listeners[$channel] = $postponed;
+            Loop::enable($this->poll);
             return new Listener($postponed->getObservable(), $channel, $this->unlisten);
         });
     }
@@ -229,6 +247,10 @@ class PgSqlExecutor implements Executor {
         
         $postponed = $this->listeners[$channel];
         unset($this->listeners[$channel]);
+        
+        if (empty($this->listeners) && $this->deferred === null) {
+            Loop::disable($this->poll);
+        }
         
         $awaitable = $this->query(\sprintf("UNLISTEN %s", $channel));
         $awaitable->when(function () use ($postponed) {
