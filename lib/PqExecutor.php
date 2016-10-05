@@ -115,7 +115,7 @@ class PqExecutor implements Executor {
         try {
             try {
                 $handle = $method(...$args);
-            } catch (pg\Exception $exception) {
+            } catch (pq\Exception $exception) {
                 throw new FailureException($this->handle->errorMessage, 0, $exception);
             }
     
