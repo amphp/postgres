@@ -20,6 +20,12 @@ abstract class AbstractPool implements Pool {
     
     /** @var \Amp\Deferred|null */
     private $deferred;
+    
+    /** @var \Amp\Postgres\Connection|\Interop\Async\Awaitable|null Connection used for notification listening. */
+    private $listeningConnection;
+    
+    /** @var int Number of listeners on listening connection. */
+    private $listenerCount = 0;
 
     /**
      * @return \Interop\Async\Awaitable<\Amp\Postgres\Connection>
@@ -221,19 +227,34 @@ abstract class AbstractPool implements Pool {
     }
     
     public function doListen(string $channel): \Generator {
-        /** @var \Amp\Postgres\Connection $connection */
-        $connection = yield from $this->pop();
-    
+        ++$this->listenerCount;
+        
+        if ($this->listeningConnection === null) {
+            $this->listeningConnection = new Coroutine($this->pop());
+        }
+        
+        if ($this->listeningConnection instanceof Awaitable) {
+            $this->listeningConnection = yield $this->listeningConnection;
+        }
+        
         try {
             /** @var \Amp\Postgres\Listener $listener */
-            $listener = yield $connection->listen($channel);
+            $listener = yield $this->listeningConnection->listen($channel);
         } catch (\Throwable $exception) {
-            $this->push($connection);
+            if (--$this->listenerCount === 0) {
+                $connection = $this->listeningConnection;
+                $this->listeningConnection = null;
+                $this->push($connection);
+            }
             throw $exception;
         }
         
-        $listener->onComplete(function () use ($connection) {
-            $this->push($connection);
+        $listener->onComplete(function () {
+            if (--$this->listenerCount === 0) {
+                $connection = $this->listeningConnection;
+                $this->listeningConnection = null;
+                $this->push($connection);
+            }
         });
     
         return $listener;
