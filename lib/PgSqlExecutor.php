@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\{ CallableMaker, Coroutine, Deferred, Postponed, function pipe };
-use Interop\Async\{ Awaitable, Loop };
+use Interop\Async\{ Loop, Promise };
 
 class PgSqlExecutor implements Executor {
     use CallableMaker;
@@ -124,7 +124,7 @@ class PgSqlExecutor implements Executor {
     private function send(callable $function, ...$args): \Generator {
         while ($this->deferred !== null) {
             try {
-                yield $this->deferred->getAwaitable();
+                yield $this->deferred->promise();
             } catch (\Throwable $exception) {
                 // Ignore failure from another operation.
             }
@@ -144,7 +144,7 @@ class PgSqlExecutor implements Executor {
         }
 
         try {
-            $result = yield $this->deferred->getAwaitable();
+            $result = yield $this->deferred->promise();
         } finally {
             $this->deferred = null;
         }
@@ -183,28 +183,28 @@ class PgSqlExecutor implements Executor {
         }
     }
     
-    private function sendExecute(string $name, array $params): Awaitable {
+    private function sendExecute(string $name, array $params): Promise {
         return pipe(new Coroutine($this->send("pg_send_execute", $name, $params)), $this->createResult);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): Awaitable {
+    public function query(string $sql): Promise {
         return pipe(new Coroutine($this->send("pg_send_query", $sql)), $this->createResult);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Awaitable {
+    public function execute(string $sql, ...$params): Promise {
         return pipe(new Coroutine($this->send("pg_send_query_params", $sql, $params)), $this->createResult);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function prepare(string $sql): Awaitable {
+    public function prepare(string $sql): Promise {
         return pipe(new Coroutine($this->send("pg_send_prepare", $sql, $sql)), function () use ($sql) {
             return new PgSqlStatement($sql, $this->executeCallback);
         });
@@ -213,7 +213,7 @@ class PgSqlExecutor implements Executor {
     /**
      * {@inheritdoc}
      */
-    public function notify(string $channel, string $payload = ""): Awaitable {
+    public function notify(string $channel, string $payload = ""): Promise {
         if ($payload === "") {
             return $this->query(\sprintf("NOTIFY %s"));
         }
@@ -224,7 +224,7 @@ class PgSqlExecutor implements Executor {
     /**
      * {@inheritdoc}
      */
-    public function listen(string $channel): Awaitable {
+    public function listen(string $channel): Promise {
         return pipe($this->query(\sprintf("LISTEN %s", $channel)), function (CommandResult $result) use ($channel) {
             $postponed = new Postponed;
             $this->listeners[$channel] = $postponed;
@@ -236,11 +236,11 @@ class PgSqlExecutor implements Executor {
     /**
      * @param string $channel
      *
-     * @return \Interop\Async\Awaitable
+     * @return \Interop\Async\Promise
      *
      * @throws \Error
      */
-    private function unlisten(string $channel): Awaitable {
+    private function unlisten(string $channel): Promise {
         if (!isset($this->listeners[$channel])) {
             throw new \Error("Not listening on that channel");
         }
@@ -252,10 +252,10 @@ class PgSqlExecutor implements Executor {
             Loop::disable($this->poll);
         }
         
-        $awaitable = $this->query(\sprintf("UNLISTEN %s", $channel));
-        $awaitable->when(function () use ($postponed) {
+        $promise = $this->query(\sprintf("UNLISTEN %s", $channel));
+        $promise->when(function () use ($postponed) {
             $postponed->resolve();
         });
-        return $awaitable;
+        return $promise;
     }
 }

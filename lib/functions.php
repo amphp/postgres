@@ -2,18 +2,18 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 /**
  * @param string $connectionString
  * @param int $timeout
  *
- * @return \Interop\Async\Awaitable<\Amp\Postgres\Connection>
+ * @return \Interop\Async\Promise<\Amp\Postgres\Connection>
  *
  * @throws \Amp\Postgres\FailureException If connecting fails.
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
  */
-function connect(string $connectionString, int $timeout = null): Awaitable {
+function connect(string $connectionString, int $timeout = null): Promise {
     if (\extension_loaded("pq")) {
         return PqConnection::connect($connectionString, $timeout);
     }

@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\{ Observable, Observer };
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 class Listener extends Observer implements Operation {
     use Internal\Operation;
@@ -35,13 +35,13 @@ class Listener extends Observer implements Operation {
     /**
      * Unlistens from the channel. No more values will be emitted on theis channel.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
+     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
      */
-    public function unlisten(): Awaitable {
-        $awaitable = ($this->unlisten)($this->channel);
-        $awaitable->when(function () {
+    public function unlisten(): Promise {
+        $promise = ($this->unlisten)($this->channel);
+        $promise->when(function () {
             $this->complete();
         });
-        return $awaitable;
+        return $promise;
     }
 }

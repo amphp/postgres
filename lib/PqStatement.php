@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\{ Coroutine, function rethrow };
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 use pq;
 
 class PqStatement implements Statement {
@@ -36,11 +36,11 @@ class PqStatement implements Statement {
     /**
      * @param mixed ...$params
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Result>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
-    public function execute(...$params): Awaitable {
+    public function execute(...$params): Promise {
         return new Coroutine(($this->execute)([$this->statement, "execAsync"], $params));
     }
 }

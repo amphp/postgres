@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 class ConnectionPool extends AbstractPool {
     const DEFAULT_MAX_CONNECTIONS = 100;
@@ -41,7 +41,7 @@ class ConnectionPool extends AbstractPool {
     /**
      * {@inheritdoc}
      */
-    protected function createConnection(): Awaitable {
+    protected function createConnection(): Promise {
         return connect($this->connectionString, $this->connectTimeout);
     }
 

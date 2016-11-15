@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 class AggregatePool extends AbstractPool {
     /**
@@ -15,7 +15,7 @@ class AggregatePool extends AbstractPool {
     /**
      * {@inheritdoc}
      */
-    protected function createConnection(): Awaitable {
+    protected function createConnection(): Promise {
         throw new PoolError("Creating connections is not available in an aggregate pool");
     }
 

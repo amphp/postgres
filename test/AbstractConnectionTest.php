@@ -180,8 +180,8 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
     }
 
     public function testSimultaneousQueryAndPrepare() {
-        $awaitables = [];
-        $awaitables[] = new Coroutine((function () {
+        $promises = [];
+        $promises[] = new Coroutine((function () {
             /** @var \Amp\Postgres\TupleResult $result */
             $result = yield $this->connection->query("SELECT * FROM test");
 
@@ -194,7 +194,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
             }
         })());
 
-        $awaitables[] = new Coroutine((function () {
+        $promises[] = new Coroutine((function () {
             /** @var \Amp\Postgres\Statement $statement */
             $statement = (yield $this->connection->prepare("SELECT * FROM test"));
 
@@ -210,13 +210,13 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
             }
         })());
 
-        \Amp\execute(function () use ($awaitables) {
-            yield \Amp\all($awaitables);
+        \Amp\execute(function () use ($promises) {
+            yield \Amp\all($promises);
         }, Loop::get());
     }
 
     public function testSimultaneousPrepareAndExecute() {
-        $awaitables[] = new Coroutine((function () {
+        $promises[] = new Coroutine((function () {
             /** @var \Amp\Postgres\Statement $statement */
             $statement = yield $this->connection->prepare("SELECT * FROM test");
 
@@ -232,7 +232,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
             }
         })());
 
-        $awaitables[] = new Coroutine((function () {
+        $promises[] = new Coroutine((function () {
             /** @var \Amp\Postgres\TupleResult $result */
             $result = yield $this->connection->execute("SELECT * FROM test");
 
@@ -245,8 +245,8 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
             }
         })());
 
-        \Amp\execute(function () use ($awaitables) {
-            yield \Amp\all($awaitables);
+        \Amp\execute(function () use ($promises) {
+            yield \Amp\all($promises);
         }, Loop::get());
     }
 

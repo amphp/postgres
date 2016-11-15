@@ -2,24 +2,24 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 interface Connection extends Executor {
     /**
      * @param int $isolation
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Transaction>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Transaction>
      *
      * @throws \Amp\Postgres\FailureException
      */
-    public function transaction(int $isolation = Transaction::COMMITTED): Awaitable;
+    public function transaction(int $isolation = Transaction::COMMITTED): Promise;
     
     /**
      * @param string $channel Channel name.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Listener>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Listener>
      *
      * @throws \Amp\Postgres\FailureException
      */
-    public function listen(string $channel): Awaitable;
+    public function listen(string $channel): Promise;
 }

@@ -103,10 +103,10 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
 
         
         \Amp\execute(function () Use ($count, $rounds, $pool, $method, $params) {
-            $awaitables = [];
+            $promises = [];
     
             for ($i = 0; $i < $count * $rounds; ++$i) {
-                $awaitables[] = $pool->{$method}(...$params);
+                $promises[] = $pool->{$method}(...$params);
             }
         });
     }
@@ -169,14 +169,14 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
         $pool = $this->createPool($connections);
 
         \Amp\execute(function () use ($count, $rounds, $pool) {
-            $awaitables = [];
+            $promises = [];
             for ($i = 0; $i < $count * $rounds; ++$i) {
-                $awaitables[] = $pool->transaction(Transaction::COMMITTED);
+                $promises[] = $pool->transaction(Transaction::COMMITTED);
             }
             
             yield \Amp\all(\Amp\map(function (Transaction $transaction) {
                 return $transaction->rollback();
-            }, $awaitables));
+            }, $promises));
         });
     }
 }

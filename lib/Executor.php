@@ -2,42 +2,42 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 interface Executor {
     /**
      * @param string $sql
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Result>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException
      */
-    public function query(string $sql): Awaitable;
+    public function query(string $sql): Promise;
 
     /**
      * @param string $sql
      * @param mixed ...$params
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Result>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException
      */
-    public function execute(string $sql, ...$params): Awaitable;
+    public function execute(string $sql, ...$params): Promise;
 
     /**
      * @param string $sql
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Statement>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Statement>
      *
      * @throws \Amp\Postgres\FailureException
      */
-    public function prepare(string $sql): Awaitable;
+    public function prepare(string $sql): Promise;
     
     /**
      * @param string $channel Channel name.
      * @param string $payload Notification payload.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
+     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
      */
-    public function notify(string $channel, string $payload = ""): Awaitable;
+    public function notify(string $channel, string $payload = ""): Promise;
 }

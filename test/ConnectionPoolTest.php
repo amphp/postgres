@@ -4,7 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\ConnectionPool;
 use Amp\Success;
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 class ConnectionPoolTest extends AbstractPoolTest {
     /**
@@ -19,7 +19,7 @@ class ConnectionPoolTest extends AbstractPoolTest {
             ->getMock();
 
         $mock->method('createConnection')
-            ->will($this->returnCallback(function () use ($connections): Awaitable {
+            ->will($this->returnCallback(function () use ($connections): Promise {
                 static $count = 0;
                 return new Success($connections[$count++]);
             }));

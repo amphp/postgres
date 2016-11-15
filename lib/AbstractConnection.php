@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\{ CallableMaker, Coroutine, Deferred, function pipe };
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 abstract class AbstractConnection implements Connection {
     use CallableMaker;
@@ -21,9 +21,9 @@ abstract class AbstractConnection implements Connection {
      * @param string $connectionString
      * @param int $timeout Timeout until the connection attempt fails.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Connection>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Connection>
      */
-    abstract public static function connect(string $connectionString, int $timeout = null): Awaitable;
+    abstract public static function connect(string $connectionString, int $timeout = null): Promise;
     
     /**
      * @param $executor;
@@ -43,7 +43,7 @@ abstract class AbstractConnection implements Connection {
      */
     private function send(callable $method, ...$args): \Generator {
         while ($this->busy !== null) {
-            yield $this->busy->getAwaitable();
+            yield $this->busy->promise();
         }
         
         return $method(...$args);
@@ -61,21 +61,21 @@ abstract class AbstractConnection implements Connection {
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): Awaitable {
+    public function query(string $sql): Promise {
         return new Coroutine($this->send([$this->executor, "query"], $sql));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Awaitable {
+    public function execute(string $sql, ...$params): Promise {
         return new Coroutine($this->send([$this->executor, "execute"], $sql, ...$params));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function prepare(string $sql): Awaitable {
+    public function prepare(string $sql): Promise {
         return new Coroutine($this->send([$this->executor, "prepare"], $sql));
     }
     
@@ -83,43 +83,43 @@ abstract class AbstractConnection implements Connection {
     /**
      * {@inheritdoc}
      */
-    public function notify(string $channel, string $payload = ""): Awaitable {
+    public function notify(string $channel, string $payload = ""): Promise {
         return new Coroutine($this->send([$this->executor, "notify"], $channel, $payload));
     }
     
     /**
      * {@inheritdoc}
      */
-    public function listen(string $channel): Awaitable {
+    public function listen(string $channel): Promise {
         return new Coroutine($this->send([$this->executor, "listen"], $channel));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function transaction(int $isolation = Transaction::COMMITTED): Awaitable {
+    public function transaction(int $isolation = Transaction::COMMITTED): Promise {
         switch ($isolation) {
             case Transaction::UNCOMMITTED:
-                $awaitable = $this->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
+                $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
                 break;
         
             case Transaction::COMMITTED:
-                $awaitable = $this->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
+                $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
                 break;
         
             case Transaction::REPEATABLE:
-                $awaitable = $this->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+                $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
                 break;
         
             case Transaction::SERIALIZABLE:
-                $awaitable = $this->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+                $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
                 break;
         
             default:
                 throw new \Error("Invalid transaction type");
         }
     
-        return pipe($awaitable, function (CommandResult $result) use ($isolation) {
+        return pipe($promise, function (CommandResult $result) use ($isolation) {
             $this->busy = new Deferred;
             $transaction = new Transaction($this->executor, $isolation);
             $transaction->onComplete($this->release);

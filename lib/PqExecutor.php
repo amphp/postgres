@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\{ CallableMaker, Coroutine, Deferred, Postponed, function pipe };
-use Interop\Async\{ Awaitable, Loop };
+use Interop\Async\{ Loop, Promise };
 use pq;
 
 class PqExecutor implements Executor {
@@ -107,7 +107,7 @@ class PqExecutor implements Executor {
      */
     private function send(callable $method, ...$args): \Generator {
         while ($this->busy !== null) {
-            yield $this->busy->getAwaitable();
+            yield $this->busy->promise();
         }
         
         $this->busy = new Deferred;
@@ -127,7 +127,7 @@ class PqExecutor implements Executor {
             }
     
             try {
-                $result = yield $this->deferred->getAwaitable();
+                $result = yield $this->deferred->promise();
             } finally {
                 $this->deferred = null;
             }
@@ -180,7 +180,7 @@ class PqExecutor implements Executor {
             Loop::enable($this->poll);
     
             try {
-                $result = yield $this->deferred->getAwaitable();
+                $result = yield $this->deferred->promise();
             } finally {
                 $this->deferred = null;
             }
@@ -207,37 +207,37 @@ class PqExecutor implements Executor {
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): Awaitable {
+    public function query(string $sql): Promise {
         return new Coroutine($this->send([$this->handle, "execAsync"], $sql));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Awaitable {
+    public function execute(string $sql, ...$params): Promise {
         return new Coroutine($this->send([$this->handle, "execParamsAsync"], $sql, $params));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function prepare(string $sql): Awaitable {
+    public function prepare(string $sql): Promise {
         return new Coroutine($this->send([$this->handle, "prepareAsync"], $sql, $sql));
     }
     
     /**
      * {@inheritdoc}
      */
-    public function notify(string $channel, string $payload = ""): Awaitable {
+    public function notify(string $channel, string $payload = ""): Promise {
         return new Coroutine($this->send([$this->handle, "notifyAsync"], $channel, $payload));
     }
     
     /**
      * {@inheritdoc}
      */
-    public function listen(string $channel): Awaitable {
+    public function listen(string $channel): Promise {
         $postponed = new Postponed;
-        $awaitable = new Coroutine($this->send(
+        $promise = new Coroutine($this->send(
             [$this->handle, "listenAsync"],
             $channel,
             static function (string $channel, string $message, int $pid) use ($postponed) {
@@ -248,7 +248,7 @@ class PqExecutor implements Executor {
                 $postponed->emit($notification);
             }));
         
-        return pipe($awaitable, function () use ($postponed, $channel) {
+        return pipe($promise, function () use ($postponed, $channel) {
             $this->listeners[$channel] = $postponed;
             Loop::enable($this->poll);
             return new Listener($postponed->getObservable(), $channel, $this->unlisten);
@@ -258,11 +258,11 @@ class PqExecutor implements Executor {
     /**
      * @param string $channel
      *
-     * @return \Interop\Async\Awaitable
+     * @return \Interop\Async\Promise
      *
      * @throws \Error
      */
-    private function unlisten(string $channel): Awaitable {
+    private function unlisten(string $channel): Promise {
         if (!isset($this->listeners[$channel])) {
             throw new \Error("Not listening on that channel");
         }
@@ -274,10 +274,10 @@ class PqExecutor implements Executor {
             Loop::disable($this->poll);
         }
     
-        $awaitable = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
-        $awaitable->when(function () use ($postponed) {
+        $promise = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
+        $promise->when(function () use ($postponed) {
             $postponed->resolve();
         });
-        return $awaitable;
+        return $promise;
     }
 }

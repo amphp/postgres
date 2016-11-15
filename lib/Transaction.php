@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Coroutine;
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 class Transaction implements Executor, Operation {
     use Internal\Operation;
@@ -58,7 +58,7 @@ class Transaction implements Executor, Operation {
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): Awaitable {
+    public function query(string $sql): Promise {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
@@ -69,7 +69,7 @@ class Transaction implements Executor, Operation {
     /**
      * {@inheritdoc}
      */
-    public function prepare(string $sql): Awaitable {
+    public function prepare(string $sql): Promise {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
@@ -80,7 +80,7 @@ class Transaction implements Executor, Operation {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Awaitable {
+    public function execute(string $sql, ...$params): Promise {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
@@ -92,7 +92,7 @@ class Transaction implements Executor, Operation {
     /**
      * {@inheritdoc}
      */
-    public function notify(string $channel, string $payload = ""): Awaitable {
+    public function notify(string $channel, string $payload = ""): Promise {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
@@ -103,11 +103,11 @@ class Transaction implements Executor, Operation {
     /**
      * Commits the transaction and makes it inactive.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
+     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
-    public function commit(): Awaitable {
+    public function commit(): Promise {
         return new Coroutine($this->doCommit());
     }
     
@@ -131,11 +131,11 @@ class Transaction implements Executor, Operation {
     /**
      * Rolls back the transaction and makes it inactive.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
+     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
-    public function rollback(): Awaitable {
+    public function rollback(): Promise {
         return new Coroutine($this->doRollback());
     }
     
@@ -161,11 +161,11 @@ class Transaction implements Executor, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
+     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
-    public function savepoint(string $identifier): Awaitable {
+    public function savepoint(string $identifier): Promise {
         return $this->query("SAVEPOINT " . $identifier);
     }
 
@@ -175,11 +175,11 @@ class Transaction implements Executor, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
+     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
-    public function rollbackTo(string $identifier): Awaitable {
+    public function rollbackTo(string $identifier): Promise {
         return $this->query("ROLLBACK TO " . $identifier);
     }
 
@@ -189,11 +189,11 @@ class Transaction implements Executor, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\CommandResult>
+     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
-    public function release(string $identifier): Awaitable {
+    public function release(string $identifier): Promise {
         return $this->query("RELEASE SAVEPOINT " . $identifier);
     }
 }

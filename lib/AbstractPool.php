@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\{ Coroutine, Deferred };
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 abstract class AbstractPool implements Pool {
     /** @var \SplQueue */
@@ -15,24 +15,24 @@ abstract class AbstractPool implements Pool {
     /** @var \SplObjectStorage */
     private $connections;
 
-    /** @var \Interop\Async\Awaitable|null */
-    private $awaitable;
+    /** @var \Interop\Async\Promise|null */
+    private $promise;
     
     /** @var \Amp\Deferred|null */
     private $deferred;
     
-    /** @var \Amp\Postgres\Connection|\Interop\Async\Awaitable|null Connection used for notification listening. */
+    /** @var \Amp\Postgres\Connection|\Interop\Async\Promise|null Connection used for notification listening. */
     private $listeningConnection;
     
     /** @var int Number of listeners on listening connection. */
     private $listenerCount = 0;
 
     /**
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Connection>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Connection>
      *
      * @throws \Amp\Postgres\FailureException
      */
-    abstract protected function createConnection(): Awaitable;
+    abstract protected function createConnection(): Promise;
 
     public function __construct() {
         $this->connections = new \SplObjectStorage();
@@ -74,9 +74,9 @@ abstract class AbstractPool implements Pool {
      * @resolve \Amp\Postgres\Connection
      */
     private function pop(): \Generator {
-        while ($this->awaitable !== null) {
+        while ($this->promise !== null) {
             try {
-                yield $this->awaitable; // Prevent simultaneous connection creation.
+                yield $this->promise; // Prevent simultaneous connection creation.
             } catch (\Throwable $exception) {
                 // Ignore failure or cancellation of other operations.
             }
@@ -87,15 +87,15 @@ abstract class AbstractPool implements Pool {
                 if ($this->connections->count() >= $this->getMaxConnections()) {
                     // All possible connections busy, so wait until one becomes available.
                     $this->deferred = new Deferred;
-                    yield $this->awaitable = $this->deferred->getAwaitable();
+                    yield $this->promise = $this->deferred->promise();
                 } else {
                     // Max connection count has not been reached, so open another connection.
-                    $this->awaitable = $this->createConnection();
-                    $this->addConnection(yield $this->awaitable);
+                    $this->promise = $this->createConnection();
+                    $this->addConnection(yield $this->promise);
                 }
             } finally {
                 $this->deferred = null;
-                $this->awaitable = null;
+                $this->promise = null;
             }
         }
 
@@ -123,7 +123,7 @@ abstract class AbstractPool implements Pool {
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): Awaitable {
+    public function query(string $sql): Promise {
         return new Coroutine($this->doQuery($sql));
     }
     
@@ -152,7 +152,7 @@ abstract class AbstractPool implements Pool {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Awaitable {
+    public function execute(string $sql, ...$params): Promise {
         return new Coroutine($this->doExecute($sql, $params));
     }
     
@@ -181,7 +181,7 @@ abstract class AbstractPool implements Pool {
     /**
      * {@inheritdoc}
      */
-    public function prepare(string $sql): Awaitable {
+    public function prepare(string $sql): Promise {
         return new Coroutine($this->doPrepare($sql));
     }
     
@@ -202,7 +202,7 @@ abstract class AbstractPool implements Pool {
     /**
      * {@inheritdoc}
      */
-    public function notify(string $channel, string $payload = ""): Awaitable {
+    public function notify(string $channel, string $payload = ""): Promise {
         return new Coroutine($this->doNotify($channel, $payload));
     }
     
@@ -222,7 +222,7 @@ abstract class AbstractPool implements Pool {
     /**
      * {@inheritdoc}
      */
-    public function listen(string $channel): Awaitable {
+    public function listen(string $channel): Promise {
         return new Coroutine($this->doListen($channel));
     }
     
@@ -233,7 +233,7 @@ abstract class AbstractPool implements Pool {
             $this->listeningConnection = new Coroutine($this->pop());
         }
         
-        if ($this->listeningConnection instanceof Awaitable) {
+        if ($this->listeningConnection instanceof Promise) {
             $this->listeningConnection = yield $this->listeningConnection;
         }
         
@@ -263,7 +263,7 @@ abstract class AbstractPool implements Pool {
     /**
      * {@inheritdoc}
      */
-    public function transaction(int $isolation = Transaction::COMMITTED): Awaitable {
+    public function transaction(int $isolation = Transaction::COMMITTED): Promise {
         return new Coroutine($this->doTransaction($isolation));
     }
     

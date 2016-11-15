@@ -3,18 +3,18 @@
 namespace Amp\Postgres;
 
 use Amp\{ Deferred, TimeoutException };
-use Interop\Async\{ Awaitable, Loop };
+use Interop\Async\{ Loop, Promise };
 
 class PgSqlConnection extends AbstractConnection {
     /**
      * @param string $connectionString
      * @param int|null $timeout
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\PgSqlConnection>
+     * @return \Interop\Async\Promise<\Amp\Postgres\PgSqlConnection>
      *
      * @throws \Amp\Postgres\FailureException
      */
-    public static function connect(string $connectionString, int $timeout = null): Awaitable {
+    public static function connect(string $connectionString, int $timeout = null): Promise {
         if (!$connection = @\pg_connect($connectionString, \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
             throw new FailureException("Failed to create connection resource");
         }
@@ -60,7 +60,7 @@ class PgSqlConnection extends AbstractConnection {
     
         if ($timeout !== null) {
             return \Amp\capture(
-                $deferred->getAwaitable(),
+                $deferred->promise(),
                 TimeoutException::class,
                 function (\Throwable $exception) use ($connection, $poll, $await) {
                     Loop::cancel($poll);
@@ -71,7 +71,7 @@ class PgSqlConnection extends AbstractConnection {
             );
         }
     
-        return $deferred->getAwaitable();
+        return $deferred->promise();
     }
     
     /**

@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Awaitable;
+use Interop\Async\Promise;
 
 class PgSqlStatement implements Statement {
     /** @var string */
@@ -30,11 +30,11 @@ class PgSqlStatement implements Statement {
     /**
      * @param mixed ...$params
      *
-     * @return \Interop\Async\Awaitable<\Amp\Postgres\Result>
+     * @return \Interop\Async\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
-    public function execute(...$params): Awaitable {
+    public function execute(...$params): Promise {
         return ($this->execute)($this->sql, $params);
     }
 }
