@@ -4,6 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\{ CommandResult, Connection, Statement, Transaction, TupleResult };
 use Amp\Success;
+use Interop\Async\Loop;
 
 abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
     /**
@@ -69,12 +70,12 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
             ->will($this->returnValue(new Success($result)));
 
         $pool = $this->createPool($connections);
-
-        \Amp\execute(function () use ($method, $pool, $params, $result) {
+    
+        Loop::execute(\Amp\wrap(function () use ($method, $pool, $params, $result) {
             $return = yield $pool->{$method}(...$params);
 
             $this->assertSame($result, $return);
-        });
+        }));
     }
 
     /**
@@ -100,15 +101,15 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
         }
 
         $pool = $this->createPool($connections);
-
-        
-        \Amp\execute(function () Use ($count, $rounds, $pool, $method, $params) {
+    
+    
+        Loop::execute(\Amp\wrap(function () Use ($count, $rounds, $pool, $method, $params) {
             $promises = [];
     
             for ($i = 0; $i < $count * $rounds; ++$i) {
                 $promises[] = $pool->{$method}(...$params);
             }
-        });
+        }));
     }
 
     /**
@@ -137,12 +138,12 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
             ->will($this->returnValue(new Success($result)));
 
         $pool = $this->createPool($connections);
-        
-        \Amp\execute(function () use ($pool, $result) {
+    
+        Loop::execute(\Amp\wrap(function () use ($pool, $result) {
             $return = yield $pool->transaction(Transaction::COMMITTED);
             $this->assertInstanceOf(Transaction::class, $return);
             yield $return->rollback();
-        });
+        }));
     }
 
     /**
@@ -167,8 +168,8 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
         }
 
         $pool = $this->createPool($connections);
-
-        \Amp\execute(function () use ($count, $rounds, $pool) {
+    
+        Loop::execute(\Amp\wrap(function () use ($count, $rounds, $pool) {
             $promises = [];
             for ($i = 0; $i < $count * $rounds; ++$i) {
                 $promises[] = $pool->transaction(Transaction::COMMITTED);
@@ -177,6 +178,6 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
             yield \Amp\all(\Amp\map(function (Transaction $transaction) {
                 return $transaction->rollback();
             }, $promises));
-        });
+        }));
     }
 }

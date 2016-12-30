@@ -19,8 +19,7 @@
         }
     ],
     "require": {
-        "amphp/amp": "dev-master as 2.0",
-        "async-interop/event-loop-implementation": "^0.3"
+        "amphp/amp": "dev-master as 2.0"
     },
     "require-dev": {
         "amphp/loop": "dev-master",

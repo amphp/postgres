@@ -3,6 +3,7 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\{ Connection, function connect };
+use Interop\Async\Loop;
 
 class FunctionsTest extends \PHPUnit_Framework_TestCase {
     public function setUp() {
@@ -12,36 +13,36 @@ class FunctionsTest extends \PHPUnit_Framework_TestCase {
     }
 
     public function testConnect() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $connection = yield connect('host=localhost user=postgres', 1);
             $this->assertInstanceOf(Connection::class, $connection);
-        });
+        }));
     }
 
     /**
      * @expectedException \Amp\Postgres\FailureException
      */
     public function testConnectInvalidUser() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $connection = yield connect('host=localhost user=invalid', 1);
-        });
+        }));
     }
 
     /**
      * @expectedException \Amp\Postgres\FailureException
      */
     public function testConnectInvalidConnectionString() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $connection = yield connect('invalid connection string', 1);
-        });
+        }));
     }
 
     /**
      * @expectedException \Amp\Postgres\FailureException
      */
     public function testConnectInvalidHost() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $connection = yield connect('hostaddr=invalid.host user=postgres', 1);
-        });
+        }));
     }
 }

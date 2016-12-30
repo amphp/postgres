@@ -31,7 +31,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
     }
     
     public function testQueryWithTupleResult() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             /** @var \Amp\Postgres\TupleResult $result */
             $result = yield $this->connection->query("SELECT * FROM test");
 
@@ -46,41 +46,41 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
             }
-        }, Loop::get());
+        }), Loop::get());
     }
 
     public function testQueryWithCommandResult() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             /** @var \Amp\Postgres\CommandResult $result */
             $result = yield $this->connection->query("INSERT INTO test VALUES ('canon', 'jp')");
 
             $this->assertInstanceOf(CommandResult::class, $result);
             $this->assertSame(1, $result->affectedRows());
-        }, Loop::get());
+        }), Loop::get());
     }
 
     /**
      * @expectedException \Amp\Postgres\QueryError
      */
     public function testQueryWithEmptyQuery() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             /** @var \Amp\Postgres\CommandResult $result */
             $result = yield $this->connection->query('');
-        }, Loop::get());
+        }), Loop::get());
     }
 
     /**
      * @expectedException \Amp\Postgres\QueryError
      */
     public function testQueryWithSyntaxError() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             /** @var \Amp\Postgres\CommandResult $result */
             $result = yield $this->connection->query("SELECT & FROM test");
-        }, Loop::get());
+        }), Loop::get());
     }
 
     public function testPrepare() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $query = "SELECT * FROM test WHERE domain=\$1";
 
             /** @var \Amp\Postgres\Statement $statement */
@@ -102,11 +102,11 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
                 $this->assertSame($data[0], $row['domain']);
                 $this->assertSame($data[1], $row['tld']);
             }
-        }, Loop::get());
+        }), Loop::get());
     }
 
     public function testExecute() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $data = $this->getData()[0];
 
             /** @var \Amp\Postgres\TupleResult $result */
@@ -121,7 +121,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
                 $this->assertSame($data[0], $row['domain']);
                 $this->assertSame($data[1], $row['tld']);
             }
-        }, Loop::get());
+        }), Loop::get());
     }
 
     /**
@@ -141,10 +141,10 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
                 $this->assertEquals($value, $row['value']);
             }
         });
-        
-        \Amp\execute(function () use ($callback) {
+    
+        Loop::execute(\Amp\wrap(function () use ($callback) {
             yield \Amp\all([$callback(0), $callback(1)]);
-        }, Loop::get());
+        }), Loop::get());
     }
 
     /**
@@ -165,13 +165,13 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
         });
     
         try {
-            \Amp\execute(function () use ($callback) {
+            Loop::execute(\Amp\wrap(function () use ($callback) {
                 $failing = $callback("SELECT & FROM test");
                 $successful = $callback("SELECT * FROM test");
                 
                 yield $successful;
                 yield $failing;
-            }, Loop::get());
+            }), Loop::get());
         } catch (QueryError $exception) {
             return;
         }
@@ -209,10 +209,10 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
                 $this->assertSame($data[$i][1], $row['tld']);
             }
         })());
-
-        \Amp\execute(function () use ($promises) {
+    
+        Loop::execute(\Amp\wrap(function () use ($promises) {
             yield \Amp\all($promises);
-        }, Loop::get());
+        }), Loop::get());
     }
 
     public function testSimultaneousPrepareAndExecute() {
@@ -244,14 +244,14 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
                 $this->assertSame($data[$i][1], $row['tld']);
             }
         })());
-
-        \Amp\execute(function () use ($promises) {
+    
+        Loop::execute(\Amp\wrap(function () use ($promises) {
             yield \Amp\all($promises);
-        }, Loop::get());
+        }), Loop::get());
     }
 
     public function testTransaction() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $isolation = Transaction::COMMITTED;
 
             /** @var \Amp\Postgres\Transaction $transaction */
@@ -280,44 +280,44 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
             } catch (TransactionError $exception) {
                 // Exception expected.
             }
-        }, Loop::get());
+        }), Loop::get());
     }
     
     public function testConnect() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $connect = $this->getConnectCallable();
             $connection = yield $connect('host=localhost user=postgres');
             $this->assertInstanceOf(Connection::class, $connection);
-        });
+        }));
     }
     
     /**
      * @expectedException \Amp\Postgres\FailureException
      */
     public function testConnectInvalidUser() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $connect = $this->getConnectCallable();
             $connection = yield $connect('host=localhost user=invalid', 1);
-        });
+        }));
     }
     
     /**
      * @expectedException \Amp\Postgres\FailureException
      */
     public function testConnectInvalidConnectionString() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $connect = $this->getConnectCallable();
             $connection = yield $connect('invalid connection string', 1);
-        });
+        }));
     }
     
     /**
      * @expectedException \Amp\Postgres\FailureException
      */
     public function testConnectInvalidHost() {
-        \Amp\execute(function () {
+        Loop::execute(\Amp\wrap(function () {
             $connect = $this->getConnectCallable();
             $connection = yield $connect('hostaddr=invalid.host user=postgres', 1);
-        });
+        }));
     }
 }
