@@ -41,7 +41,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
             
             $data = $this->getData();
 
-            for ($i = 0; yield $result->next(); ++$i) {
+            for ($i = 0; yield $result->advance(); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
@@ -97,7 +97,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
 
             $this->assertSame(2, $result->numFields());
     
-            while (yield $result->next()) {
+            while (yield $result->advance()) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[0], $row['domain']);
                 $this->assertSame($data[1], $row['tld']);
@@ -116,7 +116,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
 
             $this->assertSame(2, $result->numFields());
 
-            while (yield $result->next()) {
+            while (yield $result->advance()) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[0], $row['domain']);
                 $this->assertSame($data[1], $row['tld']);
@@ -136,7 +136,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
                 yield new Pause(100);
             }
     
-            while (yield $result->next()) {
+            while (yield $result->advance()) {
                 $row = $result->getCurrent();
                 $this->assertEquals($value, $row['value']);
             }
@@ -157,7 +157,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
 
             $data = $this->getData();
     
-            for ($i = 0; yield $result->next(); ++$i) {
+            for ($i = 0; yield $result->advance(); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
@@ -187,7 +187,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
 
             $data = $this->getData();
     
-            for ($i = 0; yield $result->next(); ++$i) {
+            for ($i = 0; yield $result->advance(); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
@@ -203,7 +203,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
 
             $data = $this->getData();
     
-            for ($i = 0; yield $result->next(); ++$i) {
+            for ($i = 0; yield $result->advance(); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
@@ -225,7 +225,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
 
             $data = $this->getData();
     
-            for ($i = 0; yield $result->next(); ++$i) {
+            for ($i = 0; yield $result->advance(); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
@@ -238,7 +238,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
 
             $data = $this->getData();
     
-            for ($i = 0; yield $result->next(); ++$i) {
+            for ($i = 0; yield $result->advance(); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
