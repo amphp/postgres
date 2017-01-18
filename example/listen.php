@@ -4,8 +4,9 @@
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres;
+use AsyncInterop\Loop;
 
-Amp\execute(function () {
+Loop::execute(Amp\wrap(function () {
     $pool = Postgres\pool('host=localhost user=postgres');
     
     $channel = "test";
@@ -15,20 +16,20 @@ Amp\execute(function () {
     
     printf("Listening on channel '%s'\n", $listener->getChannel());
     
-    Amp\delay(3000, function () use ($listener) {
+    Loop::delay(3000, Amp\wrap(function () use ($listener) { // Unlisten in 3 seconds.
         printf("Unlistening from channel '%s'\n", $listener->getChannel());
-        yield $listener->unlisten();
-    });
+        return $listener->unlisten();
+    }));
     
-    Amp\delay(1000, function () use ($pool, $channel) {
-        yield $pool->notify($channel, "Data 1");
-    });
+    Loop::delay(1000, Amp\wrap(function () use ($pool, $channel) {
+        return $pool->notify($channel, "Data 1"); // Send first notification.
+    }));
     
-    Amp\delay(2000, function () use ($pool, $channel) {
-        yield $pool->notify($channel, "Data 2");
-    });
+    Loop::delay(2000, Amp\wrap(function () use ($pool, $channel) {
+        return $pool->notify($channel, "Data 2"); // Send second notification.
+    }));
 
-    while (yield $listener->next()) {
+    while (yield $listener->advance()) {
         /** @var \Amp\Postgres\Notification $notification */
         $notification = $listener->getCurrent();
         printf(
@@ -38,4 +39,4 @@ Amp\execute(function () {
             $notification->payload
         );
     }
-});
+}));
