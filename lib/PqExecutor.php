@@ -236,22 +236,22 @@ class PqExecutor implements Executor {
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        $postponed = new Emitter;
+        $emitter = new Emitter;
         $promise = new Coroutine($this->send(
             [$this->handle, "listenAsync"],
             $channel,
-            static function (string $channel, string $message, int $pid) use ($postponed) {
+            static function (string $channel, string $message, int $pid) use ($emitter) {
                 $notification = new Notification;
                 $notification->channel = $channel;
                 $notification->pid = $pid;
                 $notification->payload = $message;
-                $postponed->emit($notification);
+                $emitter->emit($notification);
             }));
         
-        return pipe($promise, function () use ($postponed, $channel) {
-            $this->listeners[$channel] = $postponed;
+        return pipe($promise, function () use ($emitter, $channel): Listener {
+            $this->listeners[$channel] = $emitter;
             Loop::enable($this->poll);
-            return new Listener($postponed->getStream(), $channel, $this->unlisten);
+            return new Listener($emitter->stream(), $channel, $this->unlisten);
         });
     }
     
@@ -267,7 +267,7 @@ class PqExecutor implements Executor {
             throw new \Error("Not listening on that channel");
         }
         
-        $postponed = $this->listeners[$channel];
+        $emitter = $this->listeners[$channel];
         unset($this->listeners[$channel]);
     
         if (empty($this->listeners) && $this->deferred === null) {
@@ -275,8 +275,8 @@ class PqExecutor implements Executor {
         }
     
         $promise = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
-        $promise->when(function () use ($postponed) {
-            $postponed->resolve();
+        $promise->when(function () use ($emitter) {
+            $emitter->resolve();
         });
         return $promise;
     }

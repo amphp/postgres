@@ -225,11 +225,11 @@ class PgSqlExecutor implements Executor {
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        return pipe($this->query(\sprintf("LISTEN %s", $channel)), function (CommandResult $result) use ($channel) {
-            $postponed = new Emitter;
-            $this->listeners[$channel] = $postponed;
+        return pipe($this->query(\sprintf("LISTEN %s", $channel)), function () use ($channel): Listener {
+            $emitter = new Emitter;
+            $this->listeners[$channel] = $emitter;
             Loop::enable($this->poll);
-            return new Listener($postponed->getStream(), $channel, $this->unlisten);
+            return new Listener($emitter->stream(), $channel, $this->unlisten);
         });
     }
     
@@ -245,7 +245,7 @@ class PgSqlExecutor implements Executor {
             throw new \Error("Not listening on that channel");
         }
         
-        $postponed = $this->listeners[$channel];
+        $emitter = $this->listeners[$channel];
         unset($this->listeners[$channel]);
         
         if (empty($this->listeners) && $this->deferred === null) {
@@ -253,8 +253,8 @@ class PgSqlExecutor implements Executor {
         }
         
         $promise = $this->query(\sprintf("UNLISTEN %s", $channel));
-        $promise->when(function () use ($postponed) {
-            $postponed->resolve();
+        $promise->when(function () use ($emitter) {
+            $emitter->resolve();
         });
         return $promise;
     }

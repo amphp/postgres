@@ -119,7 +119,7 @@ abstract class AbstractConnection implements Connection {
                 throw new \Error("Invalid transaction type");
         }
     
-        return pipe($promise, function (CommandResult $result) use ($isolation): Transaction {
+        return pipe($promise, function () use ($isolation): Transaction {
             $this->busy = new Deferred;
             $transaction = new Transaction($this->executor, $isolation);
             $transaction->onComplete($this->release);
