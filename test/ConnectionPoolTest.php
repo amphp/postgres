@@ -4,7 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\ConnectionPool;
 use Amp\Success;
-use Interop\Async\Promise;
+use AsyncInterop\Promise;
 
 class ConnectionPoolTest extends AbstractPoolTest {
     /**

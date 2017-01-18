@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Coroutine, Emitter };
+use Amp\{ Coroutine, Producer };
 use pq;
 
 class PqUnbufferedResult extends TupleResult implements Operation {
@@ -17,7 +17,7 @@ class PqUnbufferedResult extends TupleResult implements Operation {
      */
     public function __construct(callable $fetch, pq\Result $result) {
         $this->numCols = $result->numCols;
-        parent::__construct(new Emitter(function (callable $emit) use ($result, $fetch) {
+        parent::__construct(new Producer(function (callable $emit) use ($result, $fetch) {
             $count = 0;
             try {
                 do {

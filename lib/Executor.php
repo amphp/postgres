@@ -2,13 +2,13 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Promise;
+use AsyncInterop\Promise;
 
 interface Executor {
     /**
      * @param string $sql
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\Result>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException
      */
@@ -18,7 +18,7 @@ interface Executor {
      * @param string $sql
      * @param mixed ...$params
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\Result>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException
      */
@@ -27,7 +27,7 @@ interface Executor {
     /**
      * @param string $sql
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\Statement>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\Statement>
      *
      * @throws \Amp\Postgres\FailureException
      */
@@ -37,7 +37,7 @@ interface Executor {
      * @param string $channel Channel name.
      * @param string $payload Notification payload.
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\CommandResult>
      */
     public function notify(string $channel, string $payload = ""): Promise;
 }

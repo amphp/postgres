@@ -1,10 +1,10 @@
-<?php declare(strict_types = 1);
+<?php
 
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\{ CommandResult, Connection, Statement, Transaction, TupleResult };
 use Amp\Success;
-use Interop\Async\Loop;
+use AsyncInterop\Loop;
 
 abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
     /**

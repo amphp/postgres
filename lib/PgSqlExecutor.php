@@ -2,8 +2,8 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Postponed, function pipe };
-use Interop\Async\{ Loop, Promise };
+use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, function pipe };
+use AsyncInterop\{ Loop, Promise };
 
 class PgSqlExecutor implements Executor {
     use CallableMaker;
@@ -26,7 +26,7 @@ class PgSqlExecutor implements Executor {
     /** @var callable */
     private $createResult;
     
-    /** @var \Amp\Postponed[] */
+    /** @var \Amp\Emitter[] */
     private $listeners = [];
     
     /** @var callable */
@@ -226,17 +226,17 @@ class PgSqlExecutor implements Executor {
      */
     public function listen(string $channel): Promise {
         return pipe($this->query(\sprintf("LISTEN %s", $channel)), function (CommandResult $result) use ($channel) {
-            $postponed = new Postponed;
+            $postponed = new Emitter;
             $this->listeners[$channel] = $postponed;
             Loop::enable($this->poll);
-            return new Listener($postponed->getObservable(), $channel, $this->unlisten);
+            return new Listener($postponed->getStream(), $channel, $this->unlisten);
         });
     }
     
     /**
      * @param string $channel
      *
-     * @return \Interop\Async\Promise
+     * @return \AsyncInterop\Promise
      *
      * @throws \Error
      */

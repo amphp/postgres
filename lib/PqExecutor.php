@@ -2,8 +2,8 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Postponed, function pipe };
-use Interop\Async\{ Loop, Promise };
+use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, function pipe };
+use AsyncInterop\{ Loop, Promise };
 use pq;
 
 class PqExecutor implements Executor {
@@ -24,7 +24,7 @@ class PqExecutor implements Executor {
     /** @var string */
     private $await;
     
-    /** @var \Amp\Postponed[] */
+    /** @var \Amp\Emitter[] */
     private $listeners;
 
     /** @var callable */
@@ -236,7 +236,7 @@ class PqExecutor implements Executor {
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        $postponed = new Postponed;
+        $postponed = new Emitter;
         $promise = new Coroutine($this->send(
             [$this->handle, "listenAsync"],
             $channel,
@@ -251,14 +251,14 @@ class PqExecutor implements Executor {
         return pipe($promise, function () use ($postponed, $channel) {
             $this->listeners[$channel] = $postponed;
             Loop::enable($this->poll);
-            return new Listener($postponed->getObservable(), $channel, $this->unlisten);
+            return new Listener($postponed->getStream(), $channel, $this->unlisten);
         });
     }
     
     /**
      * @param string $channel
      *
-     * @return \Interop\Async\Promise
+     * @return \AsyncInterop\Promise
      *
      * @throws \Error
      */

@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Emitter;
+use Amp\Producer;
 use pq;
 
 class PqBufferedResult extends TupleResult implements \Countable {
@@ -14,7 +14,7 @@ class PqBufferedResult extends TupleResult implements \Countable {
      */
     public function __construct(pq\Result $result) {
         $this->result = $result;
-        parent::__construct(new Emitter(static function (callable $emit) use ($result) {
+        parent::__construct(new Producer(static function (callable $emit) use ($result) {
             for ($count = 0; $row = $result->fetchRow(pq\Result::FETCH_ASSOC); ++$count) {
                 yield $emit($row);
             }

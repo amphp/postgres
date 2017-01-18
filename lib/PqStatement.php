@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\{ Coroutine, function rethrow };
-use Interop\Async\Promise;
+use AsyncInterop\Promise;
 use pq;
 
 class PqStatement implements Statement {
@@ -36,7 +36,7 @@ class PqStatement implements Statement {
     /**
      * @param mixed ...$params
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\Result>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */

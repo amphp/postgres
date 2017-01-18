@@ -2,10 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Observable, Observer };
-use Interop\Async\Promise;
+use Amp\{ Listener as StreamListener, Stream };
+use AsyncInterop\Promise;
 
-class Listener extends Observer implements Operation {
+class Listener extends StreamListener implements Operation {
     use Internal\Operation;
     
     /** @var string */
@@ -15,12 +15,12 @@ class Listener extends Observer implements Operation {
     private $unlisten;
     
     /**
-     * @param \Amp\Observable $observable Observable emitting notificatons on the channel.
+     * @param \Amp\Stream $stream Stream emitting notificatons on the channel.
      * @param string $channel Channel name.
      * @param callable(string $channel): void $unlisten Function invoked to unlisten from the channel.
      */
-    public function __construct(Observable $observable, string $channel, callable $unlisten) {
-        parent::__construct($observable);
+    public function __construct(Stream $stream, string $channel, callable $unlisten) {
+        parent::__construct($stream);
         $this->channel = $channel;
         $this->unlisten = $unlisten;
     }
@@ -35,9 +35,10 @@ class Listener extends Observer implements Operation {
     /**
      * Unlistens from the channel. No more values will be emitted on theis channel.
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\CommandResult>
      */
     public function unlisten(): Promise {
+        /** @var \AsyncInterop\Promise $promise */
         $promise = ($this->unlisten)($this->channel);
         $promise->when(function () {
             $this->complete();

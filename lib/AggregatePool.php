@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Promise;
+use AsyncInterop\Promise;
 
 class AggregatePool extends AbstractPool {
     /**

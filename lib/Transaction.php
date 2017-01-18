@@ -3,7 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Coroutine;
-use Interop\Async\Promise;
+use AsyncInterop\Promise;
 
 class Transaction implements Executor, Operation {
     use Internal\Operation;
@@ -103,7 +103,7 @@ class Transaction implements Executor, Operation {
     /**
      * Commits the transaction and makes it inactive.
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
@@ -131,7 +131,7 @@ class Transaction implements Executor, Operation {
     /**
      * Rolls back the transaction and makes it inactive.
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
@@ -161,7 +161,7 @@ class Transaction implements Executor, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
@@ -175,7 +175,7 @@ class Transaction implements Executor, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */
@@ -189,7 +189,7 @@ class Transaction implements Executor, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\CommandResult>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError
      */

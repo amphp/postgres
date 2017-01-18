@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Emitter;
+use Amp\Producer;
 
 class PgSqlTupleResult extends TupleResult implements \Countable {
     /** @var resource PostgreSQL result resource. */
@@ -13,7 +13,7 @@ class PgSqlTupleResult extends TupleResult implements \Countable {
      */
     public function __construct($handle) {
         $this->handle = $handle;
-        parent::__construct(new Emitter(static function (callable $emit) use ($handle) {
+        parent::__construct(new Producer(static function (callable $emit) use ($handle) {
             $count = \pg_num_rows($handle);
             for ($i = 0; $i < $count; ++$i) {
                 $result = \pg_fetch_assoc($handle);

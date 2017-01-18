@@ -2,9 +2,9 @@
 
 namespace Amp\Postgres;
 
-use Amp\Observer;
+use Amp\Listener;
 
-abstract class TupleResult extends Observer implements Result {
+abstract class TupleResult extends Listener implements Result {
     /**
      * Returns the number of fields (columns) in each row.
      *

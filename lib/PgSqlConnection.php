@@ -3,14 +3,14 @@
 namespace Amp\Postgres;
 
 use Amp\{ Deferred, TimeoutException };
-use Interop\Async\{ Loop, Promise };
+use AsyncInterop\{ Loop, Promise };
 
 class PgSqlConnection extends AbstractConnection {
     /**
      * @param string $connectionString
      * @param int|null $timeout
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\PgSqlConnection>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\PgSqlConnection>
      *
      * @throws \Amp\Postgres\FailureException
      */

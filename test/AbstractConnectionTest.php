@@ -1,10 +1,10 @@
-<?php declare(strict_types = 1);
+<?php
 
 namespace Amp\Postgres\Test;
 
 use Amp\{ Coroutine, Pause };
 use Amp\Postgres\{ CommandResult, Connection, QueryError, Transaction, TransactionError, TupleResult };
-use Interop\Async\Loop;
+use AsyncInterop\Loop;
 
 abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
     /** @var \Amp\Postgres\Connection */

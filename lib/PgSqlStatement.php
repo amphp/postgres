@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Interop\Async\Promise;
+use AsyncInterop\Promise;
 
 class PgSqlStatement implements Statement {
     /** @var string */
@@ -30,7 +30,7 @@ class PgSqlStatement implements Statement {
     /**
      * @param mixed ...$params
      *
-     * @return \Interop\Async\Promise<\Amp\Postgres\Result>
+     * @return \AsyncInterop\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
