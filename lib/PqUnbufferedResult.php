@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Coroutine, Producer };
+use Amp\Producer;
 use pq;
 
 class PqUnbufferedResult extends TupleResult implements Operation {
@@ -12,7 +12,7 @@ class PqUnbufferedResult extends TupleResult implements Operation {
     private $numCols;
     
     /**
-     * @param callable(): \Generator $fetch Coroutine function to fetch next result row.
+     * @param callable(): \AsyncInterop\Promise $fetch Function to fetch next result row.
      * @param \pq\Result $result PostgreSQL result object.
      */
     public function __construct(callable $fetch, pq\Result $result) {
@@ -21,7 +21,7 @@ class PqUnbufferedResult extends TupleResult implements Operation {
             $count = 0;
             try {
                 do {
-                    $next = new Coroutine($fetch()); // Request next result before current is consumed.
+                    $next = $fetch(); // Request next result before current is consumed.
                     ++$count;
                     yield $emit($result->fetchRow(pq\Result::FETCH_ASSOC));
                     $result = yield $next;

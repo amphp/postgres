@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, function pipe };
+use Amp\{ CallableMaker, Coroutine, Deferred, Emitter };
 use AsyncInterop\{ Loop, Promise };
 use pq;
 
@@ -82,7 +82,7 @@ class PqExecutor implements Executor {
         Loop::disable($this->await);
 
         $this->send = $this->callableFromInstanceMethod("send");
-        $this->fetch = $this->callableFromInstanceMethod("fetch");
+        $this->fetch = \Amp\coroutine($this->callableFromInstanceMethod("fetch"));
         $this->unlisten = $this->callableFromInstanceMethod("unlisten");
         $this->release = $this->callableFromInstanceMethod("release");
     }
@@ -248,7 +248,7 @@ class PqExecutor implements Executor {
                 $emitter->emit($notification);
             }));
         
-        return pipe($promise, function () use ($emitter, $channel): Listener {
+        return \Amp\pipe($promise, function () use ($emitter, $channel): Listener {
             $this->listeners[$channel] = $emitter;
             Loop::enable($this->poll);
             return new Listener($emitter->stream(), $channel, $this->unlisten);
