@@ -14,7 +14,7 @@ class FunctionsTest extends \PHPUnit_Framework_TestCase {
 
     public function testConnect() {
         Loop::execute(\Amp\wrap(function () {
-            $connection = yield connect('host=localhost user=postgres', 1);
+            $connection = yield connect('host=localhost user=postgres', 100);
             $this->assertInstanceOf(Connection::class, $connection);
         }));
     }
@@ -24,7 +24,7 @@ class FunctionsTest extends \PHPUnit_Framework_TestCase {
      */
     public function testConnectInvalidUser() {
         Loop::execute(\Amp\wrap(function () {
-            $connection = yield connect('host=localhost user=invalid', 1);
+            $connection = yield connect('host=localhost user=invalid', 100);
         }));
     }
 
@@ -33,7 +33,7 @@ class FunctionsTest extends \PHPUnit_Framework_TestCase {
      */
     public function testConnectInvalidConnectionString() {
         Loop::execute(\Amp\wrap(function () {
-            $connection = yield connect('invalid connection string', 1);
+            $connection = yield connect('invalid connection string', 100);
         }));
     }
 
@@ -42,7 +42,7 @@ class FunctionsTest extends \PHPUnit_Framework_TestCase {
      */
     public function testConnectInvalidHost() {
         Loop::execute(\Amp\wrap(function () {
-            $connection = yield connect('hostaddr=invalid.host user=postgres', 1);
+            $connection = yield connect('hostaddr=invalid.host user=postgres', 100);
         }));
     }
 }

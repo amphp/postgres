@@ -19,11 +19,11 @@ abstract class AbstractConnection implements Connection {
     
     /**
      * @param string $connectionString
-     * @param int $timeout Timeout until the connection attempt fails.
+     * @param int $timeout Timeout until the connection attempt fails. 0 for no timeout.
      *
      * @return \AsyncInterop\Promise<\Amp\Postgres\Connection>
      */
-    abstract public static function connect(string $connectionString, int $timeout = null): Promise;
+    abstract public static function connect(string $connectionString, int $timeout = 0): Promise;
     
     /**
      * @param $executor;

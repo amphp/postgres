@@ -297,7 +297,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
     public function testConnectInvalidUser() {
         Loop::execute(\Amp\wrap(function () {
             $connect = $this->getConnectCallable();
-            $connection = yield $connect('host=localhost user=invalid', 1);
+            $connection = yield $connect('host=localhost user=invalid', 100);
         }));
     }
     
@@ -307,7 +307,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
     public function testConnectInvalidConnectionString() {
         Loop::execute(\Amp\wrap(function () {
             $connect = $this->getConnectCallable();
-            $connection = yield $connect('invalid connection string', 1);
+            $connection = yield $connect('invalid connection string', 100);
         }));
     }
     
@@ -317,7 +317,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
     public function testConnectInvalidHost() {
         Loop::execute(\Amp\wrap(function () {
             $connect = $this->getConnectCallable();
-            $connection = yield $connect('hostaddr=invalid.host user=postgres', 1);
+            $connection = yield $connect('hostaddr=invalid.host user=postgres', 100);
         }));
     }
 }

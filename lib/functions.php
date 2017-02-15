@@ -13,7 +13,7 @@ use AsyncInterop\Promise;
  * @throws \Amp\Postgres\FailureException If connecting fails.
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
  */
-function connect(string $connectionString, int $timeout = null): Promise {
+function connect(string $connectionString, int $timeout = 0): Promise {
     if (\extension_loaded("pq")) {
         return PqConnection::connect($connectionString, $timeout);
     }
