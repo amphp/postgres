@@ -13,6 +13,6 @@ class Notification {
     /** @var int PID of message source. */
     public $pid;
     
-    /** @var string Message paypload */
+    /** @var string Message payload */
     public $payload;
 }

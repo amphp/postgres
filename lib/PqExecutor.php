@@ -153,7 +153,7 @@ class PqExecutor implements Executor {
             case pq\Result::TUPLES_OK:
                 return new PqBufferedResult($result);
         
-            CASE pq\Result::SINGLE_TUPLE:
+            case pq\Result::SINGLE_TUPLE:
                 $result = new PqUnbufferedResult($this->fetch, $result);
                 $result->onComplete($this->release);
                 $this->busy = new Deferred;
