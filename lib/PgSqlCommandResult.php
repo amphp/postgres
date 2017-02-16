@@ -33,11 +33,4 @@ class PgSqlCommandResult implements CommandResult {
     public function lastOid(): string {
         return (string) \pg_last_oid($this->handle);
     }
-
-    /**
-     * @return int
-     */
-    public function count(): int {
-        return $this->affectedRows();
-    }
 }

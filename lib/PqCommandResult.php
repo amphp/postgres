@@ -20,11 +20,4 @@ class PqCommandResult implements CommandResult {
     public function affectedRows(): int {
         return $this->result->affectedRows;
     }
-
-    /**
-     * @return int
-     */
-    public function count() {
-        return $this->affectedRows();
-    }
 }
