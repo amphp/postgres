@@ -2,11 +2,13 @@
 
 namespace Amp\Postgres;
 
-use Amp\Producer;
+use Amp\{ CallableMaker, Producer };
 use pq;
 
 class PqUnbufferedResult extends TupleResult implements Operation {
-    use Internal\Operation;
+    use CallableMaker, Internal\Operation {
+        __destruct as private release;
+    }
     
     /** @var int */
     private $numCols;
@@ -32,7 +34,12 @@ class PqUnbufferedResult extends TupleResult implements Operation {
             return $count;
         }));
     }
-    
+
+    public function __destruct() {
+        parent::__destruct();
+        $this->release();
+    }
+
     public function numFields(): int {
         return $this->numCols;
     }
