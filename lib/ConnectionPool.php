@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use AsyncInterop\Promise;
+use Amp\Promise;
 
 class ConnectionPool extends AbstractPool {
     const DEFAULT_MAX_CONNECTIONS = 100;

@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Coroutine, Deferred };
-use AsyncInterop\Promise;
+use Amp\{ Coroutine, Deferred, Promise };
 
 abstract class AbstractPool implements Pool {
     /** @var \SplQueue */
@@ -15,20 +14,20 @@ abstract class AbstractPool implements Pool {
     /** @var \SplObjectStorage */
     private $connections;
 
-    /** @var \AsyncInterop\Promise|null */
+    /** @var \Amp\Promise|null */
     private $promise;
     
     /** @var \Amp\Deferred|null */
     private $deferred;
     
-    /** @var \Amp\Postgres\Connection|\AsyncInterop\Promise|null Connection used for notification listening. */
+    /** @var \Amp\Postgres\Connection|\Amp\Promise|null Connection used for notification listening. */
     private $listeningConnection;
     
     /** @var int Number of listeners on listening connection. */
     private $listenerCount = 0;
 
     /**
-     * @return \AsyncInterop\Promise<\Amp\Postgres\Connection>
+     * @return \Amp\Promise<\Amp\Postgres\Connection>
      *
      * @throws \Amp\Postgres\FailureException
      */

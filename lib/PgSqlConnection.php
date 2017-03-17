@@ -2,15 +2,14 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Deferred, Failure };
-use AsyncInterop\{ Loop, Promise };
+use Amp\{ Deferred, Failure, Loop, Promise };
 
 class PgSqlConnection extends AbstractConnection {
     /**
      * @param string $connectionString
      * @param int $timeout
      *
-     * @return \AsyncInterop\Promise<\Amp\Postgres\PgSqlConnection>
+     * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
      */
     public static function connect(string $connectionString, int $timeout = 0): Promise {
         if (!$connection = @\pg_connect($connectionString, \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
@@ -51,7 +50,7 @@ class PgSqlConnection extends AbstractConnection {
         $promise = $deferred->promise();
 
         if ($timeout !== 0) {
-            $promise = \Amp\timeout($promise, $timeout);
+            $promise = Promise\timeout($promise, $timeout);
         }
 
         $promise->when(function ($exception) use ($connection, $poll, $await) {

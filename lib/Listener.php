@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Listener as StreamListener, Stream };
-use AsyncInterop\Promise;
+use Amp\{ Listener as StreamListener, Promise, Stream };
 
 class Listener extends StreamListener implements Operation {
     use Internal\Operation;
@@ -35,10 +34,10 @@ class Listener extends StreamListener implements Operation {
     /**
      * Unlistens from the channel. No more values will be emitted on theis channel.
      *
-     * @return \AsyncInterop\Promise<\Amp\Postgres\CommandResult>
+     * @return \Amp\Promise<\Amp\Postgres\CommandResult>
      */
     public function unlisten(): Promise {
-        /** @var \AsyncInterop\Promise $promise */
+        /** @var \Amp\Promise $promise */
         $promise = ($this->unlisten)($this->channel);
         $promise->when(function () {
             $this->complete();

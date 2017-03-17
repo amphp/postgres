@@ -5,7 +5,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres;
 
-AsyncInterop\Loop::execute(Amp\wrap(function () {
+Amp\Loop::run(function () {
     $pool = Postgres\pool('host=localhost user=postgres');
     
     /** @var \Amp\Postgres\Statement $statement */
@@ -18,4 +18,4 @@ AsyncInterop\Loop::execute(Amp\wrap(function () {
         $row = $result->getCurrent();
         \printf("%-35s = %s (%s)\n", $row['name'], $row['setting'], $row['description']);
     }
-}));
+});

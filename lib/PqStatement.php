@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Coroutine, function rethrow };
-use AsyncInterop\Promise;
+use Amp\{ Coroutine, Promise };
 use pq;
 
 class PqStatement implements Statement {
@@ -23,7 +22,7 @@ class PqStatement implements Statement {
     }
     
     public function __destruct() {
-        rethrow(new Coroutine(($this->execute)([$this->statement, "deallocateAsync"])));
+        Promise\rethrow(new Coroutine(($this->execute)([$this->statement, "deallocateAsync"])));
     }
     
     /**
@@ -36,7 +35,7 @@ class PqStatement implements Statement {
     /**
      * @param mixed ...$params
      *
-     * @return \AsyncInterop\Promise<\Amp\Postgres\Result>
+     * @return \Amp\Promise<\Amp\Postgres\Result>
      *
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */

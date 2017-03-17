@@ -2,13 +2,13 @@
 
 namespace Amp\Postgres;
 
-use AsyncInterop\Promise;
+use Amp\Promise;
 
 interface Statement {
     /**
      * @param mixed ...$params
      *
-     * @return \AsyncInterop\Promise<\Amp\Postgres\Result>
+     * @return \Amp\Promise<\Amp\Postgres\Result>
      */
     public function execute(...$params): Promise;
 }

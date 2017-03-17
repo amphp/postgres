@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Emitter };
-use AsyncInterop\{ Loop, Promise };
+use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, Loop, Promise };
 use pq;
 
 class PqExecutor implements Executor {
@@ -248,7 +247,7 @@ class PqExecutor implements Executor {
                 $emitter->emit($notification);
             }));
         
-        return \Amp\pipe($promise, function () use ($emitter, $channel): Listener {
+        return Promise\pipe($promise, function () use ($emitter, $channel): Listener {
             $this->listeners[$channel] = $emitter;
             Loop::enable($this->poll);
             return new Listener($emitter->stream(), $channel, $this->unlisten);
@@ -258,7 +257,7 @@ class PqExecutor implements Executor {
     /**
      * @param string $channel
      *
-     * @return \AsyncInterop\Promise
+     * @return \Amp\Promise
      *
      * @throws \Error
      */

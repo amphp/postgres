@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, function pipe };
-use AsyncInterop\{ Loop, Promise };
+use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, Loop, Promise, function Promise\pipe };
 
 class PgSqlExecutor implements Executor {
     use CallableMaker;
@@ -236,7 +235,7 @@ class PgSqlExecutor implements Executor {
     /**
      * @param string $channel
      *
-     * @return \AsyncInterop\Promise
+     * @return \Amp\Promise
      *
      * @throws \Error
      */

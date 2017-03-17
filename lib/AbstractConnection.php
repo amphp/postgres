@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, function pipe };
-use AsyncInterop\Promise;
+use Amp\{ CallableMaker, Coroutine, Deferred, Promise };
 
 abstract class AbstractConnection implements Connection {
     use CallableMaker;
@@ -21,7 +20,7 @@ abstract class AbstractConnection implements Connection {
      * @param string $connectionString
      * @param int $timeout Timeout until the connection attempt fails. 0 for no timeout.
      *
-     * @return \AsyncInterop\Promise<\Amp\Postgres\Connection>
+     * @return \Amp\Promise<\Amp\Postgres\Connection>
      */
     abstract public static function connect(string $connectionString, int $timeout = 0): Promise;
     
@@ -119,7 +118,7 @@ abstract class AbstractConnection implements Connection {
                 throw new \Error("Invalid transaction type");
         }
     
-        return pipe($promise, function () use ($isolation): Transaction {
+        return Promise\pipe($promise, function () use ($isolation): Transaction {
             $this->busy = new Deferred;
             $transaction = new Transaction($this->executor, $isolation);
             $transaction->onComplete($this->release);

@@ -14,7 +14,7 @@ class PqUnbufferedResult extends TupleResult implements Operation {
     private $numCols;
     
     /**
-     * @param callable(): \AsyncInterop\Promise $fetch Function to fetch next result row.
+     * @param callable(): \Amp\Promise $fetch Function to fetch next result row.
      * @param \pq\Result $result PostgreSQL result object.
      */
     public function __construct(callable $fetch, pq\Result $result) {

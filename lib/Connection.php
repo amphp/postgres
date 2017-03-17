@@ -2,13 +2,13 @@
 
 namespace Amp\Postgres;
 
-use AsyncInterop\Promise;
+use Amp\Promise;
 
 interface Connection extends Executor {
     /**
      * @param int $isolation
      *
-     * @return \AsyncInterop\Promise<\Amp\Postgres\Transaction>
+     * @return \Amp\Promise<\Amp\Postgres\Transaction>
      *
      * @throws \Amp\Postgres\FailureException
      */
@@ -17,7 +17,7 @@ interface Connection extends Executor {
     /**
      * @param string $channel Channel name.
      *
-     * @return \AsyncInterop\Promise<\Amp\Postgres\Listener>
+     * @return \Amp\Promise<\Amp\Postgres\Listener>
      *
      * @throws \Amp\Postgres\FailureException
      */

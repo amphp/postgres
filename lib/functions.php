@@ -2,13 +2,13 @@
 
 namespace Amp\Postgres;
 
-use AsyncInterop\Promise;
+use Amp\Promise;
 
 /**
  * @param string $connectionString
  * @param int $timeout
  *
- * @return \AsyncInterop\Promise<\Amp\Postgres\Connection>
+ * @return \Amp\Promise<\Amp\Postgres\Connection>
  *
  * @throws \Amp\Postgres\FailureException If connecting fails.
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.

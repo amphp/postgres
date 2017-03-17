@@ -2,9 +2,8 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\{ Loop, Promise, Success };
 use Amp\Postgres\{ CommandResult, Connection, Statement, Transaction, TupleResult };
-use Amp\Success;
-use AsyncInterop\Loop;
 
 abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
     /**
@@ -71,11 +70,11 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
 
         $pool = $this->createPool($connections);
     
-        Loop::execute(\Amp\wrap(function () use ($method, $pool, $params, $result) {
+        Loop::run(function () use ($method, $pool, $params, $result) {
             $return = yield $pool->{$method}(...$params);
 
             $this->assertSame($result, $return);
-        }));
+        });
     }
 
     /**
@@ -103,13 +102,13 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
         $pool = $this->createPool($connections);
     
     
-        Loop::execute(\Amp\wrap(function () Use ($count, $rounds, $pool, $method, $params) {
+        Loop::run(function () Use ($count, $rounds, $pool, $method, $params) {
             $promises = [];
     
             for ($i = 0; $i < $count * $rounds; ++$i) {
                 $promises[] = $pool->{$method}(...$params);
             }
-        }));
+        });
     }
 
     /**
@@ -139,11 +138,11 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
 
         $pool = $this->createPool($connections);
     
-        Loop::execute(\Amp\wrap(function () use ($pool, $result) {
+        Loop::run(function () use ($pool, $result) {
             $return = yield $pool->transaction(Transaction::COMMITTED);
             $this->assertInstanceOf(Transaction::class, $return);
             yield $return->rollback();
-        }));
+        });
     }
 
     /**
@@ -169,15 +168,15 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
 
         $pool = $this->createPool($connections);
     
-        Loop::execute(\Amp\wrap(function () use ($count, $rounds, $pool) {
+        Loop::run(function () use ($count, $rounds, $pool) {
             $promises = [];
             for ($i = 0; $i < $count * $rounds; ++$i) {
                 $promises[] = $pool->transaction(Transaction::COMMITTED);
             }
             
-            yield \Amp\all(\Amp\map(function (Transaction $transaction) {
+            yield Promise\all(Promise\map(function (Transaction $transaction) {
                 return $transaction->rollback();
             }, $promises));
-        }));
+        });
     }
 }

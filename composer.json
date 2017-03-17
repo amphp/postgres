@@ -22,8 +22,7 @@
         "amphp/amp": "dev-master as 2.0"
     },
     "require-dev": {
-        "amphp/loop": "dev-master",
-        "phpunit/phpunit": "^5.0"
+        "phpunit/phpunit": "^5"
     },
     "minimum-stability": "dev",
     "autoload": {

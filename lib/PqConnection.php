@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Deferred, Failure };
-use AsyncInterop\{ Loop, Promise };
+use Amp\{ Deferred, Failure, Loop, Promise };
 use pq;
 
 class PqConnection extends AbstractConnection {
@@ -11,7 +10,7 @@ class PqConnection extends AbstractConnection {
      * @param string $connectionString
      * @param int $timeout
      *
-     * @return \AsyncInterop\Promise<\Amp\Postgres\PgSqlConnection>
+     * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
      */
     public static function connect(string $connectionString, int $timeout = 0): Promise {
         try {
@@ -50,7 +49,7 @@ class PqConnection extends AbstractConnection {
         $promise = $deferred->promise();
 
         if ($timeout !== 0) {
-            $promise = \Amp\timeout($promise, $timeout);
+            $promise = Promise\timeout($promise, $timeout);
         }
 
         $promise->when(function () use ($poll, $await) {

@@ -4,15 +4,15 @@
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres;
-use AsyncInterop\Loop;
+use Amp\Loop;
 
-Loop::execute(Amp\wrap(function () {
+Loop::run(function () {
     $pool = Postgres\pool('host=localhost user=postgres');
     
     $channel = "test";
     
     /** @var \Amp\Postgres\Listener $listener */
-    $listener = yield $pool->listen("test");
+    $listener = yield $pool->listen($channel);
     
     printf("Listening on channel '%s'\n", $listener->getChannel());
     
@@ -39,4 +39,4 @@ Loop::execute(Amp\wrap(function () {
             $notification->payload
         );
     }
-}));
+});
