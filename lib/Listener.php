@@ -39,7 +39,7 @@ class Listener extends StreamListener implements Operation {
     public function unlisten(): Promise {
         /** @var \Amp\Promise $promise */
         $promise = ($this->unlisten)($this->channel);
-        $promise->when(function () {
+        $promise->onResolve(function () {
             $this->complete();
         });
         return $promise;

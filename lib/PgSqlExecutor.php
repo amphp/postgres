@@ -252,7 +252,7 @@ class PgSqlExecutor implements Executor {
         }
         
         $promise = $this->query(\sprintf("UNLISTEN %s", $channel));
-        $promise->when(function () use ($emitter) {
+        $promise->onResolve(function () use ($emitter) {
             $emitter->resolve();
         });
         return $promise;

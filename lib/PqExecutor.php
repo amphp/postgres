@@ -274,7 +274,7 @@ class PqExecutor implements Executor {
         }
     
         $promise = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
-        $promise->when(function () use ($emitter) {
+        $promise->onResolve(function () use ($emitter) {
             $emitter->resolve();
         });
         return $promise;

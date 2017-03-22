@@ -52,7 +52,7 @@ class PqConnection extends AbstractConnection {
             $promise = Promise\timeout($promise, $timeout);
         }
 
-        $promise->when(function () use ($poll, $await) {
+        $promise->onResolve(function () use ($poll, $await) {
             Loop::cancel($poll);
             Loop::cancel($await);
         });

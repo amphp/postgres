@@ -53,7 +53,7 @@ class PgSqlConnection extends AbstractConnection {
             $promise = Promise\timeout($promise, $timeout);
         }
 
-        $promise->when(function ($exception) use ($connection, $poll, $await) {
+        $promise->onResolve(function ($exception) use ($connection, $poll, $await) {
             if ($exception) {
                 \pg_close($connection);
             }
