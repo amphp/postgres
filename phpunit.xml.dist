@@ -13,7 +13,7 @@
         stopOnFailure="false"
 >
     <testsuites>
-        <testsuite name="Icicle Postgres Client">
+        <testsuite name="Postgres Client">
             <directory>test</directory>
         </testsuite>
     </testsuites>
