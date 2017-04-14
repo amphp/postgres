@@ -2,9 +2,9 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Listener as StreamListener, Promise, Stream };
+use Amp\{ Promise, Stream, StreamIterator };
 
-class Listener extends StreamListener implements Operation {
+class Listener extends StreamIterator implements Operation {
     use Internal\Operation;
     
     /** @var string */

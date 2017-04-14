@@ -2,9 +2,9 @@
 
 namespace Amp\Postgres;
 
-use Amp\Listener;
+use Amp\StreamIterator;
 
-abstract class TupleResult extends Listener implements Result {
+abstract class TupleResult extends StreamIterator implements Result {
     /**
      * Returns the number of fields (columns) in each row.
      *

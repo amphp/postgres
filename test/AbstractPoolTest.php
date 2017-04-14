@@ -173,9 +173,11 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
             for ($i = 0; $i < $count * $rounds; ++$i) {
                 $promises[] = $pool->transaction(Transaction::COMMITTED);
             }
-            
-            yield Promise\all(Promise\map(function (Transaction $transaction) {
-                return $transaction->rollback();
+
+            yield Promise\all(\array_map(function (Promise $promise) {
+                return Promise\pipe($promise, function (Transaction $transaction) {
+                    return $transaction->rollback();
+                });
             }, $promises));
         });
     }
