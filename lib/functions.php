@@ -22,7 +22,7 @@ function connect(string $connectionString, int $timeout = 0): Promise {
         return PgSqlConnection::connect($connectionString, $timeout);
     }
     
-    throw new \Error("This lib requires either pecl-pq or ext-pgsql");
+    throw new \Error("amphp/postgres requires either pecl-pq or ext-pgsql");
 }
 
 /**
