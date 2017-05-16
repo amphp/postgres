@@ -13,7 +13,7 @@ interface Connection extends Executor {
      * @throws \Amp\Postgres\FailureException
      */
     public function transaction(int $isolation = Transaction::COMMITTED): Promise;
-    
+
     /**
      * @param string $channel Channel name.
      *

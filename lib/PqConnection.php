@@ -2,7 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Deferred, Failure, Loop, Promise };
+use Amp\Deferred;
+use Amp\Failure;
+use Amp\Loop;
+use Amp\Promise;
 use pq;
 
 class PqConnection extends AbstractConnection {
@@ -21,9 +24,9 @@ class PqConnection extends AbstractConnection {
         $connection->resetAsync();
         $connection->nonblocking = true;
         $connection->unbuffered = true;
-        
+
         $deferred = new Deferred;
-    
+
         $callback = function () use ($connection, $deferred) {
             switch ($connection->poll()) {
                 case pq\Connection::POLLING_READING:
@@ -42,7 +45,7 @@ class PqConnection extends AbstractConnection {
                     return;
             }
         };
-    
+
         $poll = Loop::onReadable($connection->socket, $callback);
         $await = Loop::onWritable($connection->socket, $callback);
 
@@ -59,7 +62,7 @@ class PqConnection extends AbstractConnection {
 
         return $promise;
     }
-    
+
     /**
      * @param \pq\Connection $handle
      */

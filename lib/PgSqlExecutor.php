@@ -2,11 +2,16 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Deferred, Emitter, Loop, Promise, function call };
+use Amp\CallableMaker;
+use Amp\Deferred;
+use Amp\Emitter;
+use Amp\Loop;
+use Amp\Promise;
+use function Amp\call;
 
 class PgSqlExecutor implements Executor {
     use CallableMaker;
-    
+
     /** @var resource PostgreSQL connection handle. */
     private $handle;
 
@@ -21,13 +26,13 @@ class PgSqlExecutor implements Executor {
 
     /** @var callable */
     private $executeCallback;
-    
+
     /** @var \Amp\Emitter[] */
     private $listeners = [];
-    
+
     /** @var callable */
     private $unlisten;
-    
+
     /**
      * Connection constructor.
      *
@@ -39,10 +44,10 @@ class PgSqlExecutor implements Executor {
 
         $deferred = &$this->deferred;
         $listeners = &$this->listeners;
-        
+
         $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$listeners, $handle) {
             $status = \pg_consume_input($handle);
-            
+
             while ($result = \pg_get_notify($handle, \PGSQL_ASSOC)) {
                 $channel = $result["message"];
                 if (isset($listeners[$channel])) {
@@ -53,11 +58,11 @@ class PgSqlExecutor implements Executor {
                     $listeners[$channel]->emit($notification);
                 }
             }
-            
+
             if ($deferred === null) {
                 return; // No active query, only notification listeners.
             }
-            
+
             if (!$status) {
                 Loop::disable($watcher);
                 $deferred->fail(new FailureException(\pg_last_error($handle)));
@@ -77,14 +82,14 @@ class PgSqlExecutor implements Executor {
             if (0 === $flush) {
                 return; // Not finished sending data, listen again.
             }
-            
+
             Loop::disable($watcher);
 
             if ($flush === false) {
                 $deferred->fail(new FailureException(\pg_last_error($handle)));
             }
         });
-        
+
         Loop::disable($this->poll);
         Loop::disable($this->await);
 
@@ -99,7 +104,7 @@ class PgSqlExecutor implements Executor {
         if (\is_resource($this->handle)) {
             \pg_close($this->handle);
         }
-        
+
         Loop::cancel($this->poll);
         Loop::cancel($this->await);
     }
@@ -146,7 +151,7 @@ class PgSqlExecutor implements Executor {
 
         return $result;
     }
-    
+
     /**
      * @param resource $result PostgreSQL result resource.
      *
@@ -177,7 +182,7 @@ class PgSqlExecutor implements Executor {
                 throw new FailureException("Unknown result status");
         }
     }
-    
+
     private function sendExecute(string $name, array $params): Promise {
         return call(function () use ($name, $params) {
             return $this->createResult(yield from $this->send("pg_send_execute", $name, $params));
@@ -211,7 +216,7 @@ class PgSqlExecutor implements Executor {
             return new PgSqlStatement($sql, $this->executeCallback);
         });
     }
-    
+
     /**
      * {@inheritdoc}
      */
@@ -219,10 +224,10 @@ class PgSqlExecutor implements Executor {
         if ($payload === "") {
             return $this->query(\sprintf("NOTIFY %s"));
         }
-        
+
         return $this->query(\sprintf("NOTIFY %s, '%s'", $channel, $payload));
     }
-    
+
     /**
      * {@inheritdoc}
      */
@@ -236,7 +241,7 @@ class PgSqlExecutor implements Executor {
             return new Listener($emitter->iterate(), $channel, $this->unlisten);
         });
     }
-    
+
     /**
      * @param string $channel
      *
@@ -248,14 +253,14 @@ class PgSqlExecutor implements Executor {
         if (!isset($this->listeners[$channel])) {
             throw new \Error("Not listening on that channel");
         }
-        
+
         $emitter = $this->listeners[$channel];
         unset($this->listeners[$channel]);
-        
+
         if (empty($this->listeners) && $this->deferred === null) {
             Loop::disable($this->poll);
         }
-        
+
         $promise = $this->query(\sprintf("UNLISTEN %s", $channel));
         $promise->onResolve(function () use ($emitter) {
             $emitter->complete();

@@ -1,6 +1,7 @@
 <?php
 
 namespace Amp\Postgres;
+
 use pq;
 
 class PqCommandResult implements CommandResult {

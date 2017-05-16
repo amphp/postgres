@@ -17,11 +17,11 @@ function connect(string $connectionString, int $timeout = 0): Promise {
     if (\extension_loaded("pq")) {
         return PqConnection::connect($connectionString, $timeout);
     }
-    
+
     if (\extension_loaded("pgsql")) {
         return PgSqlConnection::connect($connectionString, $timeout);
     }
-    
+
     throw new \Error("amphp/postgres requires either pecl-pq or ext-pgsql");
 }
 

@@ -2,8 +2,15 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\{ Loop, Promise, Success, function call };
-use Amp\Postgres\{ CommandResult, Connection, Statement, Transaction, TupleResult };
+use Amp\Loop;
+use Amp\Postgres\CommandResult;
+use Amp\Postgres\Connection;
+use Amp\Postgres\Statement;
+use Amp\Postgres\Transaction;
+use Amp\Postgres\TupleResult;
+use Amp\Promise;
+use Amp\Success;
+use function Amp\call;
 
 abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
     /**
@@ -69,7 +76,7 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
             ->will($this->returnValue(new Success($result)));
 
         $pool = $this->createPool($connections);
-    
+
         Loop::run(function () use ($method, $pool, $params, $result) {
             $return = yield $pool->{$method}(...$params);
 
@@ -100,11 +107,11 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
         }
 
         $pool = $this->createPool($connections);
-    
-    
-        Loop::run(function () Use ($count, $rounds, $pool, $method, $params) {
+
+
+        Loop::run(function () use ($count, $rounds, $pool, $method, $params) {
             $promises = [];
-    
+
             for ($i = 0; $i < $count * $rounds; ++$i) {
                 $promises[] = $pool->{$method}(...$params);
             }
@@ -137,7 +144,7 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
             ->will($this->returnValue(new Success($result)));
 
         $pool = $this->createPool($connections);
-    
+
         Loop::run(function () use ($pool, $result) {
             $return = yield $pool->transaction(Transaction::COMMITTED);
             $this->assertInstanceOf(Transaction::class, $return);
@@ -167,7 +174,7 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
         }
 
         $pool = $this->createPool($connections);
-    
+
         Loop::run(function () use ($count, $rounds, $pool) {
             $promises = [];
             for ($i = 0; $i < $count * $rounds; ++$i) {

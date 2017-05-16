@@ -2,8 +2,15 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\{ Coroutine, Delayed, Loop };
-use Amp\Postgres\{ CommandResult, Connection, QueryError, Transaction, TransactionError, TupleResult };
+use Amp\Coroutine;
+use Amp\Delayed;
+use Amp\Loop;
+use Amp\Postgres\CommandResult;
+use Amp\Postgres\Connection;
+use Amp\Postgres\QueryError;
+use Amp\Postgres\Transaction;
+use Amp\Postgres\TransactionError;
+use Amp\Postgres\TupleResult;
 
 abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
     /** @var \Amp\Postgres\Connection */
@@ -20,15 +27,15 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
             ['php', 'net'],
         ];
     }
-    
+
     abstract public function createConnection(string $connectionString): Connection;
 
     abstract public function getConnectCallable(): callable;
-    
+
     public function setUp() {
         $this->connection = $this->createConnection('host=localhost user=postgres');
     }
-    
+
     public function testQueryWithTupleResult() {
         Loop::run(function () {
             /** @var \Amp\Postgres\TupleResult $result */
@@ -37,7 +44,7 @@ abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
             $this->assertInstanceOf(TupleResult::class, $result);
 
             $this->assertSame(2, $result->numFields());
-            
+
             $data = $this->getData();
 
             for ($i = 0; yield $result->advance(); ++$i) {

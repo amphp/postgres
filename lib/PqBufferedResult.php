@@ -20,11 +20,11 @@ class PqBufferedResult extends TupleResult {
             }
         }));
     }
-    
+
     public function numRows(): int {
         return $this->result->numRows;
     }
-    
+
     public function numFields(): int {
         return $this->result->numCols;
     }

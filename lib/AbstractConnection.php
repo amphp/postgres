@@ -2,20 +2,24 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Promise, function call };
+use Amp\CallableMaker;
+use Amp\Coroutine;
+use Amp\Deferred;
+use Amp\Promise;
+use function Amp\call;
 
 abstract class AbstractConnection implements Connection {
     use CallableMaker;
-    
+
     /** @var \Amp\Postgres\Executor */
     private $executor;
-    
+
     /** @var \Amp\Deferred|null Used to only allow one transaction at a time. */
     private $busy;
-    
+
     /** @var callable */
     private $release;
-    
+
     /**
      * @param string $connectionString
      * @param int $timeout Timeout until the connection attempt fails. 0 for no timeout.
@@ -23,7 +27,7 @@ abstract class AbstractConnection implements Connection {
      * @return \Amp\Promise<\Amp\Postgres\Connection>
      */
     abstract public static function connect(string $connectionString, int $timeout = 0): Promise;
-    
+
     /**
      * @param $executor;
      */
@@ -44,10 +48,10 @@ abstract class AbstractConnection implements Connection {
         while ($this->busy !== null) {
             yield $this->busy->promise();
         }
-        
+
         return $method(...$args);
     }
-    
+
     /**
      * Releases the transaction lock.
      */
@@ -56,7 +60,7 @@ abstract class AbstractConnection implements Connection {
         $this->busy = null;
         $busy->resolve();
     }
-    
+
     /**
      * {@inheritdoc}
      */
@@ -77,15 +81,15 @@ abstract class AbstractConnection implements Connection {
     public function prepare(string $sql): Promise {
         return new Coroutine($this->send([$this->executor, "prepare"], $sql));
     }
-    
-    
+
+
     /**
      * {@inheritdoc}
      */
     public function notify(string $channel, string $payload = ""): Promise {
         return new Coroutine($this->send([$this->executor, "notify"], $channel, $payload));
     }
-    
+
     /**
      * {@inheritdoc}
      */
@@ -101,19 +105,19 @@ abstract class AbstractConnection implements Connection {
             case Transaction::UNCOMMITTED:
                 $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
                 break;
-        
+
             case Transaction::COMMITTED:
                 $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
                 break;
-        
+
             case Transaction::REPEATABLE:
                 $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
                 break;
-        
+
             case Transaction::SERIALIZABLE:
                 $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
                 break;
-        
+
             default:
                 throw new \Error("Invalid transaction type");
         }

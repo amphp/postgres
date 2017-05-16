@@ -2,7 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Deferred, Failure, Loop, Promise };
+use Amp\Deferred;
+use Amp\Failure;
+use Amp\Loop;
+use Amp\Promise;
 
 class PgSqlConnection extends AbstractConnection {
     /**
@@ -15,17 +18,17 @@ class PgSqlConnection extends AbstractConnection {
         if (!$connection = @\pg_connect($connectionString, \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
             return new Failure(new FailureException("Failed to create connection resource"));
         }
-    
+
         if (\pg_connection_status($connection) === \PGSQL_CONNECTION_BAD) {
             return new Failure(new FailureException(\pg_last_error($connection)));
         }
-    
+
         if (!$socket = \pg_socket($connection)) {
             return new Failure(new FailureException("Failed to access connection socket"));
         }
-    
+
         $deferred = new Deferred;
-    
+
         $callback = function ($watcher, $resource) use ($connection, $deferred) {
             switch (\pg_connect_poll($connection)) {
                 case \PGSQL_POLLING_READING:
@@ -43,7 +46,7 @@ class PgSqlConnection extends AbstractConnection {
                     return;
             }
         };
-    
+
         $poll = Loop::onReadable($socket, $callback);
         $await = Loop::onWritable($socket, $callback);
 
@@ -64,7 +67,7 @@ class PgSqlConnection extends AbstractConnection {
 
         return $promise;
     }
-    
+
     /**
      * @param resource $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.

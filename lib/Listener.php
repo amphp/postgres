@@ -2,7 +2,8 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Iterator, Promise };
+use Amp\Iterator;
+use Amp\Promise;
 
 class Listener implements Iterator, Operation {
     use Internal\Operation;
@@ -12,10 +13,10 @@ class Listener implements Iterator, Operation {
 
     /** @var string */
     private $channel;
-    
+
     /** @var callable */
     private $unlisten;
-    
+
     /**
      * @param \Amp\Iterator $iterator Iterator emitting notificatons on the channel.
      * @param string $channel Channel name.
@@ -47,7 +48,7 @@ class Listener implements Iterator, Operation {
     public function getChannel(): string {
         return $this->channel;
     }
-    
+
     /**
      * Unlistens from the channel. No more values will be emitted on theis channel.
      *

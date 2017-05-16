@@ -2,7 +2,9 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Coroutine, Deferred, Promise };
+use Amp\Coroutine;
+use Amp\Deferred;
+use Amp\Promise;
 
 abstract class AbstractPool implements Pool {
     /** @var \SplQueue */
@@ -16,13 +18,13 @@ abstract class AbstractPool implements Pool {
 
     /** @var \Amp\Promise|null */
     private $promise;
-    
+
     /** @var \Amp\Deferred|null */
     private $deferred;
-    
+
     /** @var \Amp\Postgres\Connection|\Amp\Promise|null Connection used for notification listening. */
     private $listeningConnection;
-    
+
     /** @var int Number of listeners on listening connection. */
     private $listenerCount = 0;
 
@@ -118,14 +120,14 @@ abstract class AbstractPool implements Pool {
             $this->deferred->resolve($connection);
         }
     }
-    
+
     /**
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
         return new Coroutine($this->doQuery($sql));
     }
-    
+
     private function doQuery(string $sql): \Generator {
         /** @var \Amp\Postgres\Connection $connection */
         $connection = yield from $this->pop();
@@ -136,7 +138,7 @@ abstract class AbstractPool implements Pool {
             $this->push($connection);
             throw $exception;
         }
-        
+
         if ($result instanceof Operation) {
             $result->onComplete(function () use ($connection) {
                 $this->push($connection);
@@ -154,18 +156,18 @@ abstract class AbstractPool implements Pool {
     public function execute(string $sql, ...$params): Promise {
         return new Coroutine($this->doExecute($sql, $params));
     }
-    
+
     private function doExecute(string $sql, array $params): \Generator {
         /** @var \Amp\Postgres\Connection $connection */
         $connection = yield from $this->pop();
-    
+
         try {
             $result = yield $connection->execute($sql, ...$params);
         } catch (\Throwable $exception) {
             $this->push($connection);
             throw $exception;
         }
-    
+
         if ($result instanceof Operation) {
             $result->onComplete(function () use ($connection) {
                 $this->push($connection);
@@ -183,7 +185,7 @@ abstract class AbstractPool implements Pool {
     public function prepare(string $sql): Promise {
         return new Coroutine($this->doPrepare($sql));
     }
-    
+
     private function doPrepare(string $sql): \Generator {
         /** @var \Amp\Postgres\Connection $connection */
         $connection = yield from $this->pop();
@@ -194,48 +196,48 @@ abstract class AbstractPool implements Pool {
         } finally {
             $this->push($connection);
         }
-        
+
         return $statement;
     }
-    
+
     /**
      * {@inheritdoc}
      */
     public function notify(string $channel, string $payload = ""): Promise {
         return new Coroutine($this->doNotify($channel, $payload));
     }
-    
+
     private function doNotify(string $channel, string $payload): \Generator {
         /** @var \Amp\Postgres\Connection $connection */
         $connection = yield from $this->pop();
-        
+
         try {
             $result = yield $connection->notify($channel, $payload);
         } finally {
             $this->push($connection);
         }
-        
+
         return $result;
     }
-    
+
     /**
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
         return new Coroutine($this->doListen($channel));
     }
-    
+
     public function doListen(string $channel): \Generator {
         ++$this->listenerCount;
-        
+
         if ($this->listeningConnection === null) {
             $this->listeningConnection = new Coroutine($this->pop());
         }
-        
+
         if ($this->listeningConnection instanceof Promise) {
             $this->listeningConnection = yield $this->listeningConnection;
         }
-        
+
         try {
             /** @var \Amp\Postgres\Listener $listener */
             $listener = yield $this->listeningConnection->listen($channel);
@@ -247,7 +249,7 @@ abstract class AbstractPool implements Pool {
             }
             throw $exception;
         }
-        
+
         $listener->onComplete(function () {
             if (--$this->listenerCount === 0) {
                 $connection = $this->listeningConnection;
@@ -255,7 +257,7 @@ abstract class AbstractPool implements Pool {
                 $this->push($connection);
             }
         });
-    
+
         return $listener;
     }
 
@@ -265,7 +267,7 @@ abstract class AbstractPool implements Pool {
     public function transaction(int $isolation = Transaction::COMMITTED): Promise {
         return new Coroutine($this->doTransaction($isolation));
     }
-    
+
     private function doTransaction(int $isolation = Transaction::COMMITTED): \Generator {
         /** @var \Amp\Postgres\Connection $connection */
         $connection = yield from $this->pop();
@@ -277,11 +279,11 @@ abstract class AbstractPool implements Pool {
             $this->push($connection);
             throw $exception;
         }
-        
+
         $transaction->onComplete(function () use ($connection) {
             $this->push($connection);
         });
-        
+
         return $transaction;
     }
 }

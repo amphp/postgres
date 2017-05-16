@@ -24,14 +24,14 @@ class PgSqlTupleResult extends TupleResult {
             }
         }));
     }
-    
+
     /**
      * Frees the result resource.
      */
     public function __destruct() {
         \pg_free_result($this->handle);
     }
-    
+
     /**
      * @return int Number of rows in the result set.
      */

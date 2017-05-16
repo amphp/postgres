@@ -32,7 +32,7 @@ interface Executor {
      * @throws \Amp\Postgres\FailureException
      */
     public function prepare(string $sql): Promise;
-    
+
     /**
      * @param string $channel Channel name.
      * @param string $payload Notification payload.

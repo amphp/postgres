@@ -7,10 +7,10 @@ use pq;
 
 class PqUnbufferedResult extends TupleResult implements Operation {
     use Internal\Operation;
-    
+
     /** @var int */
     private $numCols;
-    
+
     /**
      * @param callable(): \Amp\Promise $fetch Function to fetch next result row.
      * @param \pq\Result $result PostgreSQL result object.

@@ -3,28 +3,28 @@
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use Amp\Postgres;
 use Amp\Loop;
+use Amp\Postgres;
 
 Loop::run(function () {
     $pool = Postgres\pool('host=localhost user=postgres');
-    
+
     $channel = "test";
-    
+
     /** @var \Amp\Postgres\Listener $listener */
     $listener = yield $pool->listen($channel);
-    
+
     printf("Listening on channel '%s'\n", $listener->getChannel());
-    
+
     Loop::delay(3000, Amp\wrap(function () use ($listener) { // Unlisten in 3 seconds.
         printf("Unlistening from channel '%s'\n", $listener->getChannel());
         return $listener->unlisten();
     }));
-    
+
     Loop::delay(1000, Amp\wrap(function () use ($pool, $channel) {
         return $pool->notify($channel, "Data 1"); // Send first notification.
     }));
-    
+
     Loop::delay(2000, Amp\wrap(function () use ($pool, $channel) {
         return $pool->notify($channel, "Data 2"); // Send second notification.
     }));

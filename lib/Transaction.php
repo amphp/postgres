@@ -2,11 +2,12 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Coroutine, Promise };
+use Amp\Coroutine;
+use Amp\Promise;
 
 class Transaction implements Executor, Operation {
     use Internal\Operation;
-    
+
     const UNCOMMITTED  = 0;
     const COMMITTED    = 1;
     const REPEATABLE   = 2;
@@ -39,7 +40,7 @@ class Transaction implements Executor, Operation {
 
         $this->executor = $executor;
     }
-    
+
     /**
      * @return bool
      */
@@ -53,7 +54,7 @@ class Transaction implements Executor, Operation {
     public function getIsolationLevel(): int {
         return $this->isolation;
     }
-    
+
     /**
      * {@inheritdoc}
      */
@@ -86,8 +87,8 @@ class Transaction implements Executor, Operation {
 
         return $this->executor->execute($sql, ...$params);
     }
-    
-    
+
+
     /**
      * {@inheritdoc}
      */
@@ -95,7 +96,7 @@ class Transaction implements Executor, Operation {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
-        
+
         return $this->executor->notify($channel, $payload);
     }
 
@@ -109,7 +110,7 @@ class Transaction implements Executor, Operation {
     public function commit(): Promise {
         return new Coroutine($this->doCommit());
     }
-    
+
     private function doCommit(): \Generator {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
@@ -137,7 +138,7 @@ class Transaction implements Executor, Operation {
     public function rollback(): Promise {
         return new Coroutine($this->doRollback());
     }
-    
+
     public function doRollback(): \Generator {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");

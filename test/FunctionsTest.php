@@ -3,7 +3,8 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Loop;
-use Amp\Postgres\{ Connection, function connect };
+use Amp\Postgres\Connection;
+use function Amp\Postgres\connect;
 
 class FunctionsTest extends \PHPUnit_Framework_TestCase {
     public function setUp() {

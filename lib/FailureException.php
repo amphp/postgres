@@ -2,4 +2,5 @@
 
 namespace Amp\Postgres;
 
-class FailureException extends \Exception {}
+class FailureException extends \Exception {
+}
