@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, Loop, Promise };
+use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, Loop, Promise, function call, function coroutine };
 use pq;
 
 class PqExecutor implements Executor {
@@ -81,7 +81,7 @@ class PqExecutor implements Executor {
         Loop::disable($this->await);
 
         $this->send = $this->callableFromInstanceMethod("send");
-        $this->fetch = \Amp\coroutine($this->callableFromInstanceMethod("fetch"));
+        $this->fetch = coroutine($this->callableFromInstanceMethod("fetch"));
         $this->unlisten = $this->callableFromInstanceMethod("unlisten");
         $this->release = $this->callableFromInstanceMethod("release");
     }
@@ -235,22 +235,22 @@ class PqExecutor implements Executor {
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        $emitter = new Emitter;
-        $promise = new Coroutine($this->send(
-            [$this->handle, "listenAsync"],
-            $channel,
-            static function (string $channel, string $message, int $pid) use ($emitter) {
-                $notification = new Notification;
-                $notification->channel = $channel;
-                $notification->pid = $pid;
-                $notification->payload = $message;
-                $emitter->emit($notification);
-            }));
-        
-        return Promise\pipe($promise, function () use ($emitter, $channel): Listener {
+        return call(function () use ($channel) {
+            $emitter = new Emitter;
+            yield from $this->send(
+                [$this->handle, "listenAsync"],
+                $channel,
+                static function (string $channel, string $message, int $pid) use ($emitter) {
+                    $notification = new Notification;
+                    $notification->channel = $channel;
+                    $notification->pid = $pid;
+                    $notification->payload = $message;
+                    $emitter->emit($notification);
+                });
+
             $this->listeners[$channel] = $emitter;
             Loop::enable($this->poll);
-            return new Listener($emitter->stream(), $channel, $this->unlisten);
+            return new Listener($emitter->iterate(), $channel, $this->unlisten);
         });
     }
     
@@ -275,7 +275,7 @@ class PqExecutor implements Executor {
     
         $promise = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
         $promise->onResolve(function () use ($emitter) {
-            $emitter->resolve();
+            $emitter->complete();
         });
         return $promise;
     }

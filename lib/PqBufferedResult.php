@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Producer;
 use pq;
 
-class PqBufferedResult extends TupleResult implements \Countable {
+class PqBufferedResult extends TupleResult {
     /** @var \pq\Result */
     private $result;
 
@@ -15,10 +15,9 @@ class PqBufferedResult extends TupleResult implements \Countable {
     public function __construct(pq\Result $result) {
         $this->result = $result;
         parent::__construct(new Producer(static function (callable $emit) use ($result) {
-            for ($count = 0; $row = $result->fetchRow(pq\Result::FETCH_ASSOC); ++$count) {
+            while ($row = $result->fetchRow(pq\Result::FETCH_ASSOC)) {
                 yield $emit($row);
             }
-            return $count;
         }));
     }
     
@@ -28,9 +27,5 @@ class PqBufferedResult extends TupleResult implements \Countable {
     
     public function numFields(): int {
         return $this->result->numCols;
-    }
-    
-    public function count(): int {
-        return $this->numRows();
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-interface CommandResult extends Result {
+interface CommandResult {
     /**
      * Returns the number of rows affected by the query.
      *

@@ -2,11 +2,14 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Promise, Stream, StreamIterator };
+use Amp\{ Iterator, Promise };
 
-class Listener extends StreamIterator implements Operation {
+class Listener implements Iterator, Operation {
     use Internal\Operation;
-    
+
+    /** @var \Amp\Iterator */
+    private $iterator;
+
     /** @var string */
     private $channel;
     
@@ -14,16 +17,30 @@ class Listener extends StreamIterator implements Operation {
     private $unlisten;
     
     /**
-     * @param \Amp\Stream $stream Stream emitting notificatons on the channel.
+     * @param \Amp\Iterator $iterator Iterator emitting notificatons on the channel.
      * @param string $channel Channel name.
      * @param callable(string $channel): void $unlisten Function invoked to unlisten from the channel.
      */
-    public function __construct(Stream $stream, string $channel, callable $unlisten) {
-        parent::__construct($stream);
+    public function __construct(Iterator $iterator, string $channel, callable $unlisten) {
+        $this->iterator = $iterator;
         $this->channel = $channel;
         $this->unlisten = $unlisten;
     }
-    
+
+    /**
+     * {@inheritdoc}
+     */
+    public function advance(): Promise {
+        return $this->iterator->advance();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getCurrent() {
+        return $this->iterator->getCurrent();
+    }
+
     /**
      * @return string Channel name.
      */

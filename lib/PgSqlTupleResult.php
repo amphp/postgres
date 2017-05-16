@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Producer;
 
-class PgSqlTupleResult extends TupleResult implements \Countable {
+class PgSqlTupleResult extends TupleResult {
     /** @var resource PostgreSQL result resource. */
     private $handle;
 
@@ -22,7 +22,6 @@ class PgSqlTupleResult extends TupleResult implements \Countable {
                 }
                 yield $emit($result);
             }
-            return $count;
         }));
     }
     
@@ -95,13 +94,6 @@ class PgSqlTupleResult extends TupleResult implements \Countable {
      */
     public function fieldSize($fieldNameOrNum): int {
         return \pg_field_size($this->handle, $this->filterNameOrNum($fieldNameOrNum));
-    }
-
-    /**
-     * @return int Number of rows in the result set.
-     */
-    public function count(): int {
-        return $this->numRows();
     }
 
     /**

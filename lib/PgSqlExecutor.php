@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, Loop, Promise, function Promise\pipe };
+use Amp\{ CallableMaker, Deferred, Emitter, Loop, Promise, function call };
 
 class PgSqlExecutor implements Executor {
     use CallableMaker;
@@ -21,9 +21,6 @@ class PgSqlExecutor implements Executor {
 
     /** @var callable */
     private $executeCallback;
-    
-    /** @var callable */
-    private $createResult;
     
     /** @var \Amp\Emitter[] */
     private $listeners = [];
@@ -91,7 +88,6 @@ class PgSqlExecutor implements Executor {
         Loop::disable($this->poll);
         Loop::disable($this->await);
 
-        $this->createResult = $this->callableFromInstanceMethod("createResult");
         $this->executeCallback = $this->callableFromInstanceMethod("sendExecute");
         $this->unlisten = $this->callableFromInstanceMethod("unlisten");
     }
@@ -154,12 +150,12 @@ class PgSqlExecutor implements Executor {
     /**
      * @param resource $result PostgreSQL result resource.
      *
-     * @return \Amp\Postgres\Result
+     * @return \Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult
      *
      * @throws \Amp\Postgres\FailureException
      * @throws \Amp\Postgres\QueryError
      */
-    private function createResult($result): Result {
+    private function createResult($result) {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:
                 throw new QueryError("Empty query string");
@@ -183,28 +179,35 @@ class PgSqlExecutor implements Executor {
     }
     
     private function sendExecute(string $name, array $params): Promise {
-        return pipe(new Coroutine($this->send("pg_send_execute", $name, $params)), $this->createResult);
+        return call(function () use ($name, $params) {
+            return $this->createResult(yield from $this->send("pg_send_execute", $name, $params));
+        });
     }
 
     /**
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
-        return pipe(new Coroutine($this->send("pg_send_query", $sql)), $this->createResult);
+        return call(function () use ($sql) {
+            return $this->createResult(yield from $this->send("pg_send_query", $sql));
+        });
     }
 
     /**
      * {@inheritdoc}
      */
     public function execute(string $sql, ...$params): Promise {
-        return pipe(new Coroutine($this->send("pg_send_query_params", $sql, $params)), $this->createResult);
+        return call(function () use ($sql, $params) {
+            return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params));
+        });
     }
 
     /**
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return pipe(new Coroutine($this->send("pg_send_prepare", $sql, $sql)), function () use ($sql) {
+        return call(function () use ($sql) {
+            yield from $this->send("pg_send_prepare", $sql, $sql);
             return new PgSqlStatement($sql, $this->executeCallback);
         });
     }
@@ -224,11 +227,13 @@ class PgSqlExecutor implements Executor {
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        return pipe($this->query(\sprintf("LISTEN %s", $channel)), function () use ($channel): Listener {
+        return call(function () use ($channel) {
+            yield $this->query(\sprintf("LISTEN %s"));
+
             $emitter = new Emitter;
             $this->listeners[$channel] = $emitter;
             Loop::enable($this->poll);
-            return new Listener($emitter->stream(), $channel, $this->unlisten);
+            return new Listener($emitter->iterate(), $channel, $this->unlisten);
         });
     }
     
@@ -253,7 +258,7 @@ class PgSqlExecutor implements Executor {
         
         $promise = $this->query(\sprintf("UNLISTEN %s", $channel));
         $promise->onResolve(function () use ($emitter) {
-            $emitter->resolve();
+            $emitter->complete();
         });
         return $promise;
     }

@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Promise };
+use Amp\{ CallableMaker, Coroutine, Deferred, Promise, function call };
 
 abstract class AbstractConnection implements Connection {
     use CallableMaker;
@@ -117,8 +117,9 @@ abstract class AbstractConnection implements Connection {
             default:
                 throw new \Error("Invalid transaction type");
         }
-    
-        return Promise\pipe($promise, function () use ($isolation): Transaction {
+
+        return call(function () use ($promise, $isolation) {
+            yield $promise;
             $this->busy = new Deferred;
             $transaction = new Transaction($this->executor, $isolation);
             $transaction->onComplete($this->release);

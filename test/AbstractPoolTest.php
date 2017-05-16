@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\{ Loop, Promise, Success };
+use Amp\{ Loop, Promise, Success, function call };
 use Amp\Postgres\{ CommandResult, Connection, Statement, Transaction, TupleResult };
 
 abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
@@ -175,7 +175,8 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
             }
 
             yield Promise\all(\array_map(function (Promise $promise) {
-                return Promise\pipe($promise, function (Transaction $transaction) {
+                return call(function () use ($promise) {
+                    $transaction = yield $promise;
                     return $transaction->rollback();
                 });
             }, $promises));
