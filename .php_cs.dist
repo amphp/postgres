@@ -21,7 +21,6 @@ return PhpCsFixer\Config::create()
         "no_whitespace_in_blank_line" => true,
         "non_printable_character" => true,
         "normalize_index_brace" => true,
-        "ordered_imports" => true,
         "php_unit_construct" => true,
         "php_unit_dedicate_assert" => true,
         "php_unit_fqcn_annotation" => true,
@@ -31,6 +30,7 @@ return PhpCsFixer\Config::create()
         "return_type_declaration" => ["space_before" => "none"],
         "short_scalar_cast" => true,
         "single_blank_line_before_namespace" => true,
+        "single_import_per_statement" => false,
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()

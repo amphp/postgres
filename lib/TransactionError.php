@@ -2,5 +2,4 @@
 
 namespace Amp\Postgres;
 
-class TransactionError extends \Error {
-}
+class TransactionError extends \Error {}

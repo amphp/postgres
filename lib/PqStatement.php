@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Coroutine;
-use Amp\Promise;
+use Amp\{ Coroutine, Promise };
 use pq;
 
 class PqStatement implements Statement {

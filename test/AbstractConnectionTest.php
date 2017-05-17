@@ -2,15 +2,8 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Coroutine;
-use Amp\Delayed;
-use Amp\Loop;
-use Amp\Postgres\CommandResult;
-use Amp\Postgres\Connection;
-use Amp\Postgres\QueryError;
-use Amp\Postgres\Transaction;
-use Amp\Postgres\TransactionError;
-use Amp\Postgres\TupleResult;
+use Amp\{ Coroutine, Delayed, Loop };
+use Amp\Postgres\{ CommandResult, Connection, QueryError, Transaction, TransactionError, TupleResult };
 
 abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
     /** @var \Amp\Postgres\Connection */

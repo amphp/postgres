@@ -2,15 +2,8 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
-use Amp\Coroutine;
-use Amp\Deferred;
-use Amp\Emitter;
-use Amp\Loop;
-use Amp\Promise;
+use Amp\{ CallableMaker, Coroutine, Deferred, Emitter, Loop, Promise, function call, function coroutine };
 use pq;
-use function Amp\call;
-use function Amp\coroutine;
 
 class PqExecutor implements Executor {
     use CallableMaker;

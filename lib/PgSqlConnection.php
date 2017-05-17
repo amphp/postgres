@@ -2,10 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Deferred;
-use Amp\Failure;
-use Amp\Loop;
-use Amp\Promise;
+use Amp\{ Deferred, Failure, Loop, Promise };
 
 class PgSqlConnection extends AbstractConnection {
     /**

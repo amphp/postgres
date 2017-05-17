@@ -2,11 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
-use Amp\Coroutine;
-use Amp\Deferred;
-use Amp\Promise;
-use function Amp\call;
+use Amp\{ CallableMaker, Coroutine, Deferred, Promise, function call };
 
 abstract class AbstractConnection implements Connection {
     use CallableMaker;

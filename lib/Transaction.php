@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Coroutine;
-use Amp\Promise;
+use Amp\{ Coroutine, Promise };
 
 class Transaction implements Executor, Operation {
     use Internal\Operation;

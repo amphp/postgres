@@ -2,9 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Coroutine;
-use Amp\Deferred;
-use Amp\Promise;
+use Amp\{ Coroutine, Deferred, Promise };
 
 abstract class AbstractPool implements Pool {
     /** @var \SplQueue */

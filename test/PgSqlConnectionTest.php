@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\Connection;
-use Amp\Postgres\PgSqlConnection;
+use Amp\Postgres\{ Connection, PgSqlConnection };
 
 /**
  * @requires extension pgsql

@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Iterator;
-use Amp\Promise;
+use Amp\{ Iterator, Promise };
 
 class Listener implements Iterator, Operation {
     use Internal\Operation;
