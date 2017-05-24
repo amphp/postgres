@@ -24,7 +24,7 @@ composer require amphp/postgres
 
 You can also manually edit `composer.json` to add this library as a project requirement.
 
-```js
+```json
 // composer.json
 {
     "require": {
@@ -43,7 +43,7 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Amp\Postgres;
 
-Amp\execute(function () {
+Amp\Loop::run(function () {
     /** @var \Amp\Postgres\Connection $connection */
     $connection = yield Postgres\connect('host=localhost user=postgres dbname=test');
 
@@ -53,7 +53,7 @@ Amp\execute(function () {
     /** @var \Amp\Postgres\TupleResult $result */
     $result = yield $statement->execute(1337);
 
-    while (yield $result->next()) {
+    while (yield $result->advance()) {
         $row = $result->getCurrent();
         // $row is an array (map) of column values. e.g.: $row['column_name']
     }
