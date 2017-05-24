@@ -8,7 +8,7 @@ interface Executor {
     /**
      * @param string $sql
      *
-     * @return \Amp\Promise<\Amp\Postgres\Result>
+     * @return \Amp\Promise<\Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult>
      *
      * @throws \Amp\Postgres\FailureException
      */
@@ -18,7 +18,7 @@ interface Executor {
      * @param string $sql
      * @param mixed ...$params
      *
-     * @return \Amp\Promise<\Amp\Postgres\Result>
+     * @return \Amp\Promise<\Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult>
      *
      * @throws \Amp\Postgres\FailureException
      */
