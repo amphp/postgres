@@ -36,8 +36,10 @@ class Listener implements Iterator, Operation {
 
     /**
      * {@inheritdoc}
+     *
+     * @return \Amp\Postgres\Notification
      */
-    public function getCurrent() {
+    public function getCurrent(): Notification {
         return $this->iterator->getCurrent();
     }
 

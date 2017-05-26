@@ -25,8 +25,10 @@ abstract class TupleResult implements Iterator {
 
     /**
      * {@inheritdoc}
+     *
+     * @return mixed[] Map of column values.
      */
-    public function getCurrent() {
+    public function getCurrent(): array {
         return $this->iterator->getCurrent();
     }
 
