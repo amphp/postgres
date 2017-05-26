@@ -14,6 +14,8 @@ class PqConnectionTest extends AbstractConnectionTest {
     public function createConnection(string $connectionString): Connection {
         $this->handle = new \pq\Connection($connectionString);
 
+        $this->handle->exec("DROP TABLE IF EXISTS test");
+
         $result = $this->handle->exec("CREATE TABLE test (domain VARCHAR(63), tld VARCHAR(63), PRIMARY KEY (domain, tld))");
 
         if (!$result) {

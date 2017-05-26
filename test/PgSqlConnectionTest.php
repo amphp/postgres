@@ -15,6 +15,8 @@ class PgSqlConnectionTest extends AbstractConnectionTest {
         $this->handle = \pg_connect($connectionString);
         $socket = \pg_socket($this->handle);
 
+        \pg_query($this->handle, "DROP TABLE IF EXISTS test");
+
         $result = \pg_query($this->handle, "CREATE TABLE test (domain VARCHAR(63), tld VARCHAR(63), PRIMARY KEY (domain, tld))");
 
         if (!$result) {
