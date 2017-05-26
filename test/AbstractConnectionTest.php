@@ -2,10 +2,11 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\{ Coroutine, Delayed, Loop };
-use Amp\Postgres\{ CommandResult, Connection, QueryError, Transaction, TransactionError, TupleResult };
+use Amp\Loop;
+use Amp\Postgres\{ CommandResult, Connection, Transaction, TransactionError, TupleResult };
+use PHPUnit\Framework\TestCase;
 
-abstract class AbstractConnectionTest extends \PHPUnit_Framework_TestCase {
+abstract class AbstractConnectionTest extends TestCase {
     /** @var \Amp\Postgres\Connection */
     protected $connection;
 

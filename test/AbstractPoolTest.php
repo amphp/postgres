@@ -4,8 +4,9 @@ namespace Amp\Postgres\Test;
 
 use Amp\{ Loop, Promise, Success, function call };
 use Amp\Postgres\{ CommandResult, Connection, Statement, Transaction, TupleResult };
+use PHPUnit\Framework\TestCase;
 
-abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
+abstract class AbstractPoolTest extends TestCase {
     /**
      * @param array $connections
      *
@@ -101,12 +102,17 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
 
         $pool = $this->createPool($connections);
 
-
-        Loop::run(function () use ($count, $rounds, $pool, $method, $params) {
+        Loop::run(function () use ($resultClass, $count, $rounds, $pool, $method, $params) {
             $promises = [];
 
             for ($i = 0; $i < $count * $rounds; ++$i) {
                 $promises[] = $pool->{$method}(...$params);
+            }
+
+            $results = yield Promise\all($promises);
+
+            foreach ($results as $result) {
+                $this->assertInstanceOf($resultClass, $result);
             }
         });
     }
@@ -170,16 +176,21 @@ abstract class AbstractPoolTest extends \PHPUnit_Framework_TestCase {
 
         Loop::run(function () use ($count, $rounds, $pool) {
             $promises = [];
-            for ($i = 0; $i < $count * $rounds; ++$i) {
+            for ($i = 0; $i < $count; ++$i) {
                 $promises[] = $pool->transaction(Transaction::COMMITTED);
             }
 
-            yield Promise\all(\array_map(function (Promise $promise) {
+            $results = yield Promise\all(\array_map(function (Promise $promise) {
                 return call(function () use ($promise) {
                     $transaction = yield $promise;
-                    return $transaction->rollback();
+                    $this->assertInstanceOf(Transaction::class, $transaction);
+                    return yield $transaction->rollback();
                 });
             }, $promises));
+
+            foreach ($results as $result) {
+                $this->assertInstanceof(CommandResult::class, $result);
+            }
         });
     }
 }
