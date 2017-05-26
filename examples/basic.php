@@ -6,13 +6,11 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use Amp\Postgres;
 
 Amp\Loop::run(function () {
-    $pool = Postgres\pool('host=localhost user=postgres');
-
-    /** @var \Amp\Postgres\Statement $statement */
-    $statement = yield $pool->prepare('SHOW ALL');
+    /** @var \Amp\Postgres\Connection $connection */
+    $connection = yield Postgres\connect('host=localhost user=postgres');
 
     /** @var \Amp\Postgres\TupleResult $result */
-    $result = yield $statement->execute();
+    $result = yield $connection->query('SHOW ALL');
 
     while (yield $result->advance()) {
         $row = $result->getCurrent();

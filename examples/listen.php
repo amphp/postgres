@@ -16,21 +16,20 @@ Loop::run(function () {
 
     printf("Listening on channel '%s'\n", $listener->getChannel());
 
-    Loop::delay(3000, Amp\wrap(function () use ($listener) { // Unlisten in 3 seconds.
+    Loop::delay(3000, function () use ($listener) { // Unlisten in 3 seconds.
         printf("Unlistening from channel '%s'\n", $listener->getChannel());
         return $listener->unlisten();
-    }));
+    });
 
-    Loop::delay(1000, Amp\wrap(function () use ($pool, $channel) {
+    Loop::delay(1000, function () use ($pool, $channel) {
         return $pool->notify($channel, "Data 1"); // Send first notification.
-    }));
+    });
 
-    Loop::delay(2000, Amp\wrap(function () use ($pool, $channel) {
+    Loop::delay(2000, function () use ($pool, $channel) {
         return $pool->notify($channel, "Data 2"); // Send second notification.
-    }));
+    });
 
     while (yield $listener->advance()) {
-        /** @var \Amp\Postgres\Notification $notification */
         $notification = $listener->getCurrent();
         printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",
