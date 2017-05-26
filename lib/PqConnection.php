@@ -37,7 +37,6 @@ class PqConnection extends AbstractConnection {
                     return;
 
                 case pq\Connection::POLLING_OK:
-                case \PGSQL_POLLING_OK:
                     $deferred->resolve(new self($connection));
                     return;
             }
