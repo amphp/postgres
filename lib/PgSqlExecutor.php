@@ -59,16 +59,13 @@ class PgSqlExecutor implements Executor {
             }
 
             if (!$status) {
-                Loop::disable($watcher);
                 $deferred->fail(new FailureException(\pg_last_error($handle)));
-                return;
+            } elseif (!\pg_connection_busy($handle)) {
+                $deferred->resolve(\pg_get_result($handle));
             }
 
-            if (!\pg_connection_busy($handle)) {
-                if (empty($listeners)) {
-                    Loop::disable($watcher);
-                }
-                $deferred->resolve(\pg_get_result($handle));
+            if (!\pg_connection_busy($handle) && empty($listeners)) {
+                Loop::disable($watcher);
             }
         });
 
@@ -115,14 +112,11 @@ class PgSqlExecutor implements Executor {
      * @resolve resource
      *
      * @throws \Amp\Postgres\FailureException
+     * @throws \Amp\Postgres\PendingOperationError
      */
     private function send(callable $function, ...$args): \Generator {
-        while ($this->deferred !== null) {
-            try {
-                yield $this->deferred->promise();
-            } catch (\Throwable $exception) {
-                // Ignore failure from another operation.
-            }
+        if ($this->deferred !== null) {
+            throw new PendingOperationError;
         }
 
         $result = $function($this->handle, ...$args);

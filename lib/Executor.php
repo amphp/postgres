@@ -20,7 +20,9 @@ interface Executor {
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult>
      *
-     * @throws \Amp\Postgres\FailureException
+     * @throws \Amp\Postgres\FailureException If the operation fails due to unexpected condition.
+     * @throws \Amp\Postgres\QueryError If the operation fails due to an error in the query (such as a syntax error).
+     * @throws \Amp\Postgres\PendingOperationError If another operation is currently pending on the connection.
      */
     public function execute(string $sql, ...$params): Promise;
 
@@ -29,7 +31,9 @@ interface Executor {
      *
      * @return \Amp\Promise<\Amp\Postgres\Statement>
      *
-     * @throws \Amp\Postgres\FailureException
+     * @throws \Amp\Postgres\FailureException If the operation fails due to unexpected condition.
+     * @throws \Amp\Postgres\QueryError If the operation fails due to an error in the query (such as a syntax error).
+     * @throws \Amp\Postgres\PendingOperationError If another operation is currently pending on the connection.
      */
     public function prepare(string $sql): Promise;
 
@@ -38,6 +42,9 @@ interface Executor {
      * @param string $payload Notification payload.
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult>
+     *
+     * @throws \Amp\Postgres\FailureException If the operation fails due to unexpected condition.
+     * @throws \Amp\Postgres\PendingOperationError If another operation is currently pending on the connection.
      */
     public function notify(string $channel, string $payload = ""): Promise;
 }

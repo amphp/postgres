@@ -41,7 +41,7 @@ class Transaction implements Executor, Operation {
     }
 
     /**
-     * @return bool
+     * @return bool True if the transaction is active, false if it has been committed or rolled back.
      */
     public function isActive(): bool {
         return $this->executor !== null;
@@ -56,6 +56,8 @@ class Transaction implements Executor, Operation {
 
     /**
      * {@inheritdoc}
+     *
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function query(string $sql): Promise {
         if ($this->executor === null) {
@@ -67,6 +69,8 @@ class Transaction implements Executor, Operation {
 
     /**
      * {@inheritdoc}
+     *
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function prepare(string $sql): Promise {
         if ($this->executor === null) {
@@ -78,6 +82,8 @@ class Transaction implements Executor, Operation {
 
     /**
      * {@inheritdoc}
+     *
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function execute(string $sql, ...$params): Promise {
         if ($this->executor === null) {
@@ -90,6 +96,8 @@ class Transaction implements Executor, Operation {
 
     /**
      * {@inheritdoc}
+     *
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function notify(string $channel, string $payload = ""): Promise {
         if ($this->executor === null) {
@@ -104,7 +112,7 @@ class Transaction implements Executor, Operation {
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function commit(): Promise {
         return new Coroutine($this->doCommit());
@@ -132,7 +140,7 @@ class Transaction implements Executor, Operation {
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function rollback(): Promise {
         return new Coroutine($this->doRollback());
@@ -162,7 +170,7 @@ class Transaction implements Executor, Operation {
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function savepoint(string $identifier): Promise {
         return $this->query("SAVEPOINT " . $identifier);
@@ -176,7 +184,7 @@ class Transaction implements Executor, Operation {
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function rollbackTo(string $identifier): Promise {
         return $this->query("ROLLBACK TO " . $identifier);
@@ -190,7 +198,7 @@ class Transaction implements Executor, Operation {
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError
+     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function release(string $identifier): Promise {
         return $this->query("RELEASE SAVEPOINT " . $identifier);

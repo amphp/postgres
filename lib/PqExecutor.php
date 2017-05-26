@@ -58,20 +58,18 @@ class PqExecutor implements Executor {
 
             if ($status === pq\Connection::POLLING_FAILED) {
                 $deferred->fail(new FailureException($handle->errorMessage));
-                return;
+            } elseif (!$handle->busy) {
+                $deferred->resolve($handle->getResult());
             }
 
-            if (!$handle->busy) {
-                if (empty($listeners)) {
-                    Loop::disable($watcher);
-                }
-                $deferred->resolve($handle->getResult());
+            if (!$handle->busy && empty($listeners)) {
+                Loop::disable($watcher);
             }
         });
 
         $this->await = Loop::onWritable($this->handle->socket, static function ($watcher) use (&$deferred, $handle) {
             if (!$handle->flush()) {
-                return; // Not finished sending data, listen again.
+                return; // Not finished sending data, continue polling for writability.
             }
 
             Loop::disable($watcher);
@@ -105,18 +103,14 @@ class PqExecutor implements Executor {
      * @throws \Amp\Postgres\FailureException
      */
     private function send(callable $method, ...$args): \Generator {
-        while ($this->busy !== null) {
-            yield $this->busy->promise();
+        if ($this->busy) {
+            throw new PendingOperationError;
         }
 
-        $this->busy = new Deferred;
+        $this->busy = true;
 
         try {
-            try {
-                $handle = $method(...$args);
-            } catch (pq\Exception $exception) {
-                throw new FailureException($this->handle->errorMessage, 0, $exception);
-            }
+            $handle = $method(...$args);
 
             $this->deferred = new Deferred;
 
@@ -138,8 +132,10 @@ class PqExecutor implements Executor {
             if (!$result instanceof pq\Result) {
                 throw new FailureException("Unknown query result");
             }
+        } catch (pq\Exception $exception) {
+            throw new FailureException($this->handle->errorMessage, 0, $exception);
         } finally {
-            $this->release();
+            $this->busy = false;
         }
 
         switch ($result->status) {
@@ -153,9 +149,9 @@ class PqExecutor implements Executor {
                 return new PqBufferedResult($result);
 
             case pq\Result::SINGLE_TUPLE:
+                $this->busy = true;
                 $result = new PqUnbufferedResult($this->fetch, $result);
                 $result->onComplete($this->release);
-                $this->busy = new Deferred;
                 return $result;
 
             case pq\Result::NONFATAL_ERROR:
@@ -198,9 +194,7 @@ class PqExecutor implements Executor {
     }
 
     private function release() {
-        $busy = $this->busy;
-        $this->busy = null;
-        $busy->resolve();
+        $this->busy = false;
     }
 
     /**

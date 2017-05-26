@@ -36,46 +36,51 @@ abstract class AbstractConnection implements Connection {
      * @param callable $method Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
-     * @return \Generator
+     * @return \Amp\Promise
      *
      * @throws \Amp\Postgres\FailureException
+     * @throws \Amp\Postgres\PendingOperationError
      */
-    private function send(callable $method, ...$args): \Generator {
-        while ($this->busy !== null) {
-            yield $this->busy->promise();
+    private function send(callable $method, ...$args): Promise {
+        if ($this->busy) {
+            throw new PendingOperationError;
         }
 
-        return $method(...$args);
+        $this->busy = true;
+
+        try {
+            return $method(...$args);
+        } finally {
+            $this->busy = false;
+        }
     }
 
     /**
      * Releases the transaction lock.
      */
     private function release() {
-        $busy = $this->busy;
-        $this->busy = null;
-        $busy->resolve();
+        $this->busy = false;
     }
 
     /**
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
-        return new Coroutine($this->send([$this->executor, "query"], $sql));
+        return $this->send([$this->executor, "query"], $sql);
     }
 
     /**
      * {@inheritdoc}
      */
     public function execute(string $sql, ...$params): Promise {
-        return new Coroutine($this->send([$this->executor, "execute"], $sql, ...$params));
+        return $this->send([$this->executor, "execute"], $sql, ...$params);
     }
 
     /**
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return new Coroutine($this->send([$this->executor, "prepare"], $sql));
+        return $this->send([$this->executor, "prepare"], $sql);
     }
 
 
@@ -83,35 +88,41 @@ abstract class AbstractConnection implements Connection {
      * {@inheritdoc}
      */
     public function notify(string $channel, string $payload = ""): Promise {
-        return new Coroutine($this->send([$this->executor, "notify"], $channel, $payload));
+        return $this->send([$this->executor, "notify"], $channel, $payload);
     }
 
     /**
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        return new Coroutine($this->send([$this->executor, "listen"], $channel));
+        return $this->send([$this->executor, "listen"], $channel);
     }
 
     /**
      * {@inheritdoc}
      */
     public function transaction(int $isolation = Transaction::COMMITTED): Promise {
+        if ($this->busy) {
+            throw new PendingOperationError;
+        }
+
+        $this->busy = true;
+
         switch ($isolation) {
             case Transaction::UNCOMMITTED:
-                $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
+                $promise = $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
                 break;
 
             case Transaction::COMMITTED:
-                $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
+                $promise = $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
                 break;
 
             case Transaction::REPEATABLE:
-                $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+                $promise = $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
                 break;
 
             case Transaction::SERIALIZABLE:
-                $promise = $this->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+                $promise = $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
                 break;
 
             default:
@@ -120,7 +131,6 @@ abstract class AbstractConnection implements Connection {
 
         return call(function () use ($promise, $isolation) {
             yield $promise;
-            $this->busy = new Deferred;
             $transaction = new Transaction($this->executor, $isolation);
             $transaction->onComplete($this->release);
             return $transaction;
