@@ -16,22 +16,8 @@ services:
   - postgresql
 
 install:
-  - git clone https://github.com/m6w6/ext-raphf;
-    pushd ext-raphf;
-    phpize;
-    ./configure;
-    make;
-    make install;
-    popd;
-    echo "extension=raphf.so" >> "$(php -r 'echo php_ini_loaded_file();')";
-  - git clone https://github.com/m6w6/ext-pq;
-    pushd ext-pq;
-    phpize;
-    ./configure;
-    make;
-    make install;
-    popd;
-    echo "extension=pq.so" >> "$(php -r 'echo php_ini_loaded_file();')";
+  - travis/install-raphf.sh
+  - travis/install-pq.sh
   - composer self-update
   # --ignore-platform-reqs, because https://github.com/FriendsOfPHP/PHP-CS-Fixer/pull/2722
   - composer update -n --prefer-dist --ignore-platform-reqs
