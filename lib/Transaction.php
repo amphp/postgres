@@ -2,10 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Coroutine, Promise };
+use Amp\{ CallableMaker, Coroutine, Promise };
 
 class Transaction implements Executor, Operation {
-    use Internal\Operation;
+    use Internal\Operation, CallableMaker;
 
     const UNCOMMITTED  = 0;
     const COMMITTED    = 1;
@@ -17,6 +17,9 @@ class Transaction implements Executor, Operation {
 
     /** @var int */
     private $isolation;
+
+    /** @var callable */
+    private $onResolve;
 
     /**
      * @param \Amp\Postgres\Executor $executor
@@ -38,6 +41,7 @@ class Transaction implements Executor, Operation {
         }
 
         $this->executor = $executor;
+        $this->onResolve = $this->callableFromInstanceMethod("complete");
     }
 
     /**
@@ -115,24 +119,15 @@ class Transaction implements Executor, Operation {
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function commit(): Promise {
-        return new Coroutine($this->doCommit());
-    }
-
-    private function doCommit(): \Generator {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        $executor = $this->executor;
+        $promise = $this->executor->query("COMMIT");
         $this->executor = null;
+        $promise->onResolve($this->onResolve);
 
-        try {
-            $result = yield $executor->query("COMMIT");
-        } finally {
-            $this->complete();
-        }
-
-        return $result;
+        return $promise;
     }
 
     /**
@@ -143,24 +138,15 @@ class Transaction implements Executor, Operation {
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
     public function rollback(): Promise {
-        return new Coroutine($this->doRollback());
-    }
-
-    public function doRollback(): \Generator {
         if ($this->executor === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        $executor = $this->executor;
+        $promise = $this->executor->query("ROLLBACK");
         $this->executor = null;
+        $promise->onResolve($this->onResolve);
 
-        try {
-            $result = yield $executor->query("ROLLBACK");
-        } finally {
-            $this->complete();
-        }
-
-        return $result;
+        return $promise;
     }
 
     /**
