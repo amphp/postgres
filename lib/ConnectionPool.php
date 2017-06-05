@@ -16,6 +16,8 @@ class ConnectionPool extends AbstractPool {
     /**
      * @param string $connectionString
      * @param int $maxConnections
+     *
+     * @throws \Error If $maxConnections is less than 1.
      */
     public function __construct(string $connectionString, int $maxConnections = self::DEFAULT_MAX_CONNECTIONS) {
         parent::__construct();
@@ -23,8 +25,8 @@ class ConnectionPool extends AbstractPool {
         $this->connectionString = $connectionString;
 
         $this->maxConnections = $maxConnections;
-        if (1 > $this->maxConnections) {
-            $this->maxConnections = 1;
+        if ($this->maxConnections < 1) {
+            throw new \Error("Pool must contain at least one connection");
         }
     }
 

@@ -25,4 +25,12 @@ class ConnectionPoolTest extends AbstractPoolTest {
 
         return $mock;
     }
+
+    /**
+     * @expectedException \Error
+     * @expectedExceptionMessage Pool must contain at least one connection
+     */
+    public function testInvalidMaxConnections() {
+        $pool = new ConnectionPool('connection string', 0);
+    }
 }
