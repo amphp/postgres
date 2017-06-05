@@ -33,7 +33,7 @@ abstract class AbstractConnection implements Connection {
     }
 
     /**
-     * @param callable $method Method to execute.
+     * @param string $methodName Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
      * @return \Amp\Promise
@@ -41,7 +41,7 @@ abstract class AbstractConnection implements Connection {
      * @throws \Amp\Postgres\FailureException
      * @throws \Amp\Postgres\PendingOperationError
      */
-    private function send(callable $method, ...$args): Promise {
+    private function send(string $methodName, ...$args): Promise {
         if ($this->busy) {
             throw new PendingOperationError;
         }
@@ -49,7 +49,7 @@ abstract class AbstractConnection implements Connection {
         $this->busy = true;
 
         try {
-            return $method(...$args);
+            return $this->executor->{$methodName}(...$args);
         } finally {
             $this->busy = false;
         }
@@ -66,21 +66,21 @@ abstract class AbstractConnection implements Connection {
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
-        return $this->send([$this->executor, "query"], $sql);
+        return $this->send("query", $sql);
     }
 
     /**
      * {@inheritdoc}
      */
     public function execute(string $sql, ...$params): Promise {
-        return $this->send([$this->executor, "execute"], $sql, ...$params);
+        return $this->send("execute", $sql, ...$params);
     }
 
     /**
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return $this->send([$this->executor, "prepare"], $sql);
+        return $this->send("prepare", $sql);
     }
 
 
@@ -88,14 +88,14 @@ abstract class AbstractConnection implements Connection {
      * {@inheritdoc}
      */
     public function notify(string $channel, string $payload = ""): Promise {
-        return $this->send([$this->executor, "notify"], $channel, $payload);
+        return $this->send("notify", $channel, $payload);
     }
 
     /**
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        return $this->send([$this->executor, "listen"], $channel);
+        return $this->send("listen", $channel);
     }
 
     /**
