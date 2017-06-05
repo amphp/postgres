@@ -19,7 +19,7 @@
         }
     ],
     "require": {
-        "amphp/amp": "^2.0"
+        "amphp/amp": "dev-master as 2.0"
     },
     "require-dev": {
         "amphp/phpunit-util": "dev-master as 0.1",

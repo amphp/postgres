@@ -15,7 +15,7 @@ class FunctionsTest extends TestCase {
 
     public function testConnect() {
         Loop::run(function () {
-            $connection = yield connect('host=localhost user=postgres', 100);
+            $connection = yield connect('host=localhost user=postgres');
             $this->assertInstanceOf(Connection::class, $connection);
         });
     }
@@ -25,7 +25,7 @@ class FunctionsTest extends TestCase {
      */
     public function testConnectInvalidUser() {
         Loop::run(function () {
-            $connection = yield connect('host=localhost user=invalid', 100);
+            $connection = yield connect('host=localhost user=invalid');
         });
     }
 
@@ -34,7 +34,7 @@ class FunctionsTest extends TestCase {
      */
     public function testConnectInvalidConnectionString() {
         Loop::run(function () {
-            $connection = yield connect('invalid connection string', 100);
+            $connection = yield connect('invalid connection string');
         });
     }
 
@@ -43,7 +43,7 @@ class FunctionsTest extends TestCase {
      */
     public function testConnectInvalidHost() {
         Loop::run(function () {
-            $connection = yield connect('hostaddr=invalid.host user=postgres', 100);
+            $connection = yield connect('hostaddr=invalid.host user=postgres');
         });
     }
 }

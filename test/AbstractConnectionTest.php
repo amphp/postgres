@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\CancellationTokenSource;
 use Amp\Loop;
 use Amp\Postgres\{ CommandResult, Connection, Transaction, TransactionError, TupleResult };
 use PHPUnit\Framework\TestCase;
@@ -189,7 +190,7 @@ abstract class AbstractConnectionTest extends TestCase {
     public function testConnectInvalidUser() {
         Loop::run(function () {
             $connect = $this->getConnectCallable();
-            $connection = yield $connect('host=localhost user=invalid', 100);
+            $connection = yield $connect('host=localhost user=invalid');
         });
     }
 
@@ -199,7 +200,7 @@ abstract class AbstractConnectionTest extends TestCase {
     public function testConnectInvalidConnectionString() {
         Loop::run(function () {
             $connect = $this->getConnectCallable();
-            $connection = yield $connect('invalid connection string', 100);
+            $connection = yield $connect('invalid connection string');
         });
     }
 
@@ -209,7 +210,31 @@ abstract class AbstractConnectionTest extends TestCase {
     public function testConnectInvalidHost() {
         Loop::run(function () {
             $connect = $this->getConnectCallable();
-            $connection = yield $connect('hostaddr=invalid.host user=postgres', 100);
+            $connection = yield $connect('hostaddr=invalid.host user=postgres');
+        });
+    }
+
+    /**
+     * @expectedException \Amp\CancelledException
+     */
+    public function testConnectCancellationBeforeConnect() {
+        Loop::run(function () {
+            $connect = $this->getConnectCallable();
+            $source = new CancellationTokenSource;
+            $token = $source->getToken();
+            $source->cancel();
+            $connection = yield $connect('host=localhost user=postgres', $token);
+        });
+    }
+
+    public function testConnectCancellationAfterConnect() {
+        Loop::run(function () {
+            $connect = $this->getConnectCallable();
+            $source = new CancellationTokenSource;
+            $token = $source->getToken();
+            $connection = yield $connect('host=localhost user=postgres', $token);
+            $this->assertInstanceOf(Connection::class, $connection);
+            $source->cancel();
         });
     }
 }

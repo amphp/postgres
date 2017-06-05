@@ -2,17 +2,17 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ Deferred, Failure, Loop, Promise };
+use Amp\{ CancellationToken, Deferred, Failure, Loop, NullCancellationToken, Promise };
 use pq;
 
 class PqConnection extends AbstractConnection {
     /**
      * @param string $connectionString
-     * @param int $timeout
+     * @param \Amp\CancellationToken $token
      *
      * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
      */
-    public static function connect(string $connectionString, int $timeout = 0): Promise {
+    public static function connect(string $connectionString, CancellationToken $token = null): Promise {
         try {
             $connection = new pq\Connection($connectionString, pq\Connection::ASYNC);
         } catch (pq\Exception $exception) {
@@ -33,7 +33,7 @@ class PqConnection extends AbstractConnection {
                     return; // Still writing...
 
                 case pq\Connection::POLLING_FAILED:
-                    $deferred->fail(new FailureException("Could not connect to PostgreSQL server"));
+                    $deferred->fail(new FailureException($connection->errorMessage));
                     return;
 
                 case pq\Connection::POLLING_OK:
@@ -47,11 +47,11 @@ class PqConnection extends AbstractConnection {
 
         $promise = $deferred->promise();
 
-        if ($timeout !== 0) {
-            $promise = Promise\timeout($promise, $timeout);
-        }
+        $token = $token ?? new NullCancellationToken;
+        $id = $token->subscribe([$deferred, "fail"]);
 
-        $promise->onResolve(function () use ($poll, $await) {
+        $promise->onResolve(function () use ($poll, $await, $id, $token) {
+            $token->unsubscribe($id);
             Loop::cancel($poll);
             Loop::cancel($await);
         });

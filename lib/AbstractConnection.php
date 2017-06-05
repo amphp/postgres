@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Deferred, Promise, function call };
+use Amp\{ CallableMaker, CancellationToken, Promise, function call };
 
 abstract class AbstractConnection implements Connection {
     use CallableMaker;
@@ -18,11 +18,11 @@ abstract class AbstractConnection implements Connection {
 
     /**
      * @param string $connectionString
-     * @param int $timeout Timeout until the connection attempt fails. 0 for no timeout.
+     * @param \Amp\CancellationToken $token
      *
      * @return \Amp\Promise<\Amp\Postgres\Connection>
      */
-    abstract public static function connect(string $connectionString, int $timeout = 0): Promise;
+    abstract public static function connect(string $connectionString, CancellationToken $token = null): Promise;
 
     /**
      * @param $executor;
