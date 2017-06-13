@@ -211,7 +211,7 @@ class PgSqlExecutor implements Executor {
      */
     public function notify(string $channel, string $payload = ""): Promise {
         if ($payload === "") {
-            return $this->query(\sprintf("NOTIFY %s"));
+            return $this->query(\sprintf("NOTIFY %s", $channel));
         }
 
         return $this->query(\sprintf("NOTIFY %s, '%s'", $channel, $payload));
@@ -222,10 +222,19 @@ class PgSqlExecutor implements Executor {
      */
     public function listen(string $channel): Promise {
         return call(function () use ($channel) {
-            yield $this->query(\sprintf("LISTEN %s"));
+            if (isset($this->listeners[$channel])) {
+                throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
+            }
 
-            $emitter = new Emitter;
-            $this->listeners[$channel] = $emitter;
+            $this->listeners[$channel] = $emitter =  new Emitter;
+
+            try {
+                yield $this->query(\sprintf("LISTEN %s", $channel));
+            } catch (\Throwable $exception) {
+                unset($this->listeners[$channel]);
+                throw $exception;
+            }
+
             Loop::enable($this->poll);
             return new Listener($emitter->iterate(), $channel, $this->unlisten);
         });

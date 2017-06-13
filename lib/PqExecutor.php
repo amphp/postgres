@@ -230,19 +230,28 @@ class PqExecutor implements Executor {
      */
     public function listen(string $channel): Promise {
         return call(function () use ($channel) {
-            $emitter = new Emitter;
-            yield from $this->send(
-                [$this->handle, "listenAsync"],
-                $channel,
-                static function (string $channel, string $message, int $pid) use ($emitter) {
-                    $notification = new Notification;
-                    $notification->channel = $channel;
-                    $notification->pid = $pid;
-                    $notification->payload = $message;
-                    $emitter->emit($notification);
-                });
+            if (isset($this->listeners[$channel])) {
+                throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
+            }
 
-            $this->listeners[$channel] = $emitter;
+            $this->listeners[$channel] = $emitter = new Emitter;
+
+            try {
+                yield from $this->send(
+                    [$this->handle, "listenAsync"],
+                    $channel,
+                    static function (string $channel, string $message, int $pid) use ($emitter) {
+                        $notification = new Notification;
+                        $notification->channel = $channel;
+                        $notification->pid = $pid;
+                        $notification->payload = $message;
+                        $emitter->emit($notification);
+                    });
+            } catch (\Throwable $exception) {
+                unset($this->listeners[$channel]);
+                throw $exception;
+            }
+
             Loop::enable($this->poll);
             return new Listener($emitter->iterate(), $channel, $this->unlisten);
         });

@@ -4,7 +4,9 @@ namespace Amp\Postgres\Test;
 
 use Amp\CancellationTokenSource;
 use Amp\Loop;
-use Amp\Postgres\{ CommandResult, Connection, Transaction, TransactionError, TupleResult };
+use Amp\Postgres\{
+    CommandResult, Connection, Listener, Transaction, TransactionError, TupleResult
+};
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractConnectionTest extends TestCase {
@@ -173,6 +175,66 @@ abstract class AbstractConnectionTest extends TestCase {
             } catch (TransactionError $exception) {
                 // Exception expected.
             }
+        });
+    }
+
+    public function testListen() {
+        Loop::run(function () {
+            $channel = "test";
+            /** @var \Amp\Postgres\Listener $listener */
+            $listener = yield $this->connection->listen($channel);
+
+            $this->assertInstanceOf(Listener::class, $listener);
+
+            yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
+            yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
+
+            $count = 0;
+            Loop::defer(function () use (&$count, $listener) {
+                $listener->unlisten();
+                $this->assertSame(2, $count);
+            });
+
+            while (yield $listener->advance()) {
+                $this->assertSame($listener->getCurrent()->payload, (string) $count++);
+            }
+        });
+    }
+
+    /**
+     * @depends testListen
+     */
+    public function testNotify() {
+        Loop::run(function () {
+            $channel = "test";
+            /** @var \Amp\Postgres\Listener $listener */
+            $listener = yield $this->connection->listen($channel);
+
+            yield $this->connection->notify($channel, '0');
+            yield $this->connection->notify($channel, '1');
+
+            $count = 0;
+            Loop::defer(function () use (&$count, $listener) {
+                $listener->unlisten();
+                $this->assertSame(2, $count);
+            });
+
+            while (yield $listener->advance()) {
+                $this->assertSame($listener->getCurrent()->payload, (string) $count++);
+            }
+        });
+    }
+
+    /**
+     * @depends testListen
+     * @expectedException \Amp\Postgres\QueryError
+     * @expectedExceptionMessage Already listening on channel
+     */
+    public function testListenOnSameChannel() {
+        Loop::run(function () {
+            $channel = "test";
+            $listener = yield $this->connection->listen($channel);
+            $listener = yield $this->connection->listen($channel);
         });
     }
 
