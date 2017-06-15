@@ -2,11 +2,8 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\CancellationTokenSource;
 use Amp\Loop;
-use Amp\Postgres\{
-    CommandResult, Connection, Listener, Transaction, TransactionError, TupleResult
-};
+use Amp\Postgres\{ CommandResult, Connection, Listener, Transaction, TransactionError, TupleResult };
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractConnectionTest extends TestCase {
@@ -25,9 +22,12 @@ abstract class AbstractConnectionTest extends TestCase {
         ];
     }
 
+    /**
+     * @param string $connectionString
+     *
+     * @return \Amp\Postgres\Connection Connection object to be tested.
+     */
     abstract public function createConnection(string $connectionString): Connection;
-
-    abstract public function getConnectCallable(): callable;
 
     public function setUp() {
         $this->connection = $this->createConnection('host=localhost user=postgres');
@@ -235,68 +235,6 @@ abstract class AbstractConnectionTest extends TestCase {
             $channel = "test";
             $listener = yield $this->connection->listen($channel);
             $listener = yield $this->connection->listen($channel);
-        });
-    }
-
-    public function testConnect() {
-        Loop::run(function () {
-            $connect = $this->getConnectCallable();
-            $connection = yield $connect('host=localhost user=postgres');
-            $this->assertInstanceOf(Connection::class, $connection);
-        });
-    }
-
-    /**
-     * @expectedException \Amp\Postgres\FailureException
-     */
-    public function testConnectInvalidUser() {
-        Loop::run(function () {
-            $connect = $this->getConnectCallable();
-            $connection = yield $connect('host=localhost user=invalid');
-        });
-    }
-
-    /**
-     * @expectedException \Amp\Postgres\FailureException
-     */
-    public function testConnectInvalidConnectionString() {
-        Loop::run(function () {
-            $connect = $this->getConnectCallable();
-            $connection = yield $connect('invalid connection string');
-        });
-    }
-
-    /**
-     * @expectedException \Amp\Postgres\FailureException
-     */
-    public function testConnectInvalidHost() {
-        Loop::run(function () {
-            $connect = $this->getConnectCallable();
-            $connection = yield $connect('hostaddr=invalid.host user=postgres');
-        });
-    }
-
-    /**
-     * @expectedException \Amp\CancelledException
-     */
-    public function testConnectCancellationBeforeConnect() {
-        Loop::run(function () {
-            $connect = $this->getConnectCallable();
-            $source = new CancellationTokenSource;
-            $token = $source->getToken();
-            $source->cancel();
-            $connection = yield $connect('host=localhost user=postgres', $token);
-        });
-    }
-
-    public function testConnectCancellationAfterConnect() {
-        Loop::run(function () {
-            $connect = $this->getConnectCallable();
-            $source = new CancellationTokenSource;
-            $token = $source->getToken();
-            $connection = yield $connect('host=localhost user=postgres', $token);
-            $this->assertInstanceOf(Connection::class, $connection);
-            $source->cancel();
         });
     }
 }

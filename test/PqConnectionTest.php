@@ -33,10 +33,6 @@ class PqConnectionTest extends AbstractConnectionTest {
         return new PqConnection($this->handle);
     }
 
-    public function getConnectCallable(): callable {
-        return [PqConnection::class, 'connect'];
-    }
-
     public function tearDown() {
         $this->handle->exec("ROLLBACK");
         $this->handle->exec("DROP TABLE test");

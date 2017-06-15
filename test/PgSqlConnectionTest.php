@@ -34,10 +34,6 @@ class PgSqlConnectionTest extends AbstractConnectionTest {
         return new PgSqlConnection($this->handle, $socket);
     }
 
-    public function getConnectCallable(): callable {
-        return [PgSqlConnection::class, 'connect'];
-    }
-
     public function tearDown() {
         \pg_query($this->handle, "ROLLBACK");
         \pg_query($this->handle, "DROP TABLE test");
