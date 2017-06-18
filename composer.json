@@ -19,15 +19,13 @@
         }
     ],
     "require": {
-        "amphp/amp": "dev-master as 2.0"
+        "amphp/amp": "^2"
     },
     "require-dev": {
-        "amphp/phpunit-util": "dev-master as 0.1",
+        "amphp/phpunit-util": "^1",
         "phpunit/phpunit": "^6",
         "friendsofphp/php-cs-fixer": "^2.3"
     },
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "Amp\\Postgres\\": "lib"
