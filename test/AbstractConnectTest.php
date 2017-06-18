@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\{ CancellationToken, CancellationTokenSource, Loop, Promise };
+use Amp\{ CancellationToken, CancellationTokenSource, Loop, Promise, TimeoutCancellationToken };
 use Amp\Postgres\Connection;
 use PHPUnit\Framework\TestCase;
 
@@ -17,7 +17,7 @@ abstract class AbstractConnectTest extends TestCase {
 
     public function testConnect() {
         Loop::run(function () {
-            $connection = yield $this->connect('host=localhost user=postgres');
+            $connection = yield $this->connect('host=localhost user=postgres', new TimeoutCancellationToken(100));
             $this->assertInstanceOf(Connection::class, $connection);
         });
     }
@@ -54,7 +54,7 @@ abstract class AbstractConnectTest extends TestCase {
      */
     public function testConnectInvalidUser() {
         Loop::run(function () {
-            $connection = yield $this->connect('host=localhost user=invalid');
+            $connection = yield $this->connect('host=localhost user=invalid', new TimeoutCancellationToken(100));
         });
     }
 
@@ -64,7 +64,7 @@ abstract class AbstractConnectTest extends TestCase {
      */
     public function testConnectInvalidConnectionString() {
         Loop::run(function () {
-            $connection = yield $this->connect('invalid connection string');
+            $connection = yield $this->connect('invalid connection string', new TimeoutCancellationToken(100));
         });
     }
 
@@ -74,7 +74,7 @@ abstract class AbstractConnectTest extends TestCase {
      */
     public function testConnectInvalidHost() {
         Loop::run(function () {
-            $connection = yield $this->connect('hostaddr=invalid.host user=postgres');
+            $connection = yield $this->connect('hostaddr=invalid.host user=postgres', new TimeoutCancellationToken(100));
         });
     }
 }
