@@ -50,13 +50,16 @@ class PgSqlExecutor implements Executor {
 
             while ($result = \pg_get_notify($handle, \PGSQL_ASSOC)) {
                 $channel = $result["message"];
-                if (isset($listeners[$channel])) {
-                    $notification = new Notification;
-                    $notification->channel = $channel;
-                    $notification->pid = $result["pid"];
-                    $notification->payload = $result["payload"];
-                    $listeners[$channel]->emit($notification);
+
+                if (!isset($listeners[$channel])) {
+                    return;
                 }
+
+                $notification = new Notification;
+                $notification->channel = $channel;
+                $notification->pid = $result["pid"];
+                $notification->payload = $result["payload"];
+                $listeners[$channel]->emit($notification);
             }
 
             if ($deferred === null) {
@@ -76,7 +79,7 @@ class PgSqlExecutor implements Executor {
 
         $this->await = Loop::onWritable($socket, static function ($watcher) use (&$deferred, $handle) {
             $flush = \pg_flush($handle);
-            if (0 === $flush) {
+            if ($flush === 0) {
                 return; // Not finished sending data, listen again.
             }
 
@@ -231,7 +234,7 @@ class PgSqlExecutor implements Executor {
                 throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
             }
 
-            $this->listeners[$channel] = $emitter =  new Emitter;
+            $this->listeners[$channel] = $emitter = new Emitter;
 
             try {
                 yield $this->query(\sprintf("LISTEN %s", $channel));
@@ -265,9 +268,7 @@ class PgSqlExecutor implements Executor {
         }
 
         $promise = $this->query(\sprintf("UNLISTEN %s", $channel));
-        $promise->onResolve(function () use ($emitter) {
-            $emitter->complete();
-        });
+        $promise->onResolve([$emitter, "complete"]);
         return $promise;
     }
 }

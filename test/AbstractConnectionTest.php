@@ -10,6 +10,7 @@ use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
 use Amp\Postgres\TupleResult;
 use PHPUnit\Framework\TestCase;
+use function Amp\asyncCall;
 
 abstract class AbstractConnectionTest extends TestCase {
     /** @var \Amp\Postgres\Connection */
@@ -191,18 +192,21 @@ abstract class AbstractConnectionTest extends TestCase {
 
             $this->assertInstanceOf(Listener::class, $listener);
 
-            yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
-            yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
+            asyncCall(function () use ($channel) {
+                yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
+                yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
+            });
 
             $count = 0;
-            Loop::defer(function () use (&$count, $listener) {
+            Loop::delay(100, function () use ($listener) {
                 $listener->unlisten();
-                $this->assertSame(2, $count);
             });
 
             while (yield $listener->advance()) {
                 $this->assertSame($listener->getCurrent()->payload, (string) $count++);
             }
+
+            $this->assertSame(2, $count);
         });
     }
 
@@ -215,18 +219,21 @@ abstract class AbstractConnectionTest extends TestCase {
             /** @var \Amp\Postgres\Listener $listener */
             $listener = yield $this->connection->listen($channel);
 
-            yield $this->connection->notify($channel, '0');
-            yield $this->connection->notify($channel, '1');
+            asyncCall(function () use ($channel) {
+                yield $this->connection->notify($channel, '0');
+                yield $this->connection->notify($channel, '1');
+            });
 
             $count = 0;
-            Loop::defer(function () use (&$count, $listener) {
+            Loop::delay(100, function () use ($listener) {
                 $listener->unlisten();
-                $this->assertSame(2, $count);
             });
 
             while (yield $listener->advance()) {
                 $this->assertSame($listener->getCurrent()->payload, (string) $count++);
             }
+
+            $this->assertSame(2, $count);
         });
     }
 
