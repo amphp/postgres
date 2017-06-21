@@ -2,7 +2,12 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CancellationToken, Deferred, Failure, Loop, NullCancellationToken, Promise };
+use Amp\CancellationToken;
+use Amp\Deferred;
+use Amp\Failure;
+use Amp\Loop;
+use Amp\NullCancellationToken;
+use Amp\Promise;
 use pq;
 
 class PqConnection extends AbstractConnection {

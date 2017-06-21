@@ -2,9 +2,16 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\{ Loop, Promise, Success, function call };
-use Amp\Postgres\{ CommandResult, Connection, Statement, Transaction, TupleResult };
+use Amp\Loop;
+use Amp\Postgres\CommandResult;
+use Amp\Postgres\Connection;
+use Amp\Postgres\Statement;
+use Amp\Postgres\Transaction;
+use Amp\Postgres\TupleResult;
+use Amp\Promise;
+use Amp\Success;
 use PHPUnit\Framework\TestCase;
+use function Amp\call;
 
 abstract class AbstractPoolTest extends TestCase {
     /**

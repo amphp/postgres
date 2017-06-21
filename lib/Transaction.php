@@ -2,7 +2,8 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Coroutine, Promise };
+use Amp\CallableMaker;
+use Amp\Promise;
 
 class Transaction implements Executor, Operation {
     use Internal\Operation, CallableMaker;

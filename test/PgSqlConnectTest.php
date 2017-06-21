@@ -2,8 +2,9 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\{ CancellationToken, Promise };
+use Amp\CancellationToken;
 use Amp\Postgres\PgSqlConnection;
+use Amp\Promise;
 
 /**
  * @requires extension pgsql

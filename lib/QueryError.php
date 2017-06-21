@@ -2,4 +2,5 @@
 
 namespace Amp\Postgres;
 
-class QueryError extends \Error {}
+class QueryError extends \Error {
+}

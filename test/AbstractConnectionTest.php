@@ -3,7 +3,12 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Loop;
-use Amp\Postgres\{ CommandResult, Connection, Listener, Transaction, TransactionError, TupleResult };
+use Amp\Postgres\CommandResult;
+use Amp\Postgres\Connection;
+use Amp\Postgres\Listener;
+use Amp\Postgres\Transaction;
+use Amp\Postgres\TransactionError;
+use Amp\Postgres\TupleResult;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractConnectionTest extends TestCase {

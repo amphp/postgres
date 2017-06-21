@@ -3,8 +3,9 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Loop;
-use Amp\Postgres\{ Connection, function connect };
+use Amp\Postgres\Connection;
 use PHPUnit\Framework\TestCase;
+use function Amp\Postgres\connect;
 
 class FunctionsTest extends TestCase {
     public function setUp() {

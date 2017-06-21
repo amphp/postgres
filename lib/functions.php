@@ -2,7 +2,8 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CancellationToken, Promise };
+use Amp\CancellationToken;
+use Amp\Promise;
 
 /**
  * @param string $connectionString

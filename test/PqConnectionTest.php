@@ -2,7 +2,8 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\{ Connection, PqConnection };
+use Amp\Postgres\Connection;
+use Amp\Postgres\PqConnection;
 
 /**
  * @requires extension pq

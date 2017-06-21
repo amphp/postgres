@@ -2,7 +2,12 @@
 
 namespace Amp\Postgres;
 
-use Amp\{ CallableMaker, Deferred, Emitter, Loop, Promise, function call };
+use Amp\CallableMaker;
+use Amp\Deferred;
+use Amp\Emitter;
+use Amp\Loop;
+use Amp\Promise;
+use function Amp\call;
 
 class PgSqlExecutor implements Executor {
     use CallableMaker;

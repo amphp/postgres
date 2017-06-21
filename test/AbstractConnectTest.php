@@ -2,8 +2,12 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\{ CancellationToken, CancellationTokenSource, Loop, Promise, TimeoutCancellationToken };
+use Amp\CancellationToken;
+use Amp\CancellationTokenSource;
+use Amp\Loop;
 use Amp\Postgres\Connection;
+use Amp\Promise;
+use Amp\TimeoutCancellationToken;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractConnectTest extends TestCase {
