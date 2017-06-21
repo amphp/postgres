@@ -10,7 +10,6 @@ use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
 use Amp\Postgres\TupleResult;
 use PHPUnit\Framework\TestCase;
-use function Amp\asyncCall;
 
 abstract class AbstractConnectionTest extends TestCase {
     /** @var \Amp\Postgres\Connection */
@@ -192,13 +191,13 @@ abstract class AbstractConnectionTest extends TestCase {
 
             $this->assertInstanceOf(Listener::class, $listener);
 
-            asyncCall(function () use ($channel) {
+            Loop::delay(100, function () use ($channel) {
                 yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
                 yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
             });
 
             $count = 0;
-            Loop::delay(100, function () use ($listener) {
+            Loop::delay(200, function () use ($listener) {
                 $listener->unlisten();
             });
 
@@ -219,13 +218,13 @@ abstract class AbstractConnectionTest extends TestCase {
             /** @var \Amp\Postgres\Listener $listener */
             $listener = yield $this->connection->listen($channel);
 
-            asyncCall(function () use ($channel) {
+            Loop::delay(100, function () use ($channel) {
                 yield $this->connection->notify($channel, '0');
                 yield $this->connection->notify($channel, '1');
             });
 
             $count = 0;
-            Loop::delay(100, function () use ($listener) {
+            Loop::delay(200, function () use ($listener) {
                 $listener->unlisten();
             });
 
