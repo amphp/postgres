@@ -46,7 +46,12 @@ class PgSqlExecutor implements Executor {
         $listeners = &$this->listeners;
 
         $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$listeners, $handle) {
-            $status = \pg_consume_input($handle);
+            if (!\pg_consume_input($handle)) {
+                if ($deferred !== null) {
+                    $deferred->fail(new FailureException(\pg_last_error($handle)));
+                }
+                return;
+            }
 
             while ($result = \pg_get_notify($handle, \PGSQL_ASSOC)) {
                 $channel = $result["message"];
@@ -66,13 +71,13 @@ class PgSqlExecutor implements Executor {
                 return; // No active query, only notification listeners.
             }
 
-            if (!$status) {
-                $deferred->fail(new FailureException(\pg_last_error($handle)));
-            } elseif (!\pg_connection_busy($handle)) {
-                $deferred->resolve(\pg_get_result($handle));
+            if (\pg_connection_busy($handle)) {
+                return;
             }
 
-            if (!\pg_connection_busy($handle) && empty($listeners)) {
+            $deferred->resolve(\pg_get_result($handle));
+
+            if (empty($listeners)) {
                 Loop::disable($watcher);
             }
         });
