@@ -6,6 +6,9 @@ use Amp\Promise;
 
 class PgSqlStatement implements Statement {
     /** @var string */
+    private $name;
+
+    /** @var string */
     private $sql;
 
     /** @var callable */
@@ -15,7 +18,8 @@ class PgSqlStatement implements Statement {
      * @param string $sql
      * @param callable $execute
      */
-    public function __construct(string $sql, callable $execute) {
+    public function __construct(string $name, string $sql, callable $execute) {
+        $this->name = $name;
         $this->sql = $sql;
         $this->execute = $execute;
     }
@@ -35,6 +39,6 @@ class PgSqlStatement implements Statement {
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
     public function execute(...$params): Promise {
-        return ($this->execute)(sha1($this->sql), $params);
+        return ($this->execute)($this->name, $params);
     }
 }

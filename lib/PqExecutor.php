@@ -215,14 +215,14 @@ class PqExecutor implements Executor {
      * {@inheritdoc}
      */
     public function execute(string $sql, ...$params): Promise {
-        return new Coroutine($this->send([$this->handle, "execParamsAsync"], sha1($sql), $params));
+        return new Coroutine($this->send([$this->handle, "execParamsAsync"], $sql, $params));
     }
 
     /**
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return new Coroutine($this->send([$this->handle, "prepareAsync"], sha1($sql), $sql));
+        return new Coroutine($this->send([$this->handle, "prepareAsync"], "amphp" .sha1($sql), $sql));
     }
 
     /**
