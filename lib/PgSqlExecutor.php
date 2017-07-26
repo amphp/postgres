@@ -205,7 +205,7 @@ class PgSqlExecutor implements Executor {
      */
     public function execute(string $sql, ...$params): Promise {
         return call(function () use ($sql, $params) {
-            return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params));
+            return $this->createResult(yield from $this->send("pg_send_query_params", sha1($sql), $params));
         });
     }
 
@@ -214,7 +214,7 @@ class PgSqlExecutor implements Executor {
      */
     public function prepare(string $sql): Promise {
         return call(function () use ($sql) {
-            yield from $this->send("pg_send_prepare", $sql, $sql);
+            yield from $this->send("pg_send_prepare", sha1($sql), $sql);
             return new PgSqlStatement($sql, $this->executeCallback);
         });
     }
