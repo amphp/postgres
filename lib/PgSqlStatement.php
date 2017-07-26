@@ -35,6 +35,6 @@ class PgSqlStatement implements Statement {
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
     public function execute(...$params): Promise {
-        return ($this->execute)($this->sql, $params);
+        return ($this->execute)(sha1($this->sql), $params);
     }
 }
