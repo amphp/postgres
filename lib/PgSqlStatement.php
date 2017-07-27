@@ -14,14 +14,26 @@ class PgSqlStatement implements Statement {
     /** @var callable */
     private $execute;
 
+    /** @var callable */
+    private $deallocate;
+
     /**
+     * @internal
+     *
+     * @param string $name
      * @param string $sql
      * @param callable $execute
+     * @param callable $deallocate
      */
-    public function __construct(string $name, string $sql, callable $execute) {
+    public function __construct(string $name, string $sql, callable $execute, callable $deallocate) {
         $this->name = $name;
         $this->sql = $sql;
         $this->execute = $execute;
+        $this->deallocate = $deallocate;
+    }
+
+    public function __destruct() {
+        ($this->deallocate)($this->name);
     }
 
     /**

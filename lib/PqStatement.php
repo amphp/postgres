@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\Coroutine;
 use Amp\Promise;
 use pq;
 
@@ -14,6 +13,8 @@ class PqStatement implements Statement {
     private $execute;
 
     /**
+     * @internal
+     *
      * @param \pq\Statement $statement
      * @param callable $execute
      */
@@ -23,7 +24,7 @@ class PqStatement implements Statement {
     }
 
     public function __destruct() {
-        Promise\rethrow(new Coroutine(($this->execute)([$this->statement, "deallocateAsync"])));
+        ($this->execute)([$this->statement, "deallocateAsync"]);
     }
 
     /**
@@ -41,6 +42,6 @@ class PqStatement implements Statement {
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
     public function execute(...$params): Promise {
-        return new Coroutine(($this->execute)([$this->statement, "execAsync"], $params));
+        return ($this->execute)([$this->statement, "execAsync"], $params);
     }
 }

@@ -2,10 +2,13 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Coroutine;
+use Amp\Delayed;
 use Amp\Loop;
 use Amp\Postgres\CommandResult;
 use Amp\Postgres\Connection;
 use Amp\Postgres\Listener;
+use Amp\Postgres\QueryError;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
 use Amp\Postgres\TupleResult;
@@ -133,20 +136,131 @@ abstract class AbstractConnectionTest extends TestCase {
     }
 
     /**
-     * @expectedException \Amp\Postgres\PendingOperationError
+     * @depends testQueryWithTupleResult
      */
     public function testSimultaneousQuery() {
-        Loop::run(function () {
-            $query1 = $this->connection->query("SELECT 0 as value");
-            $query2 = $this->connection->query("SELECT 1 as value");
+        $callback = \Amp\coroutine(function ($value) {
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $this->connection->query("SELECT {$value} as value");
 
-            try {
-                yield $query1;
-            } catch (\Throwable $exception) {
-                $this->fail("The first query should be successful");
+            if ($value) {
+                yield new Delayed(100);
             }
 
-            yield $query2;
+            while (yield $result->advance()) {
+                $row = $result->getCurrent();
+                $this->assertEquals($value, $row['value']);
+            }
+        });
+
+        Loop::run(function () use ($callback) {
+            yield \Amp\Promise\all([$callback(0), $callback(1)]);
+        });
+    }
+
+    /**
+     * @depends testSimultaneousQuery
+     */
+    public function testSimultaneousQueryWithFirstFailing() {
+        $callback = \Amp\coroutine(function ($query) {
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $this->connection->query($query);
+
+            $data = $this->getData();
+
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
+            }
+
+            return $result;
+        });
+
+        try {
+            Loop::run(function () use (&$result, $callback) {
+                $failing = $callback("SELECT & FROM test");
+                $successful = $callback("SELECT * FROM test");
+
+                $result = yield $successful;
+                yield $failing;
+            });
+        } catch (QueryError $exception) {
+            $this->assertInstanceOf(TupleResult::class, $result);
+            return;
+        }
+
+        $this->fail(\sprintf("Test did not throw an instance of %s", QueryError::class));
+    }
+
+    public function testSimultaneousQueryAndPrepare() {
+        $promises = [];
+        $promises[] = new Coroutine((function () {
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $this->connection->query("SELECT * FROM test");
+
+            $data = $this->getData();
+
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
+            }
+        })());
+
+        $promises[] = new Coroutine((function () {
+            /** @var \Amp\Postgres\Statement $statement */
+            $statement = (yield $this->connection->prepare("SELECT * FROM test"));
+
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $statement->execute();
+
+            $data = $this->getData();
+
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
+            }
+        })());
+
+        Loop::run(function () use ($promises) {
+            yield \Amp\Promise\all($promises);
+        });
+    }
+
+    public function testSimultaneousPrepareAndExecute() {
+        $promises[] = new Coroutine((function () {
+            /** @var \Amp\Postgres\Statement $statement */
+            $statement = yield $this->connection->prepare("SELECT * FROM test");
+
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $statement->execute();
+
+            $data = $this->getData();
+
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
+            }
+        })());
+
+        $promises[] = new Coroutine((function () {
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $this->connection->execute("SELECT * FROM test");
+
+            $data = $this->getData();
+
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
+            }
+        })());
+
+        Loop::run(function () use ($promises) {
+            yield \Amp\Promise\all($promises);
         });
     }
 

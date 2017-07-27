@@ -4,6 +4,8 @@ namespace Amp\Postgres;
 
 use Amp\CallableMaker;
 use Amp\CancellationToken;
+use Amp\Coroutine;
+use Amp\Deferred;
 use Amp\Promise;
 use function Amp\call;
 
@@ -44,17 +46,17 @@ abstract class AbstractConnection implements Connection {
      * @throws \Amp\Postgres\FailureException
      * @throws \Amp\Postgres\PendingOperationError
      */
-    private function send(string $methodName, ...$args): Promise {
-        if ($this->busy) {
-            throw new PendingOperationError;
+    private function send(string $methodName, ...$args): \Generator {
+        while ($this->busy) {
+            yield $this->busy->promise();
         }
 
-        $this->busy = true;
+        $this->busy = new Deferred;
 
         try {
             return $this->executor->{$methodName}(...$args);
         } finally {
-            $this->busy = false;
+            $this->release();
         }
     }
 
@@ -62,28 +64,30 @@ abstract class AbstractConnection implements Connection {
      * Releases the transaction lock.
      */
     private function release() {
-        $this->busy = false;
+        $deferred = $this->busy;
+        $this->busy = null;
+        $deferred->resolve();
     }
 
     /**
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
-        return $this->send("query", $sql);
+        return new Coroutine($this->send("query", $sql));
     }
 
     /**
      * {@inheritdoc}
      */
     public function execute(string $sql, ...$params): Promise {
-        return $this->send("execute", $sql, ...$params);
+        return new Coroutine($this->send("execute", $sql, ...$params));
     }
 
     /**
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return $this->send("prepare", $sql);
+        return new Coroutine($this->send("prepare", $sql));
     }
 
 
@@ -91,49 +95,48 @@ abstract class AbstractConnection implements Connection {
      * {@inheritdoc}
      */
     public function notify(string $channel, string $payload = ""): Promise {
-        return $this->send("notify", $channel, $payload);
+        return new Coroutine($this->send("notify", $channel, $payload));
     }
 
     /**
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        return $this->send("listen", $channel);
+        return new Coroutine($this->send("listen", $channel));
     }
 
     /**
      * {@inheritdoc}
      */
     public function transaction(int $isolation = Transaction::COMMITTED): Promise {
-        if ($this->busy) {
-            throw new PendingOperationError;
-        }
+        return call(function () use ($isolation) {
+            while ($this->busy) {
+                yield $this->busy->promise();
+            }
 
-        $this->busy = true;
+            $this->busy = new Deferred;
 
-        switch ($isolation) {
-            case Transaction::UNCOMMITTED:
-                $promise = $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
-                break;
+            switch ($isolation) {
+                case Transaction::UNCOMMITTED:
+                    yield $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
+                    break;
 
-            case Transaction::COMMITTED:
-                $promise = $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
-                break;
+                case Transaction::COMMITTED:
+                    yield $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
+                    break;
 
-            case Transaction::REPEATABLE:
-                $promise = $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
-                break;
+                case Transaction::REPEATABLE:
+                    yield $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+                    break;
 
-            case Transaction::SERIALIZABLE:
-                $promise = $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
-                break;
+                case Transaction::SERIALIZABLE:
+                    yield $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+                    break;
 
-            default:
-                throw new \Error("Invalid transaction type");
-        }
+                default:
+                    throw new \Error("Invalid transaction type");
+            }
 
-        return call(function () use ($promise, $isolation) {
-            yield $promise;
             $transaction = new Transaction($this->executor, $isolation);
             $transaction->onComplete($this->release);
             return $transaction;

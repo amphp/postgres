@@ -21,7 +21,7 @@ class PqExecutor implements Executor {
     /** @var \Amp\Deferred|null */
     private $deferred;
 
-    /** @var \Amp\Deferred */
+    /** @var \Amp\Deferred|null */
     private $busy;
 
     /** @var string */
@@ -69,7 +69,7 @@ class PqExecutor implements Executor {
                 $deferred->resolve($handle->getResult());
             }
 
-            if (!$handle->busy && empty($listeners)) {
+            if (!$deferred && !$handle->busy && empty($listeners)) {
                 Loop::disable($watcher);
             }
         });
@@ -85,7 +85,7 @@ class PqExecutor implements Executor {
         Loop::disable($this->poll);
         Loop::disable($this->await);
 
-        $this->send = $this->callableFromInstanceMethod("send");
+        $this->send = coroutine($this->callableFromInstanceMethod("send"));
         $this->fetch = coroutine($this->callableFromInstanceMethod("fetch"));
         $this->unlisten = $this->callableFromInstanceMethod("unlisten");
         $this->release = $this->callableFromInstanceMethod("release");
@@ -110,16 +110,18 @@ class PqExecutor implements Executor {
      * @throws \Amp\Postgres\FailureException
      */
     private function send(callable $method, ...$args): \Generator {
-        if ($this->busy) {
-            throw new PendingOperationError;
+        while ($this->busy) {
+            try {
+                yield $this->busy->promise();
+            } catch (\Throwable $exception) {
+                // Ignore failure from another operation.
+            }
         }
-
-        $this->busy = true;
 
         try {
             $handle = $method(...$args);
 
-            $this->deferred = new Deferred;
+            $this->deferred = $this->busy = new Deferred;
 
             Loop::enable($this->poll);
             if (!$this->handle->flush()) {
@@ -142,7 +144,7 @@ class PqExecutor implements Executor {
         } catch (pq\Exception $exception) {
             throw new FailureException($this->handle->errorMessage, 0, $exception);
         } finally {
-            $this->busy = false;
+            $this->busy = null;
         }
 
         switch ($result->status) {
@@ -156,7 +158,7 @@ class PqExecutor implements Executor {
                 return new PqBufferedResult($result);
 
             case pq\Result::SINGLE_TUPLE:
-                $this->busy = true;
+                $this->busy = new Deferred;
                 $result = new PqUnbufferedResult($this->fetch, $result);
                 $result->onComplete($this->release);
                 return $result;
@@ -201,7 +203,9 @@ class PqExecutor implements Executor {
     }
 
     private function release() {
-        $this->busy = false;
+        $deferred = $this->busy;
+        $this->busy = null;
+        $deferred->resolve();
     }
 
     /**
@@ -222,7 +226,7 @@ class PqExecutor implements Executor {
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return new Coroutine($this->send([$this->handle, "prepareAsync"], "amphp" .sha1($sql), $sql));
+        return new Coroutine($this->send([$this->handle, "prepareAsync"], "amphp" . \sha1($sql), $sql));
     }
 
     /**
@@ -253,7 +257,8 @@ class PqExecutor implements Executor {
                         $notification->pid = $pid;
                         $notification->payload = $message;
                         $emitter->emit($notification);
-                    });
+                    }
+                );
             } catch (\Throwable $exception) {
                 unset($this->listeners[$channel]);
                 throw $exception;

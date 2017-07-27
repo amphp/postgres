@@ -27,6 +27,9 @@ class PgSqlExecutor implements Executor {
     /** @var callable */
     private $executeCallback;
 
+    /** @var callable */
+    private $deallocateCallback;
+
     /** @var \Amp\Emitter[] */
     private $listeners = [];
 
@@ -77,7 +80,7 @@ class PgSqlExecutor implements Executor {
 
             $deferred->resolve(\pg_get_result($handle));
 
-            if (empty($listeners)) {
+            if (!$deferred && empty($listeners)) {
                 Loop::disable($watcher);
             }
         });
@@ -99,6 +102,7 @@ class PgSqlExecutor implements Executor {
         Loop::disable($this->await);
 
         $this->executeCallback = $this->callableFromInstanceMethod("sendExecute");
+        $this->deallocateCallback = $this->callableFromInstanceMethod("sendDeallocate");
         $this->unlisten = $this->callableFromInstanceMethod("unlisten");
     }
 
@@ -128,8 +132,12 @@ class PgSqlExecutor implements Executor {
      * @throws \Amp\Postgres\PendingOperationError
      */
     private function send(callable $function, ...$args): \Generator {
-        if ($this->deferred !== null) {
-            throw new PendingOperationError;
+        while ($this->deferred) {
+            try {
+                yield $this->deferred->promise();
+            } catch (\Throwable $exception) {
+                // Ignore failure from another operation.
+            }
         }
 
         $result = $function($this->handle, ...$args);
@@ -191,6 +199,10 @@ class PgSqlExecutor implements Executor {
         });
     }
 
+    private function sendDeallocate(string $name): Promise {
+        return $this->query(\sprintf("DEALLOCATE %s", $name));
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -214,9 +226,9 @@ class PgSqlExecutor implements Executor {
      */
     public function prepare(string $sql): Promise {
         return call(function () use ($sql) {
-            $name = "amphp" . sha1($sql);
+            $name = "amphp" . \sha1($sql);
             yield from $this->send("pg_send_prepare", $name, $sql);
-            return new PgSqlStatement($name, $sql, $this->executeCallback);
+            return new PgSqlStatement($name, $sql, $this->executeCallback, $this->deallocateCallback);
         });
     }
 
