@@ -9,9 +9,6 @@ class PqStatement implements Statement {
     /** @var \pq\Statement */
     private $statement;
 
-    /** @var string */
-    private $name;
-
     /** @var callable */
     private $execute;
 
@@ -22,19 +19,17 @@ class PqStatement implements Statement {
      * @internal
      *
      * @param \pq\Statement $statement
-     * @param string $name
      * @param callable $execute
      * @param callable $deallocate
      */
-    public function __construct(pq\Statement $statement, string $name, callable $execute, callable $deallocate) {
+    public function __construct(pq\Statement $statement, callable $execute, callable $deallocate) {
         $this->statement = $statement;
-        $this->name = $name;
         $this->execute = $execute;
         $this->deallocate = $deallocate;
     }
 
     public function __destruct() {
-        ($this->deallocate)($this->name);
+        ($this->deallocate)($this->statement->name);
     }
 
     /**

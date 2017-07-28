@@ -211,6 +211,11 @@ class PqExecutor implements Executor {
     }
 
     private function release() {
+        \assert(
+            $this->busy instanceof Deferred && $this->busy !== $this->deferred,
+            "Connection in invalid state when releasing"
+        );
+
         $deferred = $this->busy;
         $this->busy = null;
         $deferred->resolve();
@@ -258,7 +263,7 @@ class PqExecutor implements Executor {
                 return $storage->promise;
             }
 
-            return new Success(new PqStatement($storage->statement, $name, $this->send, $this->deallocate));
+            return new Success(new PqStatement($storage->statement, $this->send, $this->deallocate));
         }
 
         $this->statements[$name] = $storage = new Internal\PqStatementStorage;
@@ -266,7 +271,7 @@ class PqExecutor implements Executor {
         $storage->promise = call(function () use ($storage, $name, $sql) {
             $statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $sql);
             $storage->statement = $statement;
-            return new PqStatement($statement, $name, $this->send, $this->deallocate);
+            return new PqStatement($statement, $this->send, $this->deallocate);
         });
         $storage->promise->onResolve(function () use ($storage) {
             $storage->promise = null;
