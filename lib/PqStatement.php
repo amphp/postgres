@@ -9,22 +9,32 @@ class PqStatement implements Statement {
     /** @var \pq\Statement */
     private $statement;
 
+    /** @var string */
+    private $name;
+
     /** @var callable */
     private $execute;
+
+    /** @var callable */
+    private $deallocate;
 
     /**
      * @internal
      *
      * @param \pq\Statement $statement
+     * @param string $name
      * @param callable $execute
+     * @param callable $deallocate
      */
-    public function __construct(pq\Statement $statement, callable $execute) {
+    public function __construct(pq\Statement $statement, string $name, callable $execute, callable $deallocate) {
         $this->statement = $statement;
+        $this->name = $name;
         $this->execute = $execute;
+        $this->deallocate = $deallocate;
     }
 
     public function __destruct() {
-        ($this->execute)([$this->statement, "deallocateAsync"]);
+        ($this->deallocate)($this->name);
     }
 
     /**

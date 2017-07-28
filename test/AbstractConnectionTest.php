@@ -9,6 +9,7 @@ use Amp\Postgres\CommandResult;
 use Amp\Postgres\Connection;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryError;
+use Amp\Postgres\Statement;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
 use Amp\Postgres\TupleResult;
@@ -116,6 +117,92 @@ abstract class AbstractConnectionTest extends TestCase {
         });
     }
 
+    /**
+     * @depends testPrepare
+     */
+    public function testPrepareSameQuery() {
+        Loop::run(function () {
+            $sql = "SELECT * FROM test WHERE domain=\$1";
+
+            /** @var \Amp\Postgres\Statement $statement1 */
+            $statement1 = yield $this->connection->prepare($sql);
+
+            /** @var \Amp\Postgres\Statement $statement2 */
+            $statement2 = yield $this->connection->prepare($sql);
+
+            $this->assertInstanceOf(Statement::class, $statement1);
+            $this->assertInstanceOf(Statement::class, $statement2);
+
+            unset($statement1);
+
+            $data = $this->getData()[0];
+
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $statement2->execute($data[0]);
+
+            $this->assertInstanceOf(TupleResult::class, $result);
+
+            $this->assertSame(2, $result->numFields());
+
+            while (yield $result->advance()) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row['domain']);
+                $this->assertSame($data[1], $row['tld']);
+            }
+        });
+    }
+
+    /**
+     * @depends testPrepareSameQuery
+     */
+    public function testSimultaneousPrepareSameQuery() {
+        Loop::run(function () {
+            $sql = "SELECT * FROM test WHERE domain=\$1";
+
+            $statement1 = $this->connection->prepare($sql);
+            $statement2 = $this->connection->prepare($sql);
+
+            /**
+             * @var \Amp\Postgres\Statement $statement1
+             * @var \Amp\Postgres\Statement $statement2
+             */
+            list($statement1, $statement2) = yield [$statement1, $statement2];
+
+            $this->assertInstanceOf(Statement::class, $statement1);
+            $this->assertInstanceOf(Statement::class, $statement2);
+
+            $data = $this->getData()[0];
+
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $statement1->execute($data[0]);
+
+            $this->assertInstanceOf(TupleResult::class, $result);
+
+            $this->assertSame(2, $result->numFields());
+
+            while (yield $result->advance()) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row['domain']);
+                $this->assertSame($data[1], $row['tld']);
+            }
+
+            unset($statement1);
+
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $statement2->execute($data[0]);
+
+            $this->assertInstanceOf(TupleResult::class, $result);
+
+            $this->assertSame(2, $result->numFields());
+
+            while (yield $result->advance()) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row['domain']);
+                $this->assertSame($data[1], $row['tld']);
+            }
+        });
+    }
+
     public function testExecute() {
         Loop::run(function () {
             $data = $this->getData()[0];
@@ -154,7 +241,7 @@ abstract class AbstractConnectionTest extends TestCase {
         });
 
         Loop::run(function () use ($callback) {
-            yield \Amp\Promise\all([$callback(0), $callback(1)]);
+            yield [$callback(0), $callback(1)];
         });
     }
 
@@ -225,7 +312,7 @@ abstract class AbstractConnectionTest extends TestCase {
         })());
 
         Loop::run(function () use ($promises) {
-            yield \Amp\Promise\all($promises);
+            yield $promises;
         });
     }
 
@@ -260,7 +347,7 @@ abstract class AbstractConnectionTest extends TestCase {
         })());
 
         Loop::run(function () use ($promises) {
-            yield \Amp\Promise\all($promises);
+            yield $promises;
         });
     }
 

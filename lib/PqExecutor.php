@@ -8,6 +8,7 @@ use Amp\Deferred;
 use Amp\Emitter;
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Success;
 use pq;
 use function Amp\call;
 use function Amp\coroutine;
@@ -33,6 +34,9 @@ class PqExecutor implements Executor {
     /** @var \Amp\Emitter[] */
     private $listeners;
 
+    /** @var \Amp\Postgres\Internal\PqStatementStorage[] */
+    private $statements = [];
+
     /** @var callable */
     private $send;
 
@@ -44,6 +48,9 @@ class PqExecutor implements Executor {
 
     /** @var callable */
     private $release;
+
+    /** @var callable */
+    private $deallocate;
 
     /**
      * Connection constructor.
@@ -89,6 +96,7 @@ class PqExecutor implements Executor {
         $this->fetch = coroutine($this->callableFromInstanceMethod("fetch"));
         $this->unlisten = $this->callableFromInstanceMethod("unlisten");
         $this->release = $this->callableFromInstanceMethod("release");
+        $this->deallocate = $this->callableFromInstanceMethod("deallocate");
     }
 
     /**
@@ -134,10 +142,6 @@ class PqExecutor implements Executor {
                 $this->deferred = null;
             }
 
-            if ($handle instanceof pq\Statement) {
-                return new PqStatement($handle, $this->send);
-            }
-
             if (!$result instanceof pq\Result) {
                 throw new FailureException("Unknown query result");
             }
@@ -152,6 +156,10 @@ class PqExecutor implements Executor {
                 throw new QueryError("Empty query string");
 
             case pq\Result::COMMAND_OK:
+                if ($handle instanceof pq\Statement) {
+                    return $handle; // Will be wrapped into a PqStatement object.
+                }
+
                 return new PqCommandResult($result);
 
             case pq\Result::TUPLES_OK:
@@ -208,6 +216,20 @@ class PqExecutor implements Executor {
         $deferred->resolve();
     }
 
+    private function deallocate(string $name) {
+        \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
+
+        $storage = $this->statements[$name];
+
+        if (--$storage->count) {
+            return;
+        }
+
+        unset($this->statements[$name]);
+
+        Promise\rethrow(new Coroutine($this->send([$storage->statement, "deallocateAsync"])));
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -226,7 +248,30 @@ class PqExecutor implements Executor {
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return new Coroutine($this->send([$this->handle, "prepareAsync"], "amphp" . \sha1($sql), $sql));
+        $name = self::STATEMENT_NAME_PREFIX . \sha1($sql);
+
+        if (isset($this->statements[$name])) {
+            $storage = $this->statements[$name];
+            ++$storage->count;
+
+            if ($storage->promise) {
+                return $storage->promise;
+            }
+
+            return new Success(new PqStatement($storage->statement, $name, $this->send, $this->deallocate));
+        }
+
+        $this->statements[$name] = $storage = new Internal\PqStatementStorage;
+
+        $storage->promise = call(function () use ($storage, $name, $sql) {
+            $statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $sql);
+            $storage->statement = $statement;
+            return new PqStatement($statement, $name, $this->send, $this->deallocate);
+        });
+        $storage->promise->onResolve(function () use ($storage) {
+            $storage->promise = null;
+        });
+        return $storage->promise;
     }
 
     /**
@@ -277,9 +322,7 @@ class PqExecutor implements Executor {
      * @throws \Error
      */
     private function unlisten(string $channel): Promise {
-        if (!isset($this->listeners[$channel])) {
-            throw new \Error("Not listening on that channel");
-        }
+        \assert(isset($this->listeners[$channel]), "Not listening on that channel");
 
         $emitter = $this->listeners[$channel];
         unset($this->listeners[$channel]);

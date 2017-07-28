@@ -5,6 +5,8 @@ namespace Amp\Postgres;
 use Amp\Promise;
 
 interface Executor {
+    const STATEMENT_NAME_PREFIX = "amp_";
+
     /**
      * @param string $sql
      *

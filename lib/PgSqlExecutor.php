@@ -7,6 +7,7 @@ use Amp\Deferred;
 use Amp\Emitter;
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Success;
 use function Amp\call;
 
 class PgSqlExecutor implements Executor {
@@ -35,6 +36,9 @@ class PgSqlExecutor implements Executor {
 
     /** @var callable */
     private $unlisten;
+
+    /** @var \Amp\Postgres\Internal\StatementStorage[] */
+    private $statements = [];
 
     /**
      * Connection constructor.
@@ -199,8 +203,18 @@ class PgSqlExecutor implements Executor {
         });
     }
 
-    private function sendDeallocate(string $name): Promise {
-        return $this->query(\sprintf("DEALLOCATE %s", $name));
+    private function sendDeallocate(string $name) {
+        \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
+
+        $storage = $this->statements[$name];
+
+        if (--$storage->count) {
+            return;
+        }
+
+        unset($this->statements[$name]);
+
+        Promise\rethrow($this->query(\sprintf("DEALLOCATE %s", $name)));
     }
 
     /**
@@ -225,11 +239,29 @@ class PgSqlExecutor implements Executor {
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return call(function () use ($sql) {
-            $name = "amphp" . \sha1($sql);
+        $name = self::STATEMENT_NAME_PREFIX . \sha1($sql);
+
+        if (isset($this->statements[$name])) {
+            $storage = $this->statements[$name];
+            ++$storage->count;
+
+            if ($storage->promise) {
+                return $storage->promise;
+            }
+
+            return new Success(new PgSqlStatement($name, $sql, $this->executeCallback, $this->deallocateCallback));
+        }
+
+        $this->statements[$name] = $storage = new Internal\StatementStorage;
+
+        $storage->promise = call(function () use ($name, $sql) {
             yield from $this->send("pg_send_prepare", $name, $sql);
             return new PgSqlStatement($name, $sql, $this->executeCallback, $this->deallocateCallback);
         });
+        $storage->promise->onResolve(function () use ($storage) {
+            $storage->promise = null;
+        });
+        return $storage->promise;
     }
 
     /**
@@ -274,9 +306,7 @@ class PgSqlExecutor implements Executor {
      * @throws \Error
      */
     private function unlisten(string $channel): Promise {
-        if (!isset($this->listeners[$channel])) {
-            throw new \Error("Not listening on that channel");
-        }
+        \assert(isset($this->listeners[$channel]), "Not listening on that channel");
 
         $emitter = $this->listeners[$channel];
         unset($this->listeners[$channel]);
