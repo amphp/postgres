@@ -2,16 +2,14 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\Loop;
+
 trait Operation {
     /** @var bool */
     private $complete = false;
 
     /** @var callable[] */
     private $onComplete = [];
-
-    public function __destruct() {
-        $this->complete();
-    }
 
     public function onComplete(callable $onComplete) {
         if ($this->complete) {
@@ -29,7 +27,13 @@ trait Operation {
 
         $this->complete = true;
         foreach ($this->onComplete as $callback) {
-            $callback();
+            try {
+                $callback();
+            } catch (\Throwable $exception) {
+                Loop::defer(function () use ($exception) {
+                    throw $exception; // Rethrow to event loop error handler.
+                });
+            }
         }
         $this->onComplete = null;
     }

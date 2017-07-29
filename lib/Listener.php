@@ -29,6 +29,12 @@ class Listener implements Iterator, Operation {
         $this->unlisten = $unlisten;
     }
 
+    public function __destruct() {
+        if ($this->unlisten) {
+            $this->unlisten(); // Invokes $this->complete().
+        }
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -56,10 +62,17 @@ class Listener implements Iterator, Operation {
      * Unlistens from the channel. No more values will be emitted from this listener.
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult>
+     *
+     * @throws \Error If this method was previously invoked.
      */
     public function unlisten(): Promise {
+        if (!$this->unlisten) {
+            throw new \Error("Already unlistened on this channel");
+        }
+
         /** @var \Amp\Promise $promise */
         $promise = ($this->unlisten)($this->channel);
+        $this->unlisten = null;
         $promise->onResolve($this->callableFromInstanceMethod("complete"));
         return $promise;
     }

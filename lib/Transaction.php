@@ -19,9 +19,6 @@ class Transaction implements Executor, Operation {
     /** @var int */
     private $isolation;
 
-    /** @var callable */
-    private $onResolve;
-
     /**
      * @param \Amp\Postgres\Executor $executor
      * @param int $isolation
@@ -42,7 +39,12 @@ class Transaction implements Executor, Operation {
         }
 
         $this->executor = $executor;
-        $this->onResolve = $this->callableFromInstanceMethod("complete");
+    }
+
+    public function __destruct() {
+        if ($this->executor) {
+            $this->rollback(); // Invokes $this->complete().
+        }
     }
 
     /**
@@ -126,7 +128,7 @@ class Transaction implements Executor, Operation {
 
         $promise = $this->executor->query("COMMIT");
         $this->executor = null;
-        $promise->onResolve($this->onResolve);
+        $promise->onResolve($this->callableFromInstanceMethod("complete"));
 
         return $promise;
     }
@@ -145,7 +147,7 @@ class Transaction implements Executor, Operation {
 
         $promise = $this->executor->query("ROLLBACK");
         $this->executor = null;
-        $promise->onResolve($this->onResolve);
+        $promise->onResolve($this->callableFromInstanceMethod("complete"));
 
         return $promise;
     }
