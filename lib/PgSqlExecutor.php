@@ -277,7 +277,12 @@ class PgSqlExecutor implements Executor {
                     // @codeCoverageIgnoreEnd
             }
         });
-        $storage->promise->onResolve(function () use ($storage) {
+        $storage->promise->onResolve(function ($exception) use ($storage, $name) {
+            if ($exception) {
+                unset($this->statements[$name]);
+                return;
+            }
+
             $storage->promise = null;
         });
         return $storage->promise;

@@ -273,7 +273,12 @@ class PqExecutor implements Executor {
             $storage->statement = $statement;
             return new PqStatement($statement, $this->send, $this->deallocate);
         });
-        $storage->promise->onResolve(function () use ($storage) {
+        $storage->promise->onResolve(function ($exception) use ($storage, $name) {
+            if ($exception) {
+                unset($this->statements[$name]);
+                return;
+            }
+
             $storage->promise = null;
         });
         return $storage->promise;
