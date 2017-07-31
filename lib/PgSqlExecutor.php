@@ -193,7 +193,9 @@ class PgSqlExecutor implements Executor {
                 throw new FailureException(\pg_result_error($result));
 
             default:
+                // @codeCoverageIgnoreStart
                 throw new FailureException("Unknown result status");
+                // @codeCoverageIgnoreEnd
         }
     }
 
@@ -255,8 +257,25 @@ class PgSqlExecutor implements Executor {
         $this->statements[$name] = $storage = new Internal\StatementStorage;
 
         $storage->promise = call(function () use ($name, $sql) {
-            yield from $this->send("pg_send_prepare", $name, $sql);
-            return new PgSqlStatement($name, $sql, $this->executeCallback, $this->deallocateCallback);
+            /** @var resource $result PostgreSQL result resource. */
+            $result = yield from $this->send("pg_send_prepare", $name, $sql);
+
+            switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
+                case \PGSQL_COMMAND_OK:
+                    return new PgSqlStatement($name, $sql, $this->executeCallback, $this->deallocateCallback);
+
+                case \PGSQL_NONFATAL_ERROR:
+                case \PGSQL_FATAL_ERROR:
+                    throw new QueryError(\pg_result_error($result));
+
+                case \PGSQL_BAD_RESPONSE:
+                    throw new FailureException(\pg_result_error($result));
+
+                default:
+                    // @codeCoverageIgnoreStart
+                    throw new FailureException("Unknown result status");
+                    // @codeCoverageIgnoreEnd
+            }
         });
         $storage->promise->onResolve(function () use ($storage) {
             $storage->promise = null;

@@ -119,6 +119,20 @@ abstract class AbstractConnectionTest extends TestCase {
 
     /**
      * @depends testPrepare
+     * @expectedException \Amp\Postgres\QueryError
+     * @expectedExceptionMessage column "invalid" does not exist
+     */
+    public function testPrepareInvalidQuery() {
+        Loop::run(function () {
+            $query = "SELECT * FROM test WHERE invalid=\$1";
+
+            /** @var \Amp\Postgres\Statement $statement */
+            $statement = yield $this->connection->prepare($query);
+        });
+    }
+
+    /**
+     * @depends testPrepare
      */
     public function testPrepareSameQuery() {
         Loop::run(function () {
