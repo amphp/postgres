@@ -9,11 +9,11 @@ use Amp\Deferred;
 use Amp\Promise;
 use function Amp\call;
 
-abstract class AbstractConnection implements Connection {
+abstract class AbstractConnection implements Connection, Handle {
     use CallableMaker;
 
     /** @var \Amp\Postgres\Executor */
-    private $executor;
+    private $handle;
 
     /** @var \Amp\Deferred|null Used to only allow one transaction at a time. */
     private $busy;
@@ -30,10 +30,10 @@ abstract class AbstractConnection implements Connection {
     abstract public static function connect(string $connectionString, CancellationToken $token = null): Promise;
 
     /**
-     * @param $executor;
+     * @param \Amp\Postgres\Handle $handle
      */
-    public function __construct(Executor $executor) {
-        $this->executor = $executor;
+    public function __construct(Handle $handle) {
+        $this->handle = $handle;
         $this->release = $this->callableFromInstanceMethod("release");
     }
 
@@ -54,7 +54,7 @@ abstract class AbstractConnection implements Connection {
         $this->busy = new Deferred;
 
         try {
-            return $this->executor->{$methodName}(...$args);
+            return $this->handle->{$methodName}(...$args);
         } finally {
             $this->release();
         }
@@ -118,28 +118,42 @@ abstract class AbstractConnection implements Connection {
 
             switch ($isolation) {
                 case Transaction::UNCOMMITTED:
-                    yield $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
+                    yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
                     break;
 
                 case Transaction::COMMITTED:
-                    yield $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
+                    yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
                     break;
 
                 case Transaction::REPEATABLE:
-                    yield $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+                    yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
                     break;
 
                 case Transaction::SERIALIZABLE:
-                    yield $this->executor->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+                    yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
                     break;
 
                 default:
                     throw new \Error("Invalid transaction type");
             }
 
-            $transaction = new Transaction($this->executor, $isolation);
+            $transaction = new Transaction($this->handle, $isolation);
             $transaction->onComplete($this->release);
             return $transaction;
         });
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function quoteString(string $data): string {
+        return $this->handle->quoteString($data);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function quoteName(string $name): string {
+        return $this->handle->quoteName($name);
     }
 }

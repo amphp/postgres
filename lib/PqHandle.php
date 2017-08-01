@@ -13,7 +13,7 @@ use pq;
 use function Amp\call;
 use function Amp\coroutine;
 
-class PqExecutor implements Executor {
+class PqHandle implements Handle {
     use CallableMaker;
 
     /** @var \pq\Connection PostgreSQL connection object. */
@@ -190,6 +190,9 @@ class PqExecutor implements Executor {
             $this->deferred = new Deferred;
 
             Loop::enable($this->poll);
+            if (!$this->handle->flush()) {
+                Loop::enable($this->await);
+            }
 
             try {
                 $result = yield $this->deferred->promise();
@@ -268,12 +271,12 @@ class PqExecutor implements Executor {
 
         $this->statements[$name] = $storage = new Internal\PqStatementStorage;
 
-        $storage->promise = call(function () use ($storage, $name, $sql) {
+        $promise = $storage->promise = call(function () use ($storage, $name, $sql) {
             $statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $sql);
             $storage->statement = $statement;
             return new PqStatement($statement, $this->send, $this->deallocate);
         });
-        $storage->promise->onResolve(function ($exception) use ($storage, $name) {
+        $promise->onResolve(function ($exception) use ($storage, $name) {
             if ($exception) {
                 unset($this->statements[$name]);
                 return;
@@ -281,7 +284,7 @@ class PqExecutor implements Executor {
 
             $storage->promise = null;
         });
-        return $storage->promise;
+        return $promise;
     }
 
     /**
@@ -344,5 +347,19 @@ class PqExecutor implements Executor {
         $promise = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
         $promise->onResolve([$emitter, "complete"]);
         return $promise;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function quoteString(string $data): string {
+        return $this->handle->quote($data);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function quoteName(string $name): string {
+        return $this->handle->quoteName($name);
     }
 }

@@ -10,7 +10,7 @@ use Amp\Promise;
 use Amp\Success;
 use function Amp\call;
 
-class PgSqlExecutor implements Executor {
+class PgSqlHandle implements Handle {
     use CallableMaker;
 
     /** @var resource PostgreSQL connection handle. */
@@ -256,7 +256,7 @@ class PgSqlExecutor implements Executor {
 
         $this->statements[$name] = $storage = new Internal\StatementStorage;
 
-        $storage->promise = call(function () use ($name, $sql) {
+        $promise = $storage->promise = call(function () use ($name, $sql) {
             /** @var resource $result PostgreSQL result resource. */
             $result = yield from $this->send("pg_send_prepare", $name, $sql);
 
@@ -277,7 +277,7 @@ class PgSqlExecutor implements Executor {
                     // @codeCoverageIgnoreEnd
             }
         });
-        $storage->promise->onResolve(function ($exception) use ($storage, $name) {
+        $promise->onResolve(function ($exception) use ($storage, $name) {
             if ($exception) {
                 unset($this->statements[$name]);
                 return;
@@ -285,7 +285,7 @@ class PgSqlExecutor implements Executor {
 
             $storage->promise = null;
         });
-        return $storage->promise;
+        return $promise;
     }
 
     /**
@@ -293,10 +293,10 @@ class PgSqlExecutor implements Executor {
      */
     public function notify(string $channel, string $payload = ""): Promise {
         if ($payload === "") {
-            return $this->query(\sprintf("NOTIFY %s", $channel));
+            return $this->query(\sprintf("NOTIFY %s", $this->quoteName($channel)));
         }
 
-        return $this->query(\sprintf("NOTIFY %s, '%s'", $channel, $payload));
+        return $this->query(\sprintf("NOTIFY %s, %s", $this->quoteName($channel), $this->quoteString($payload)));
     }
 
     /**
@@ -311,7 +311,7 @@ class PgSqlExecutor implements Executor {
             $this->listeners[$channel] = $emitter = new Emitter;
 
             try {
-                yield $this->query(\sprintf("LISTEN %s", $channel));
+                yield $this->query(\sprintf("LISTEN %s", $this->quoteName($channel)));
             } catch (\Throwable $exception) {
                 unset($this->listeners[$channel]);
                 throw $exception;
@@ -339,8 +339,22 @@ class PgSqlExecutor implements Executor {
             Loop::disable($this->poll);
         }
 
-        $promise = $this->query(\sprintf("UNLISTEN %s", $channel));
+        $promise = $this->query(\sprintf("UNLISTEN %s", $this->quoteName($channel)));
         $promise->onResolve([$emitter, "complete"]);
         return $promise;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function quoteString(string $data): string {
+        return \pg_escape_literal($this->handle, $data);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function quoteName(string $name): string {
+        return \pg_escape_identifier($this->handle, $name);
     }
 }

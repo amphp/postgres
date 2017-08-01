@@ -2,11 +2,14 @@
 
 namespace Amp\Postgres;
 
+use Amp\CallableMaker;
 use Amp\Coroutine;
 use Amp\Deferred;
 use Amp\Promise;
 
 abstract class AbstractPool implements Pool {
+    use CallableMaker;
+
     /** @var \SplQueue */
     private $idle;
 
@@ -28,6 +31,9 @@ abstract class AbstractPool implements Pool {
     /** @var int Number of listeners on listening connection. */
     private $listenerCount = 0;
 
+    /** @var callable */
+    private $push;
+
     /**
      * @return \Amp\Promise<\Amp\Postgres\Connection>
      *
@@ -36,9 +42,21 @@ abstract class AbstractPool implements Pool {
     abstract protected function createConnection(): Promise;
 
     public function __construct() {
-        $this->connections = new \SplObjectStorage();
-        $this->idle = new \SplQueue();
-        $this->busy = new \SplQueue();
+        $this->connections = new \SplObjectStorage;
+        $this->idle = new \SplQueue;
+        $this->busy = new \SplQueue;
+        $this->push = $this->callableFromInstanceMethod("push");
+    }
+
+    /**
+     * @return \Amp\Promise<\Amp\Postgres\PooledConnection>
+     */
+    public function getConnection(): Promise {
+        return new Coroutine($this->doGetConnection());
+    }
+
+    private function doGetConnection(): \Generator {
+        return new PooledConnection(yield from $this->pop(), $this->push);
     }
 
     /**

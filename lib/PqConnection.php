@@ -23,7 +23,6 @@ class PqConnection extends AbstractConnection {
         } catch (pq\Exception $exception) {
             return new Failure(new FailureException("Could not connect to PostgresSQL server", 0, $exception));
         }
-        $connection->resetAsync();
         $connection->nonblocking = true;
         $connection->unbuffered = true;
 
@@ -68,6 +67,6 @@ class PqConnection extends AbstractConnection {
      * @param \pq\Connection $handle
      */
     public function __construct(pq\Connection $handle) {
-        parent::__construct(new PqExecutor($handle));
+        parent::__construct(new PqHandle($handle));
     }
 }

@@ -3,8 +3,9 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Loop;
+use Amp\Postgres\AbstractConnection;
 use Amp\Postgres\CommandResult;
-use Amp\Postgres\Connection;
+use Amp\Postgres\PooledConnection;
 use Amp\Postgres\Statement;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TupleResult;
@@ -22,10 +23,12 @@ abstract class AbstractPoolTest extends TestCase {
     abstract protected function createPool(array $connections);
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\Connection
+     * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\AbstractConnection
      */
     private function createConnection() {
-        return $this->createMock(Connection::class);
+        return $this->getMockBuilder(AbstractConnection::class)
+            ->disableOriginalConstructor()
+            ->getMock();
     }
 
     /**
@@ -33,7 +36,7 @@ abstract class AbstractPoolTest extends TestCase {
      *
      * @return \Amp\Postgres\Connection[]|\PHPUnit_Framework_MockObject_MockObject[]
      */
-    private function makeConnectionSet($count) {
+    private function makeConnectionSet(int $count) {
         $connections = [];
 
         for ($i = 0; $i < $count; ++$i) {
@@ -63,7 +66,7 @@ abstract class AbstractPoolTest extends TestCase {
      * @param string $resultClass
      * @param mixed ...$params
      */
-    public function testSingleQuery($count, $method, $resultClass, ...$params) {
+    public function testSingleQuery(int $count, string $method, string $resultClass, ...$params) {
         $result = $this->getMockBuilder($resultClass)
             ->disableOriginalConstructor()
             ->getMock();
@@ -93,7 +96,7 @@ abstract class AbstractPoolTest extends TestCase {
      * @param string $resultClass
      * @param mixed ...$params
      */
-    public function testConsecutiveQueries($count, $method, $resultClass, ...$params) {
+    public function testConsecutiveQueries(int $count, string $method, string $resultClass, ...$params) {
         $rounds = 3;
         $result = $this->getMockBuilder($resultClass)
             ->disableOriginalConstructor()
@@ -136,7 +139,7 @@ abstract class AbstractPoolTest extends TestCase {
      *
      * @param int $count
      */
-    public function testTransaction($count) {
+    public function testTransaction(int $count) {
         $connections = $this->makeConnectionSet($count);
 
         $connection = $connections[0];
@@ -163,7 +166,7 @@ abstract class AbstractPoolTest extends TestCase {
      *
      * @param int $count
      */
-    public function testConsecutiveTransactions($count) {
+    public function testConsecutiveTransactions(int $count) {
         $rounds = 3;
         $result = $this->getMockBuilder(Transaction::class)
             ->disableOriginalConstructor()
@@ -197,6 +200,38 @@ abstract class AbstractPoolTest extends TestCase {
 
             foreach ($results as $result) {
                 $this->assertInstanceof(CommandResult::class, $result);
+            }
+        });
+    }
+
+    /**
+     * @dataProvider getConnectionCounts
+     *
+     * @param int $count
+     */
+    public function testGetConnection(int $count) {
+        $connections = $this->makeConnectionSet($count);
+        $query = "SELECT * FROM test";
+
+        foreach ($connections as $connection) {
+            $connection->expects($this->once())
+                ->method('query')
+                ->with($query);
+        }
+
+        $pool = $this->createPool($connections);
+
+        Loop::run(function () use ($pool, $query, $count) {
+            $promises = [];
+            for ($i = 0; $i < $count; ++$i) {
+                $promises[] = $pool->getConnection();
+            }
+
+            $results = yield Promise\all($promises);
+
+            foreach ($results as $result) {
+                $this->assertInstanceof(PooledConnection::class, $result);
+                $result->query($query);
             }
         });
     }

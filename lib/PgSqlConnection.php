@@ -75,6 +75,6 @@ class PgSqlConnection extends AbstractConnection {
      * @param resource $socket PostgreSQL connection stream socket.
      */
     public function __construct($handle, $socket) {
-        parent::__construct(new PgSqlExecutor($handle, $socket));
+        parent::__construct(new PgSqlHandle($handle, $socket));
     }
 }
