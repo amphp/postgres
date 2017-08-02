@@ -211,11 +211,12 @@ abstract class AbstractPool implements Pool {
         try {
             /** @var \Amp\Postgres\Statement $statement */
             $statement = yield $connection->prepare($sql);
-        } finally {
+        } catch (\Throwable $exception) {
             $this->push($connection);
+            throw $exception;
         }
 
-        return $statement;
+        return new Internal\PooledStatement($connection, $statement, $this->push);
     }
 
     /**

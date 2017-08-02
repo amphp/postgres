@@ -5,7 +5,7 @@ namespace Amp\Postgres\Test;
 use Amp\Loop;
 use Amp\Postgres\CommandResult;
 use Amp\Postgres\Connection;
-use Amp\Postgres\Statement;
+use Amp\Postgres\Listener;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TupleResult;
 use Amp\Promise;
@@ -50,8 +50,9 @@ abstract class AbstractPoolTest extends TestCase {
         return [
             [3, 'query', TupleResult::class, "SELECT * FROM test"],
             [2, 'query', CommandResult::class, "INSERT INTO test VALUES (1, 7)"],
-            [1, 'prepare', Statement::class, "SELECT * FROM test WHERE id=\$1"],
+            [5, 'listen', Listener::class, "test"],
             [4, 'execute', TupleResult::class, "SELECT * FROM test WHERE id=\$1 AND time>\$2", 1, time()],
+            [4, 'notify', CommandResult::class, "test", "payload"],
         ];
     }
 
@@ -78,10 +79,9 @@ abstract class AbstractPoolTest extends TestCase {
 
         $pool = $this->createPool($connections);
 
-        Loop::run(function () use ($method, $pool, $params, $result) {
+        Loop::run(function () use ($method, $pool, $params, $result, $resultClass) {
             $return = yield $pool->{$method}(...$params);
-
-            $this->assertSame($result, $return);
+            $this->assertInstanceOf($resultClass, $return);
         });
     }
 
