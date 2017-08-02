@@ -64,7 +64,7 @@ class PgSqlHandle implements Handle {
                 $channel = $result["message"];
 
                 if (!isset($listeners[$channel])) {
-                    return;
+                    continue;
                 }
 
                 $notification = new Notification;
