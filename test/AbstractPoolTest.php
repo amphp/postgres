@@ -3,9 +3,8 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Loop;
-use Amp\Postgres\AbstractConnection;
 use Amp\Postgres\CommandResult;
-use Amp\Postgres\PooledConnection;
+use Amp\Postgres\Connection;
 use Amp\Postgres\Statement;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TupleResult;
@@ -23,12 +22,10 @@ abstract class AbstractPoolTest extends TestCase {
     abstract protected function createPool(array $connections);
 
     /**
-     * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\AbstractConnection
+     * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\Connection
      */
     private function createConnection() {
-        return $this->getMockBuilder(AbstractConnection::class)
-            ->disableOriginalConstructor()
-            ->getMock();
+        return $this->createMock(Connection::class);
     }
 
     /**
@@ -230,7 +227,7 @@ abstract class AbstractPoolTest extends TestCase {
             $results = yield Promise\all($promises);
 
             foreach ($results as $result) {
-                $this->assertInstanceof(PooledConnection::class, $result);
+                $this->assertInstanceof(Connection::class, $result);
                 $result->query($query);
             }
         });

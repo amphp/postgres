@@ -4,9 +4,9 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-interface Pool extends Connection {
+interface Pool extends Link {
     /**
-     * @return \Amp\Promise<\Amp\Postgres\PooledConnection>
+     * @return \Amp\Promise<\Amp\Postgres\Connection>
      */
     public function getConnection(): Promise;
 

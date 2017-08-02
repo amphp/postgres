@@ -1,10 +1,12 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\Connection;
+use Amp\Postgres\Transaction;
 use Amp\Promise;
 
-class PooledConnection implements Connection, Handle {
+class PooledConnection implements Connection {
     /** @var \Amp\Postgres\AbstractConnection */
     private $connection;
 
@@ -14,10 +16,10 @@ class PooledConnection implements Connection, Handle {
     /**
      * @internal
      *
-     * @param \Amp\Postgres\AbstractConnection $connection
+     * @param \Amp\Postgres\Connection $connection
      * @param callable $push
      */
-    public function __construct(AbstractConnection $connection, callable $push) {
+    public function __construct(Connection $connection, callable $push) {
         $this->connection = $connection;
         $this->push = $push;
     }

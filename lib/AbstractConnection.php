@@ -9,7 +9,7 @@ use Amp\Deferred;
 use Amp\Promise;
 use function Amp\call;
 
-abstract class AbstractConnection implements Connection, Handle {
+abstract class AbstractConnection implements Connection {
     use CallableMaker;
 
     /** @var \Amp\Postgres\Executor */

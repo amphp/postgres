@@ -49,14 +49,14 @@ abstract class AbstractPool implements Pool {
     }
 
     /**
-     * @return \Amp\Promise<\Amp\Postgres\PooledConnection>
+     * @return \Amp\Promise<\Amp\Postgres\Connection>
      */
     public function getConnection(): Promise {
         return new Coroutine($this->doGetConnection());
     }
 
     private function doGetConnection(): \Generator {
-        return new PooledConnection(yield from $this->pop(), $this->push);
+        return new Internal\PooledConnection(yield from $this->pop(), $this->push);
     }
 
     /**
