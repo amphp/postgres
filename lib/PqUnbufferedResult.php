@@ -2,14 +2,20 @@
 
 namespace Amp\Postgres;
 
+use Amp\Coroutine;
 use Amp\Producer;
+use Amp\Promise;
 use pq;
 
 class PqUnbufferedResult extends TupleResult implements Operation {
-    use Internal\Operation;
-
     /** @var int */
     private $numCols;
+
+    /** @var \Amp\Producer */
+    private $producer;
+
+    /** @var \Amp\Postgres\Internal\CompletionQueue */
+    private $queue;
 
     /**
      * @param callable(): \Amp\Promise $fetch Function to fetch next result row.
@@ -17,7 +23,9 @@ class PqUnbufferedResult extends TupleResult implements Operation {
      */
     public function __construct(callable $fetch, pq\Result $result) {
         $this->numCols = $result->numCols;
-        parent::__construct(new Producer(function (callable $emit) use ($result, $fetch) {
+        $this->queue = $queue = new Internal\CompletionQueue;
+
+        parent::__construct($this->producer = new Producer(static function (callable $emit) use ($queue, $result, $fetch) {
             try {
                 do {
                     $next = $fetch(); // Request next result before current is consumed.
@@ -25,12 +33,36 @@ class PqUnbufferedResult extends TupleResult implements Operation {
                     $result = yield $next;
                 } while ($result instanceof pq\Result);
             } finally {
-                $this->complete();
+                $queue->complete();
             }
         }));
     }
 
+    public function __destruct() {
+        if (!$this->queue->isComplete()) { // Producer above did not complete, so consume remaining results.
+            Promise\rethrow(new Coroutine($this->dispose()));
+        }
+    }
+
+    private function dispose(): \Generator {
+        try {
+            while (yield $this->producer->advance()); // Discard unused result rows.
+        } catch (\Throwable $exception) {
+            // Ignore failure while discarding results.
+        }
+    }
+
+    /**
+     * @return int Number of fields (columns) in each result set.
+     */
     public function numFields(): int {
         return $this->numCols;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function onComplete(callable $onComplete) {
+        $this->queue->onComplete($onComplete);
     }
 }
