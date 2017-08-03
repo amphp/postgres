@@ -2,12 +2,9 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
 use Amp\Promise;
 
 class Transaction implements Handle, Operation {
-    use Internal\Operation, CallableMaker;
-
     const UNCOMMITTED  = 0;
     const COMMITTED    = 1;
     const REPEATABLE   = 2;
@@ -18,6 +15,9 @@ class Transaction implements Handle, Operation {
 
     /** @var int */
     private $isolation;
+
+    /** @var \Amp\Postgres\Internal\CompletionQueue */
+    private $queue;
 
     /**
      * @param \Amp\Postgres\Handle $handle
@@ -39,12 +39,20 @@ class Transaction implements Handle, Operation {
         }
 
         $this->handle = $handle;
+        $this->queue = new Internal\CompletionQueue;
     }
 
     public function __destruct() {
         if ($this->handle) {
-            $this->rollback(); // Invokes $this->complete().
+            $this->rollback(); // Invokes $this->queue->complete().
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function onComplete(callable $onComplete) {
+        $this->queue->onComplete($onComplete);
     }
 
     /**
@@ -128,7 +136,7 @@ class Transaction implements Handle, Operation {
 
         $promise = $this->handle->query("COMMIT");
         $this->handle = null;
-        $promise->onResolve($this->callableFromInstanceMethod("complete"));
+        $promise->onResolve([$this->queue, "complete"]);
 
         return $promise;
     }
@@ -147,7 +155,7 @@ class Transaction implements Handle, Operation {
 
         $promise = $this->handle->query("ROLLBACK");
         $this->handle = null;
-        $promise->onResolve($this->callableFromInstanceMethod("complete"));
+        $promise->onResolve([$this->queue, "complete"]);
 
         return $promise;
     }

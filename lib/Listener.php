@@ -2,13 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
 use Amp\Iterator;
 use Amp\Promise;
 
 class Listener implements Iterator, Operation {
-    use CallableMaker, Internal\Operation;
-
     /** @var \Amp\Iterator */
     private $iterator;
 
@@ -17,6 +14,9 @@ class Listener implements Iterator, Operation {
 
     /** @var callable */
     private $unlisten;
+
+    /** @var \Amp\Postgres\Internal\CompletionQueue */
+    private $queue;
 
     /**
      * @param \Amp\Iterator $iterator Iterator emitting notificatons on the channel.
@@ -27,12 +27,20 @@ class Listener implements Iterator, Operation {
         $this->iterator = $iterator;
         $this->channel = $channel;
         $this->unlisten = $unlisten;
+        $this->queue = new Internal\CompletionQueue;
     }
 
     public function __destruct() {
         if ($this->unlisten) {
-            $this->unlisten(); // Invokes $this->complete().
+            $this->unlisten(); // Invokes $this->queue->complete().
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function onComplete(callable $onComplete) {
+        $this->queue->onComplete($onComplete);
     }
 
     /**
@@ -73,7 +81,7 @@ class Listener implements Iterator, Operation {
         /** @var \Amp\Promise $promise */
         $promise = ($this->unlisten)($this->channel);
         $this->unlisten = null;
-        $promise->onResolve($this->callableFromInstanceMethod("complete"));
+        $promise->onResolve([$this->queue, "complete"]);
         return $promise;
     }
 }
