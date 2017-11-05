@@ -4,6 +4,13 @@ namespace Amp\Postgres;
 
 interface Handle extends Executor {
     /**
+     * Indicates if the connection to the database is still alive.
+     *
+     * @return bool
+     */
+    public function isAlive(): bool;
+
+    /**
      * Quotes (escapes) the given string for use as a string literal or identifier in a query. This method wraps the
      * string in single quotes, so additional quotes should not be added in the query.
      *

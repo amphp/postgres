@@ -42,6 +42,10 @@ abstract class AbstractConnectionTest extends TestCase {
         $this->connection = $this->createConnection('host=localhost user=postgres');
     }
 
+    public function testIsAlive() {
+        $this->assertTrue($this->connection->isAlive());
+    }
+
     public function testQueryWithTupleResult() {
         Loop::run(function () {
             /** @var \Amp\Postgres\TupleResult $result */
@@ -376,6 +380,7 @@ abstract class AbstractConnectionTest extends TestCase {
 
             $data = $this->getData()[0];
 
+            $this->assertTrue($transaction->isAlive());
             $this->assertTrue($transaction->isActive());
             $this->assertSame($isolation, $transaction->getIsolationLevel());
 
@@ -387,6 +392,7 @@ abstract class AbstractConnectionTest extends TestCase {
 
             yield $transaction->commit();
 
+            $this->assertFalse($transaction->isAlive());
             $this->assertFalse($transaction->isActive());
 
             try {

@@ -31,6 +31,13 @@ class PooledConnection implements Connection {
     /**
      * {@inheritdoc}
      */
+    public function isAlive(): bool {
+        return $this->connection->isAlive();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function transaction(int $isolation = Transaction::COMMITTED): Promise {
         return $this->connection->transaction($isolation);
     }

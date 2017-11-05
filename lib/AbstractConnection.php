@@ -38,6 +38,13 @@ abstract class AbstractConnection implements Connection {
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function isAlive(): bool {
+        return $this->handle->isAlive();
+    }
+
+    /**
      * @param string $methodName Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *

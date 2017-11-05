@@ -24,8 +24,12 @@ abstract class AbstractPoolTest extends TestCase {
     /**
      * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\Connection
      */
-    private function createConnection() {
-        return $this->createMock(Connection::class);
+    protected function createConnection() {
+        $mock = $this->createMock(Connection::class);
+        $mock->method('isAlive')
+            ->willReturn(true);
+
+        return $mock;
     }
 
     /**

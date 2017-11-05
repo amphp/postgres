@@ -83,6 +83,10 @@ abstract class AbstractPool implements Pool {
 
         $this->connections->attach($connection);
         $this->idle->push($connection);
+
+        if ($this->deferred instanceof Deferred) {
+            $this->deferred->resolve($connection);
+        }
     }
 
     /**
@@ -101,12 +105,12 @@ abstract class AbstractPool implements Pool {
             }
         }
 
-        if ($this->idle->isEmpty()) {
+        while ($this->idle->isEmpty()) { // While loop to ensure an idle connection is available after promises below are resolved.
             try {
                 if ($this->connections->count() >= $this->getMaxConnections()) {
                     // All possible connections busy, so wait until one becomes available.
                     $this->deferred = new Deferred;
-                    yield $this->promise = $this->deferred->promise();
+                    yield $this->promise = $this->deferred->promise(); // May be resolved with defunct connection.
                 } else {
                     // Max connection count has not been reached, so open another connection.
                     $this->promise = $this->createConnection();
@@ -128,11 +132,13 @@ abstract class AbstractPool implements Pool {
      * @throws \Error If the connection is not part of this pool.
      */
     private function push(Connection $connection) {
-        if (!isset($this->connections[$connection])) {
-            throw new \Error('Connection is not part of this pool');
-        }
+        \assert(isset($this->connections[$connection]), 'Connection is not part of this pool');
 
-        $this->idle->push($connection);
+        if ($connection->isAlive()) {
+            $this->idle->push($connection);
+        } else {
+            $this->connections->detach($connection);
+        }
 
         if ($this->deferred instanceof Deferred) {
             $this->deferred->resolve($connection);

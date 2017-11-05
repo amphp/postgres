@@ -56,6 +56,13 @@ class Transaction implements Handle, Operation {
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function isAlive(): bool {
+        return $this->handle !== null && $this->handle->isAlive();
+    }
+
+    /**
      * @return bool True if the transaction is active, false if it has been committed or rolled back.
      */
     public function isActive(): bool {

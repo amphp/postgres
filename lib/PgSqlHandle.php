@@ -49,14 +49,25 @@ class PgSqlHandle implements Handle {
     public function __construct($handle, $socket) {
         $this->handle = $handle;
 
+        $handle = &$this->handle;
         $deferred = &$this->deferred;
         $listeners = &$this->listeners;
 
-        $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$listeners, $handle) {
+        $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
             if (!\pg_consume_input($handle)) {
-                if ($deferred !== null) {
-                    $deferred->fail(new FailureException(\pg_last_error($handle)));
+                $handle = null; // Marks connection as dead.
+                Loop::disable($watcher);
+
+                $exception = new ConnectionException(\pg_last_error($handle));
+
+                foreach ($listeners as $listener) {
+                    $listener->fail($exception);
                 }
+
+                if ($deferred !== null) {
+                    $deferred->fail($exception);
+                }
+
                 return;
             }
 
@@ -123,8 +134,13 @@ class PgSqlHandle implements Handle {
     }
 
     /**
-     * @coroutine
-     *
+     * {@inheritdoc}
+     */
+    public function isAlive(): bool {
+        return $this->handle !== null;
+    }
+
+    /**
      * @param callable $function Function name to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
@@ -142,6 +158,10 @@ class PgSqlHandle implements Handle {
             } catch (\Throwable $exception) {
                 // Ignore failure from another operation.
             }
+        }
+
+        if (!$this->handle) {
+            throw new ConnectionException("The connection to the database has been lost");
         }
 
         $result = $function($this->handle, ...$args);

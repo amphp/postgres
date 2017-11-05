@@ -60,13 +60,25 @@ class PqHandle implements Handle {
     public function __construct(pq\Connection $handle) {
         $this->handle = $handle;
 
+        $handle = &$this->handle;
         $deferred = &$this->deferred;
         $listeners = &$this->listeners;
 
-        $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, $handle) {
+        $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
             if ($handle->poll() === pq\Connection::POLLING_FAILED) {
-                $deferred->fail(new FailureException($handle->errorMessage));
+                $handle = null; // Marks connection as dead.
                 Loop::disable($watcher);
+
+                $exception = new ConnectionException($handle->errorMessage);
+
+                foreach ($listeners as $listener) {
+                    $listener->fail($exception);
+                }
+
+                if ($deferred !== null) {
+                    $deferred->fail($exception);
+                }
+
                 return;
             }
 
@@ -112,6 +124,13 @@ class PqHandle implements Handle {
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function isAlive(): bool {
+        return $this->handle !== null;
+    }
+
+    /**
      * @param callable $method Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
@@ -128,6 +147,10 @@ class PqHandle implements Handle {
             } catch (\Throwable $exception) {
                 // Ignore failure from another operation.
             }
+        }
+
+        if (!$this->handle) {
+            throw new ConnectionException("The connection to the database has been lost");
         }
 
         try {
@@ -229,6 +252,10 @@ class PqHandle implements Handle {
     }
 
     private function deallocate(string $name) {
+        if (!$this->handle) {
+            return; // Connection dead.
+        }
+
         \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
 
         $storage = $this->statements[$name];
