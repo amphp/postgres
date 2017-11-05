@@ -64,19 +64,23 @@ class PqHandle implements Handle {
         $listeners = &$this->listeners;
 
         $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, $handle) {
-            $status = $handle->poll();
+            if ($handle->poll() === pq\Connection::POLLING_FAILED) {
+                $deferred->fail(new FailureException($handle->errorMessage));
+                Loop::disable($watcher);
+                return;
+            }
 
             if ($deferred === null) {
                 return; // No active query, only notification listeners.
             }
 
-            if ($status === pq\Connection::POLLING_FAILED) {
-                $deferred->fail(new FailureException($handle->errorMessage));
-            } elseif (!$handle->busy) {
-                $deferred->resolve($handle->getResult());
+            if ($handle->busy) {
+                return; // Not finished receiving data, poll again.
             }
 
-            if (!$deferred && !$handle->busy && empty($listeners)) {
+            $deferred->resolve($handle->getResult());
+
+            if (!$deferred && empty($listeners)) {
                 Loop::disable($watcher);
             }
         });
