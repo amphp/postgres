@@ -149,7 +149,6 @@ class PgSqlHandle implements Handle {
      * @resolve resource
      *
      * @throws \Amp\Postgres\FailureException
-     * @throws \Amp\Postgres\PendingOperationError
      */
     private function send(callable $function, ...$args): \Generator {
         while ($this->deferred) {

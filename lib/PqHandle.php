@@ -136,7 +136,7 @@ class PqHandle implements Handle {
      *
      * @return \Generator
      *
-     * @resolve resource
+     * @resolve \Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult|\pq\Statement
      *
      * @throws \Amp\Postgres\FailureException
      */

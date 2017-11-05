@@ -51,7 +51,6 @@ abstract class AbstractConnection implements Connection {
      * @return \Amp\Promise
      *
      * @throws \Amp\Postgres\FailureException
-     * @throws \Amp\Postgres\PendingOperationError
      */
     private function send(string $methodName, ...$args): \Generator {
         while ($this->busy) {

@@ -13,6 +13,8 @@ use Amp\Promise;
  *
  * @throws \Amp\Postgres\FailureException If connecting fails.
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
+ *
+ * @codeCoverageIgnore
  */
 function connect(string $connectionString, CancellationToken $token = null): Promise {
     if (\extension_loaded("pq")) {
