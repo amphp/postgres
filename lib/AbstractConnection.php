@@ -51,13 +51,7 @@ abstract class AbstractConnection implements Connection {
             yield $this->busy->promise();
         }
 
-        $this->busy = new Deferred;
-
-        try {
-            return $this->handle->{$methodName}(...$args);
-        } finally {
-            $this->release();
-        }
+        return $this->handle->{$methodName}(...$args);
     }
 
     /**
@@ -110,12 +104,6 @@ abstract class AbstractConnection implements Connection {
      */
     public function transaction(int $isolation = Transaction::COMMITTED): Promise {
         return call(function () use ($isolation) {
-            while ($this->busy) {
-                yield $this->busy->promise();
-            }
-
-            $this->busy = new Deferred;
-
             switch ($isolation) {
                 case Transaction::UNCOMMITTED:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
@@ -136,6 +124,8 @@ abstract class AbstractConnection implements Connection {
                 default:
                     throw new \Error("Invalid transaction type");
             }
+
+            $this->busy = new Deferred;
 
             $transaction = new Transaction($this->handle, $isolation);
             $transaction->onComplete($this->release);
