@@ -11,4 +11,9 @@ interface Statement {
      * @return \Amp\Promise<\Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult>
      */
     public function execute(...$params): Promise;
+
+    /**
+     * @return string The SQL string used to prepare the statement.
+     */
+    public function getQuery(): string;
 }

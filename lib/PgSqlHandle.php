@@ -159,7 +159,7 @@ class PgSqlHandle implements Handle {
             }
         }
 
-        if (!$this->handle) {
+        if (!is_resource($this->handle)) {
             throw new ConnectionException("The connection to the database has been lost");
         }
 

@@ -37,4 +37,11 @@ class PooledStatement implements Statement {
     public function execute(...$params): Promise {
         return $this->statement->execute(...$params);
     }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getQuery(): string {
+        return $this->statement->getQuery();
+    }
 }
