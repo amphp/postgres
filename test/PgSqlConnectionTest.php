@@ -2,17 +2,17 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\Connection;
+use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 
 /**
  * @requires extension pgsql
  */
-class PgSqlConnectionTest extends AbstractConnectionTest {
+class PgSqlConnectionTest extends AbstractLinkTest {
     /** @var resource PostgreSQL connection resource. */
     protected $handle;
 
-    public function createConnection(string $connectionString): Connection {
+    public function createLink(string $connectionString): Link {
         $this->handle = \pg_connect($connectionString);
         $socket = \pg_socket($this->handle);
 
@@ -39,5 +39,9 @@ class PgSqlConnectionTest extends AbstractConnectionTest {
         \pg_get_result($this->handle); // Consume any leftover results from test.
         \pg_query($this->handle, "ROLLBACK");
         \pg_query($this->handle, "DROP TABLE test");
+    }
+
+    public function testIsAlive() {
+        $this->assertTrue($this->connection->isAlive());
     }
 }

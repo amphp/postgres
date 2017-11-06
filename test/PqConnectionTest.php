@@ -2,17 +2,17 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\Connection;
+use Amp\Postgres\Link;
 use Amp\Postgres\PqConnection;
 
 /**
  * @requires extension pq
  */
-class PqConnectionTest extends AbstractConnectionTest {
+class PqConnectionTest extends AbstractLinkTest {
     /** @var resource PostgreSQL connection resource. */
     protected $handle;
 
-    public function createConnection(string $connectionString): Connection {
+    public function createLink(string $connectionString): Link {
         $this->handle = new \pq\Connection($connectionString);
 
         $this->handle->exec("DROP TABLE IF EXISTS test");
@@ -37,5 +37,9 @@ class PqConnectionTest extends AbstractConnectionTest {
     public function tearDown() {
         $this->handle->exec("ROLLBACK");
         $this->handle->exec("DROP TABLE test");
+    }
+
+    public function testIsAlive() {
+        $this->assertTrue($this->connection->isAlive());
     }
 }

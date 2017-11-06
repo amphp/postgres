@@ -6,7 +6,7 @@ use Amp\Coroutine;
 use Amp\Delayed;
 use Amp\Loop;
 use Amp\Postgres\CommandResult;
-use Amp\Postgres\Connection;
+use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryError;
 use Amp\Postgres\Statement;
@@ -15,7 +15,7 @@ use Amp\Postgres\TransactionError;
 use Amp\Postgres\TupleResult;
 use PHPUnit\Framework\TestCase;
 
-abstract class AbstractConnectionTest extends TestCase {
+abstract class AbstractLinkTest extends TestCase {
     /** @var \Amp\Postgres\Connection */
     protected $connection;
 
@@ -34,16 +34,12 @@ abstract class AbstractConnectionTest extends TestCase {
     /**
      * @param string $connectionString
      *
-     * @return \Amp\Postgres\Connection Connection object to be tested.
+     * @return \Amp\Postgres\Link Connection or Link object to be tested.
      */
-    abstract public function createConnection(string $connectionString): Connection;
+    abstract public function createLink(string $connectionString): Link;
 
     public function setUp() {
-        $this->connection = $this->createConnection('host=localhost user=postgres');
-    }
-
-    public function testIsAlive() {
-        $this->assertTrue($this->connection->isAlive());
+        $this->connection = $this->createLink('host=localhost user=postgres');
     }
 
     public function testQueryWithTupleResult() {
@@ -411,6 +407,7 @@ abstract class AbstractConnectionTest extends TestCase {
             $listener = yield $this->connection->listen($channel);
 
             $this->assertInstanceOf(Listener::class, $listener);
+            $this->assertSame($channel, $listener->getChannel());
 
             Loop::delay(100, function () use ($channel) {
                 yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
