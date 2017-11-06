@@ -2,14 +2,15 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Delayed;
 use Amp\Loop;
 use Amp\Postgres\CommandResult;
 use Amp\Postgres\Connection;
 use Amp\Postgres\Listener;
+use Amp\Postgres\Pool;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TupleResult;
 use Amp\Promise;
-use Amp\Success;
 use PHPUnit\Framework\TestCase;
 use function Amp\call;
 
@@ -19,15 +20,18 @@ abstract class AbstractPoolTest extends TestCase {
      *
      * @return \Amp\Postgres\Pool
      */
-    abstract protected function createPool(array $connections);
+    abstract protected function createPool(array $connections): Pool;
 
     /**
      * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\Connection
      */
-    protected function createConnection() {
+    protected function createConnection(): Connection {
         $mock = $this->createMock(Connection::class);
         $mock->method('isAlive')
-            ->willReturn(true);
+            ->willReturnCallback(static function () {
+                static $count = 0;
+                return $count++ < 3; // Force defunct connection after 3 operations.
+            });
 
         return $mock;
     }
@@ -79,7 +83,7 @@ abstract class AbstractPoolTest extends TestCase {
         $connection->expects($this->once())
             ->method($method)
             ->with(...$params)
-            ->will($this->returnValue(new Success($result)));
+            ->will($this->returnValue(new Delayed(10, $result)));
 
         $pool = $this->createPool($connections);
 
@@ -108,7 +112,7 @@ abstract class AbstractPoolTest extends TestCase {
         foreach ($connections as $connection) {
             $connection->method($method)
                 ->with(...$params)
-                ->will($this->returnValue(new Success($result)));
+                ->will($this->returnValue(new Delayed(10, $result)));
         }
 
         $pool = $this->createPool($connections);
@@ -151,7 +155,7 @@ abstract class AbstractPoolTest extends TestCase {
         $connection->expects($this->once())
             ->method('transaction')
             ->with(Transaction::COMMITTED)
-            ->will($this->returnValue(new Success($result)));
+            ->will($this->returnValue(new Delayed(10, $result)));
 
         $pool = $this->createPool($connections);
 
@@ -179,7 +183,7 @@ abstract class AbstractPoolTest extends TestCase {
             $connection->method('transaction')
                 ->with(Transaction::COMMITTED)
                 ->will($this->returnCallback(function () use ($result) {
-                    return new Success($result);
+                    return new Delayed(10, $result);
                 }));
         }
 

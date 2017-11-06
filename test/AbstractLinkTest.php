@@ -259,6 +259,17 @@ abstract class AbstractLinkTest extends TestCase {
     }
 
     /**
+     * @depends testExecute
+     * @expectedException \Amp\Postgres\QueryError
+     * @expectedExceptionMessage bind message supplies 0 parameters
+     */
+    public function testExecuteWithInvalidParams() {
+        Loop::run(function () {
+            $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1");
+        });
+    }
+
+    /**
      * @depends testQueryWithTupleResult
      */
     public function testSimultaneousQuery() {

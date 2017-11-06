@@ -3,14 +3,15 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\AggregatePool;
+use Amp\Postgres\Pool;
 
 class AggregatePoolTest extends AbstractPoolTest {
     /**
      * @param array $connections
      *
-     * @return \Amp\Postgres\Pool
+     * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\Pool
      */
-    protected function createPool(array $connections) {
+    protected function createPool(array $connections): Pool {
         $mock = $this->getMockBuilder(AggregatePool::class)
             ->setConstructorArgs(['', 0, count($connections)])
             ->setMethods(['createConnection'])

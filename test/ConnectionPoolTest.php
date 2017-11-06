@@ -3,6 +3,7 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\ConnectionPool;
+use Amp\Postgres\Pool;
 use Amp\Promise;
 use Amp\Success;
 
@@ -10,9 +11,9 @@ class ConnectionPoolTest extends AbstractPoolTest {
     /**
      * @param array $connections
      *
-     * @return \Amp\Postgres\Pool
+     * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\Pool
      */
-    protected function createPool(array $connections) {
+    protected function createPool(array $connections): Pool {
         $mock = $this->getMockBuilder(ConnectionPool::class)
             ->setConstructorArgs(['connection string', \count($connections)])
             ->setMethods(['createConnection'])
@@ -21,7 +22,7 @@ class ConnectionPoolTest extends AbstractPoolTest {
         $mock->method('createConnection')
             ->will($this->returnCallback(function () use ($connections): Promise {
                 static $count = 0;
-                return new Success($connections[$count++]);
+                return new Success($connections[$count++ % \count($connections)]);
             }));
 
         return $mock;
