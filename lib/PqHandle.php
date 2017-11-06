@@ -375,11 +375,12 @@ class PqHandle implements Handle {
         $emitter = $this->listeners[$channel];
         unset($this->listeners[$channel]);
 
-        if (empty($this->listeners) && $this->deferred === null) {
-            Loop::disable($this->poll);
+        if (!$this->handle) {
+            $promise = new Success; // Connection already closed.
+        } else {
+            $promise = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
         }
 
-        $promise = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
         $promise->onResolve([$emitter, "complete"]);
         return $promise;
     }
@@ -388,6 +389,10 @@ class PqHandle implements Handle {
      * {@inheritdoc}
      */
     public function quoteString(string $data): string {
+        if (!$this->handle) {
+            throw new ConnectionException("The connection to the database has been lost");
+        }
+
         return $this->handle->quote($data);
     }
 
@@ -395,6 +400,10 @@ class PqHandle implements Handle {
      * {@inheritdoc}
      */
     public function quoteName(string $name): string {
+        if (!$this->handle) {
+            throw new ConnectionException("The connection to the database has been lost");
+        }
+
         return $this->handle->quoteName($name);
     }
 }

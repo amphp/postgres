@@ -17,6 +17,8 @@ interface Handle extends Executor {
      * @param string $data Unquoted data.
      *
      * @return string Quoted string wrapped in single quotes.
+     *
+     * @throws \Amp\Postgres\ConnectionException If the connection to the database has been lost.
      */
     public function quoteString(string $data): string;
 
@@ -26,6 +28,8 @@ interface Handle extends Executor {
      * @param string $name Unquoted identifier.
      *
      * @return string Quoted identifier.
+     *
+     * @throws \Amp\Postgres\ConnectionException If the connection to the database has been lost.
      */
     public function quoteName(string $name): string;
 }

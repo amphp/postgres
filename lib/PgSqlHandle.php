@@ -159,7 +159,7 @@ class PgSqlHandle implements Handle {
             }
         }
 
-        if (!is_resource($this->handle)) {
+        if (!\is_resource($this->handle)) {
             throw new ConnectionException("The connection to the database has been lost");
         }
 
@@ -354,11 +354,12 @@ class PgSqlHandle implements Handle {
         $emitter = $this->listeners[$channel];
         unset($this->listeners[$channel]);
 
-        if (empty($this->listeners) && $this->deferred === null) {
-            Loop::disable($this->poll);
+        if (!\is_resource($this->handle)) {
+            $promise = new Success; // Connection already closed.
+        } else {
+            $promise = $this->query(\sprintf("UNLISTEN %s", $this->quoteName($channel)));
         }
 
-        $promise = $this->query(\sprintf("UNLISTEN %s", $this->quoteName($channel)));
         $promise->onResolve([$emitter, "complete"]);
         return $promise;
     }
@@ -367,6 +368,10 @@ class PgSqlHandle implements Handle {
      * {@inheritdoc}
      */
     public function quoteString(string $data): string {
+        if (!\is_resource($this->handle)) {
+            throw new ConnectionException("The connection to the database has been lost");
+        }
+
         return \pg_escape_literal($this->handle, $data);
     }
 
@@ -374,6 +379,10 @@ class PgSqlHandle implements Handle {
      * {@inheritdoc}
      */
     public function quoteName(string $name): string {
+        if (!\is_resource($this->handle)) {
+            throw new ConnectionException("The connection to the database has been lost");
+        }
+
         return \pg_escape_identifier($this->handle, $name);
     }
 }
