@@ -10,7 +10,8 @@ This library is a component for [Amp](https://github.com/amphp/amp) that provide
 
 ##### Requirements
 
-- PHP 7
+- PHP 7+
+- [ext-pgsql](https://secure.php.net/pgsql) or [pecl-pq](https://secure.php.net/pgsql)
 
 ##### Installation
 
@@ -28,7 +29,7 @@ You can also manually edit `composer.json` to add this library as a project requ
 // composer.json
 {
     "require": {
-        "amphp/postgres": "^0.1"
+        "amphp/postgres": "^0.2"
     }
 }
 ```
