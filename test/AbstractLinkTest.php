@@ -61,6 +61,28 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
+    public function testQueryWithUnconsumedTupleResult() {
+        Loop::run(function () {
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $this->connection->query("SELECT * FROM test");
+
+            $this->assertInstanceOf(TupleResult::class, $result);
+
+            /** @var \Amp\Postgres\TupleResult $result */
+            $result = yield $this->connection->query("SELECT * FROM test");
+
+            $this->assertInstanceOf(TupleResult::class, $result);
+
+            $data = $this->getData();
+
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
+            }
+        });
+    }
+
     public function testQueryWithCommandResult() {
         Loop::run(function () {
             /** @var \Amp\Postgres\CommandResult $result */

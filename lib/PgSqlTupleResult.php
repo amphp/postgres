@@ -16,6 +16,10 @@ class PgSqlTupleResult extends TupleResult {
         parent::__construct(new Producer(static function (callable $emit) use ($handle) {
             $count = \pg_num_rows($handle);
             for ($i = 0; $i < $count; ++$i) {
+                if (!\is_resource($handle)) {
+                    return; // Result object discarded, simply return.
+                }
+
                 $result = \pg_fetch_assoc($handle);
                 if ($result === false) {
                     throw new FailureException(\pg_result_error($handle));

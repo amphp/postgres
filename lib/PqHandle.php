@@ -228,6 +228,10 @@ class PqHandle implements Handle {
             }
         }
 
+        if (!$result) {
+            return null; // Connection closing, end result set.
+        }
+
         switch ($result->status) {
             case pq\Result::TUPLES_OK: // End of result set.
                 return null;
