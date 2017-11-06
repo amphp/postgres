@@ -14,6 +14,8 @@ class PqConnectionTest extends AbstractConnectionTest {
 
     public function createLink(string $connectionString): Link {
         $this->handle = new \pq\Connection($connectionString);
+        $this->handle->nonblocking = true;
+        $this->handle->unbuffered = true;
 
         $this->handle->exec("DROP TABLE IF EXISTS test");
 

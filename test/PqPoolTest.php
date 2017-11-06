@@ -17,6 +17,8 @@ class PqPoolTest extends AbstractLinkTest {
         $pool = new AggregatePool;
 
         $handle = new \pq\Connection($connectionString);
+        $handle->nonblocking = true;
+        $handle->unbuffered = true;
 
         $handle->exec("DROP TABLE IF EXISTS test");
 
@@ -39,6 +41,8 @@ class PqPoolTest extends AbstractLinkTest {
         $pool->addConnection(new PqConnection($handle));
 
         $handle = new \pq\Connection($connectionString);
+        $handle->nonblocking = true;
+        $handle->unbuffered = true;
 
         $this->handles[] = $handle;
 
