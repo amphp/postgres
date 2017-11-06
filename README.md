@@ -11,7 +11,7 @@ This library is a component for [Amp](https://github.com/amphp/amp) that provide
 ##### Requirements
 
 - PHP 7+
-- [ext-pgsql](https://secure.php.net/pgsql) or [pecl-pq](https://secure.php.net/pgsql)
+- [ext-pgsql](https://secure.php.net/pgsql) or [pecl-pq](https://pecl.php.net/package/pq)
 
 ##### Installation
 
