@@ -8,7 +8,7 @@ use Amp\Postgres\PqConnection;
 /**
  * @requires extension pq
  */
-class PqConnectionTest extends AbstractLinkTest {
+class PqConnectionTest extends AbstractConnectionTest {
     /** @var resource PostgreSQL connection resource. */
     protected $handle;
 
@@ -37,9 +37,5 @@ class PqConnectionTest extends AbstractLinkTest {
     public function tearDown() {
         $this->handle->exec("ROLLBACK");
         $this->handle->exec("DROP TABLE test");
-    }
-
-    public function testIsAlive() {
-        $this->assertTrue($this->connection->isAlive());
     }
 }
