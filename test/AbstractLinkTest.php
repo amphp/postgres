@@ -295,7 +295,7 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testSimultaneousQuery
      */
-    public function testSimultaneousQueryWithFirstFailing() {
+    public function testSimultaneousQueryWithOneFailing() {
         $callback = \Amp\coroutine(function ($query) {
             /** @var \Amp\Postgres\TupleResult $result */
             $result = yield $this->connection->query($query);
@@ -313,8 +313,8 @@ abstract class AbstractLinkTest extends TestCase {
 
         try {
             Loop::run(function () use (&$result, $callback) {
-                $failing = $callback("SELECT & FROM test");
                 $successful = $callback("SELECT * FROM test");
+                $failing = $callback("SELECT & FROM test");
 
                 $result = yield $successful;
                 yield $failing;
