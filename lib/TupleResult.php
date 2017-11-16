@@ -5,37 +5,22 @@ namespace Amp\Postgres;
 use Amp\Iterator;
 use Amp\Promise;
 
-abstract class TupleResult implements Iterator {
-    /** @var \Amp\Iterator */
-    private $iterator;
-
-    /**
-     * @param \Amp\Iterator $iterator
-     */
-    public function __construct(Iterator $iterator) {
-        $this->iterator = $iterator;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function advance(): Promise {
-        return $this->iterator->advance();
-    }
+interface TupleResult extends Iterator {
+    const FETCH_ARRAY = 0;
+    const FETCH_ASSOC = 1;
+    const FETCH_OBJECT = 2;
 
     /**
      * {@inheritdoc}
      *
-     * @return mixed[] Map of column values.
+     * @param int $type Next row fetch type. Use the FETCH_* constants provided by this interface.
      */
-    public function getCurrent(): array {
-        return $this->iterator->getCurrent();
-    }
+    public function advance(int $type = self::FETCH_ASSOC): Promise;
 
     /**
      * Returns the number of fields (columns) in each row.
      *
      * @return int
      */
-    abstract public function numFields(): int;
+    public function numFields(): int;
 }

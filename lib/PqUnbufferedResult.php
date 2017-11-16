@@ -7,12 +7,18 @@ use Amp\Producer;
 use Amp\Promise;
 use pq;
 
-class PqUnbufferedResult extends TupleResult implements Operation {
+class PqUnbufferedResult implements TupleResult, Operation {
     /** @var int */
     private $numCols;
 
     /** @var \Amp\Producer */
     private $producer;
+
+    /** @var array|object Last row emitted. */
+    private $currentRow;
+
+    /** @var int Next row fetch type. */
+    private $type = self::FETCH_ASSOC;
 
     /** @var \Amp\Postgres\Internal\CompletionQueue */
     private $queue;
@@ -25,22 +31,52 @@ class PqUnbufferedResult extends TupleResult implements Operation {
         $this->numCols = $result->numCols;
         $this->queue = $queue = new Internal\CompletionQueue;
 
-        parent::__construct($this->producer = new Producer(static function (callable $emit) use ($queue, $result, $fetch) {
+        $this->producer = new Producer(static function (callable $emit) use ($queue, $result, $fetch) {
             try {
                 do {
                     $next = $fetch(); // Request next result before current is consumed.
-                    yield $emit($result->fetchRow(pq\Result::FETCH_ASSOC));
+                    yield $emit($result);
                     $result = yield $next;
                 } while ($result instanceof pq\Result);
             } finally {
                 $queue->complete();
             }
-        }));
+        });
     }
 
     public function __destruct() {
         if (!$this->queue->isComplete()) { // Producer above did not complete, so consume remaining results.
             Promise\rethrow(new Coroutine($this->dispose()));
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function advance(int $type = self::FETCH_ASSOC): Promise {
+        $this->currentRow = null;
+        $this->type = $type;
+
+        return $this->producer->advance();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getCurrent() {
+        if ($this->currentRow !== null) {
+            return $this->currentRow;
+        }
+
+        switch ($this->type) {
+            case self::FETCH_ASSOC:
+                return $this->currentRow = $this->producer->getCurrent()->fetchRow(pq\Result::FETCH_ASSOC);
+            case self::FETCH_ARRAY:
+                return $this->currentRow = $this->producer->getCurrent()->fetchRow(pq\Result::FETCH_ARRAY);
+            case self::FETCH_OBJECT:
+                return $this->currentRow = $this->producer->getCurrent()->fetchRow(pq\Result::FETCH_OBJECT);
+            default:
+                throw new \Error("Invalid result fetch type");
         }
     }
 

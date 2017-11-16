@@ -39,7 +39,7 @@ abstract class AbstractLinkTest extends TestCase {
     abstract public function createLink(string $connectionString): Link;
 
     public function setUp() {
-        $this->connection = $this->createLink('host=localhost user=postgres');
+        $this->connection = $this->createLink('host=localhost;user=postgres');
     }
 
     public function testQueryWithTupleResult() {
@@ -75,10 +75,10 @@ abstract class AbstractLinkTest extends TestCase {
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(); ++$i) {
+            for ($i = 0; yield $result->advance(TupleResult::FETCH_OBJECT); ++$i) {
                 $row = $result->getCurrent();
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
+                $this->assertSame($data[$i][0], $row->domain);
+                $this->assertSame($data[$i][1], $row->tld);
             }
         });
     }
@@ -131,10 +131,10 @@ abstract class AbstractLinkTest extends TestCase {
 
             $this->assertSame(2, $result->numFields());
 
-            while (yield $result->advance()) {
+            while (yield $result->advance(TupleResult::FETCH_ARRAY)) {
                 $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
+                $this->assertSame($data[0], $row[0]);
+                $this->assertSame($data[1], $row[1]);
             }
         });
     }

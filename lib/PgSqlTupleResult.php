@@ -2,31 +2,28 @@
 
 namespace Amp\Postgres;
 
-use Amp\Producer;
+use Amp\Promise;
+use Amp\Success;
 
-class PgSqlTupleResult extends TupleResult {
+class PgSqlTupleResult implements TupleResult {
     /** @var resource PostgreSQL result resource. */
     private $handle;
+
+    /** @var int */
+    private $position = 0;
+
+    /** @var mixed Last row emitted. */
+    private $currentRow;
+
+    /** @var int Next row fetch type. */
+    private $type = self::FETCH_ASSOC;
 
     /**
      * @param resource $handle PostgreSQL result resource.
      */
     public function __construct($handle) {
         $this->handle = $handle;
-        parent::__construct(new Producer(static function (callable $emit) use ($handle) {
-            $count = \pg_num_rows($handle);
-            for ($i = 0; $i < $count; ++$i) {
-                if (!\is_resource($handle)) {
-                    return; // Result object discarded, simply return.
-                }
-
-                $result = \pg_fetch_assoc($handle);
-                if ($result === false) {
-                    throw new FailureException(\pg_result_error($handle));
-                }
-                yield $emit($result);
-            }
-        }));
+        $this->numRows = \pg_num_rows($this->handle);
     }
 
     /**
@@ -34,6 +31,55 @@ class PgSqlTupleResult extends TupleResult {
      */
     public function __destruct() {
         \pg_free_result($this->handle);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function advance(int $type = self::FETCH_ASSOC): Promise {
+        $this->currentRow = null;
+        $this->type = $type;
+
+        if (++$this->position > \pg_num_rows($this->handle)) {
+            return new Success(false);
+        }
+
+        return new Success(true);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getCurrent() {
+        if ($this->currentRow !== null) {
+            return $this->currentRow;
+        }
+
+        if ($this->position > \pg_num_rows($this->handle)) {
+            throw new \Error("No more rows remain in the result set");
+        }
+
+        switch ($this->type) {
+            case self::FETCH_ASSOC:
+                $result = \pg_fetch_array($this->handle, null, \PGSQL_ASSOC);
+                break;
+            case self::FETCH_ARRAY:
+                $result = \pg_fetch_array($this->handle, null, \PGSQL_NUM);
+                break;
+            case self::FETCH_OBJECT:
+                $result = \pg_fetch_object($this->handle);
+                break;
+            default:
+                throw new \Error("Invalid result fetch type");
+        }
+
+        if ($result === false) {
+            $message = \pg_result_error($this->handle);
+            \pg_free_result($this->handle);
+            throw new FailureException($message);
+        }
+
+        return $this->currentRow = $result;
     }
 
     /**
