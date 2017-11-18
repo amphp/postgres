@@ -136,7 +136,7 @@ abstract class AbstractConnection implements Connection {
             $this->busy = new Deferred;
 
             $transaction = new Transaction($this->handle, $isolation);
-            $transaction->onComplete($this->release);
+            $transaction->onDestruct($this->release);
             return $transaction;
         });
     }

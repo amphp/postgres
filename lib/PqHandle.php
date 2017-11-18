@@ -195,7 +195,7 @@ class PqHandle implements Handle {
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
                 $result = new PqUnbufferedResult($this->fetch, $result);
-                $result->onComplete($this->release);
+                $result->onDestruct($this->release);
                 return $result;
 
             case pq\Result::NONFATAL_ERROR:

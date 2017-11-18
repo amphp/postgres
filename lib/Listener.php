@@ -15,7 +15,7 @@ class Listener implements Iterator, Operation {
     /** @var callable */
     private $unlisten;
 
-    /** @var \Amp\Postgres\Internal\CompletionQueue */
+    /** @var \Amp\Postgres\Internal\ReferenceQueue */
     private $queue;
 
     /**
@@ -27,7 +27,7 @@ class Listener implements Iterator, Operation {
         $this->iterator = $iterator;
         $this->channel = $channel;
         $this->unlisten = $unlisten;
-        $this->queue = new Internal\CompletionQueue;
+        $this->queue = new Internal\ReferenceQueue;
     }
 
     public function __destruct() {
@@ -39,8 +39,8 @@ class Listener implements Iterator, Operation {
     /**
      * {@inheritdoc}
      */
-    public function onComplete(callable $onComplete) {
-        $this->queue->onComplete($onComplete);
+    public function onDestruct(callable $onComplete) {
+        $this->queue->onDestruct($onComplete);
     }
 
     /**
@@ -81,7 +81,7 @@ class Listener implements Iterator, Operation {
         /** @var \Amp\Promise $promise */
         $promise = ($this->unlisten)($this->channel);
         $this->unlisten = null;
-        $promise->onResolve([$this->queue, "complete"]);
+        $promise->onResolve([$this->queue, "unreference"]);
         return $promise;
     }
 }

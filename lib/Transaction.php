@@ -16,7 +16,7 @@ class Transaction implements Handle, Operation {
     /** @var int */
     private $isolation;
 
-    /** @var \Amp\Postgres\Internal\CompletionQueue */
+    /** @var \Amp\Postgres\Internal\ReferenceQueue */
     private $queue;
 
     /**
@@ -39,7 +39,7 @@ class Transaction implements Handle, Operation {
         }
 
         $this->handle = $handle;
-        $this->queue = new Internal\CompletionQueue;
+        $this->queue = new Internal\ReferenceQueue;
     }
 
     public function __destruct() {
@@ -51,8 +51,8 @@ class Transaction implements Handle, Operation {
     /**
      * {@inheritdoc}
      */
-    public function onComplete(callable $onComplete) {
-        $this->queue->onComplete($onComplete);
+    public function onDestruct(callable $onComplete) {
+        $this->queue->onDestruct($onComplete);
     }
 
     /**
@@ -143,7 +143,7 @@ class Transaction implements Handle, Operation {
 
         $promise = $this->handle->query("COMMIT");
         $this->handle = null;
-        $promise->onResolve([$this->queue, "complete"]);
+        $promise->onResolve([$this->queue, "unreference"]);
 
         return $promise;
     }
@@ -162,7 +162,7 @@ class Transaction implements Handle, Operation {
 
         $promise = $this->handle->query("ROLLBACK");
         $this->handle = null;
-        $promise->onResolve([$this->queue, "complete"]);
+        $promise->onResolve([$this->queue, "unreference"]);
 
         return $promise;
     }

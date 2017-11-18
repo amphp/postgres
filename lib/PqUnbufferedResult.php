@@ -20,7 +20,7 @@ class PqUnbufferedResult implements TupleResult, Operation {
     /** @var int Next row fetch type. */
     private $type = self::FETCH_ASSOC;
 
-    /** @var \Amp\Postgres\Internal\CompletionQueue */
+    /** @var \Amp\Postgres\Internal\ReferenceQueue */
     private $queue;
 
     /**
@@ -29,7 +29,7 @@ class PqUnbufferedResult implements TupleResult, Operation {
      */
     public function __construct(callable $fetch, pq\Result $result) {
         $this->numCols = $result->numCols;
-        $this->queue = $queue = new Internal\CompletionQueue;
+        $this->queue = $queue = new Internal\ReferenceQueue;
 
         $this->producer = new Producer(static function (callable $emit) use ($queue, $result, $fetch) {
             try {
@@ -39,13 +39,13 @@ class PqUnbufferedResult implements TupleResult, Operation {
                     $result = yield $next;
                 } while ($result instanceof pq\Result);
             } finally {
-                $queue->complete();
+                $queue->unreference();
             }
         });
     }
 
     public function __destruct() {
-        if (!$this->queue->isComplete()) { // Producer above did not complete, so consume remaining results.
+        if (!$this->queue->isReferenced()) { // Producer above did not complete, so consume remaining results.
             Promise\rethrow(new Coroutine($this->dispose()));
         }
     }
@@ -98,7 +98,7 @@ class PqUnbufferedResult implements TupleResult, Operation {
     /**
      * {@inheritdoc}
      */
-    public function onComplete(callable $onComplete) {
-        $this->queue->onComplete($onComplete);
+    public function onDestruct(callable $onComplete) {
+        $this->queue->onDestruct($onComplete);
     }
 }
