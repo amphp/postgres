@@ -222,7 +222,11 @@ abstract class AbstractPool implements Pool {
             throw $exception;
         }
 
-        return new Internal\PooledStatement($connection, $statement, $this->push);
+        $statement->onDestruct(function () use ($connection) {
+            $this->push($connection);
+        });
+
+        return $statement;
     }
 
     /**

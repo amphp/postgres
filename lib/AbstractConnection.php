@@ -4,7 +4,6 @@ namespace Amp\Postgres;
 
 use Amp\CallableMaker;
 use Amp\CancellationToken;
-use Amp\Coroutine;
 use Amp\Deferred;
 use Amp\Promise;
 use function Amp\call;
@@ -12,7 +11,7 @@ use function Amp\call;
 abstract class AbstractConnection implements Connection {
     use CallableMaker;
 
-    /** @var \Amp\Postgres\Executor */
+    /** @var \Amp\Postgres\Handle */
     private $handle;
 
     /** @var \Amp\Deferred|null Used to only allow one transaction at a time. */
@@ -52,9 +51,15 @@ abstract class AbstractConnection implements Connection {
      *
      * @throws \Amp\Postgres\FailureException
      */
-    private function send(string $methodName, ...$args): \Generator {
-        while ($this->busy) {
-            yield $this->busy->promise();
+    private function send(string $methodName, ...$args): Promise {
+        if ($this->busy) {
+            return call(function () use ($methodName, $args) {
+                while ($this->busy) {
+                    yield $this->busy->promise();
+                }
+
+                return yield $this->handle->{$methodName}(...$args);
+            });
         }
 
         return $this->handle->{$methodName}(...$args);
@@ -75,21 +80,21 @@ abstract class AbstractConnection implements Connection {
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
-        return new Coroutine($this->send("query", $sql));
+        return $this->send("query", $sql);
     }
 
     /**
      * {@inheritdoc}
      */
     public function execute(string $sql, array $params = []): Promise {
-        return new Coroutine($this->send("execute", $sql, $params));
+        return $this->send("execute", $sql, $params);
     }
 
     /**
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        return new Coroutine($this->send("prepare", $sql));
+        return $this->send("prepare", $sql);
     }
 
 
@@ -97,14 +102,14 @@ abstract class AbstractConnection implements Connection {
      * {@inheritdoc}
      */
     public function notify(string $channel, string $payload = ""): Promise {
-        return new Coroutine($this->send("notify", $channel, $payload));
+        return $this->send("notify", $channel, $payload);
     }
 
     /**
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        return new Coroutine($this->send("listen", $channel));
+        return $this->send("listen", $channel);
     }
 
     /**

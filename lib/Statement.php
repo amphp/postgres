@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-interface Statement {
+interface Statement extends Operation {
     /**
      * @param mixed[] $params
      *

@@ -17,6 +17,9 @@ class PgSqlStatement implements Statement {
     /** @var callable */
     private $deallocate;
 
+    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    private $queue;
+
     /**
      * @internal
      *
@@ -30,10 +33,12 @@ class PgSqlStatement implements Statement {
         $this->sql = $sql;
         $this->execute = $execute;
         $this->deallocate = $deallocate;
+        $this->queue = new Internal\ReferenceQueue;
     }
 
     public function __destruct() {
         ($this->deallocate)($this->name);
+        $this->queue->unreference();
     }
 
     /**
@@ -52,5 +57,12 @@ class PgSqlStatement implements Statement {
      */
     public function execute(array $params = []): Promise {
         return ($this->execute)($this->name, $params);
+    }
+
+    /**
+     * @param callable $onDestruct
+     */
+    public function onDestruct(callable $onDestruct) {
+        $this->queue->onDestruct($onDestruct);
     }
 }

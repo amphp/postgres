@@ -15,6 +15,9 @@ class PqStatement implements Statement {
     /** @var callable */
     private $deallocate;
 
+    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    private $queue;
+
     /**
      * @internal
      *
@@ -26,10 +29,12 @@ class PqStatement implements Statement {
         $this->statement = $statement;
         $this->execute = $execute;
         $this->deallocate = $deallocate;
+        $this->queue = new Internal\ReferenceQueue;
     }
 
     public function __destruct() {
         ($this->deallocate)($this->statement->name);
+        $this->queue->unreference();
     }
 
     /**
@@ -48,5 +53,12 @@ class PqStatement implements Statement {
      */
     public function execute(array $params = []): Promise {
         return ($this->execute)([$this->statement, "execAsync"], $params);
+    }
+
+    /**
+     * @param callable $onDestruct
+     */
+    public function onDestruct(callable $onDestruct) {
+        $this->queue->onDestruct($onDestruct);
     }
 }
