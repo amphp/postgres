@@ -39,7 +39,7 @@ abstract class AbstractLinkTest extends TestCase {
     abstract public function createLink(string $connectionString): Link;
 
     public function setUp() {
-        $this->connection = $this->createLink('host=localhost;user=postgres');
+        $this->connection = $this->createLink('host=localhost user=postgres');
     }
 
     public function testQueryWithTupleResult() {
@@ -125,7 +125,7 @@ abstract class AbstractLinkTest extends TestCase {
             $data = $this->getData()[0];
 
             /** @var \Amp\Postgres\TupleResult $result */
-            $result = yield $statement->execute($data[0]);
+            $result = yield $statement->execute([$data[0]]);
 
             $this->assertInstanceOf(TupleResult::class, $result);
 
@@ -174,7 +174,7 @@ abstract class AbstractLinkTest extends TestCase {
             $data = $this->getData()[0];
 
             /** @var \Amp\Postgres\TupleResult $result */
-            $result = yield $statement2->execute($data[0]);
+            $result = yield $statement2->execute([$data[0]]);
 
             $this->assertInstanceOf(TupleResult::class, $result);
 
@@ -210,7 +210,7 @@ abstract class AbstractLinkTest extends TestCase {
             $data = $this->getData()[0];
 
             /** @var \Amp\Postgres\TupleResult $result */
-            $result = yield $statement1->execute($data[0]);
+            $result = yield $statement1->execute([$data[0]]);
 
             $this->assertInstanceOf(TupleResult::class, $result);
 
@@ -225,7 +225,7 @@ abstract class AbstractLinkTest extends TestCase {
             unset($statement1);
 
             /** @var \Amp\Postgres\TupleResult $result */
-            $result = yield $statement2->execute($data[0]);
+            $result = yield $statement2->execute([$data[0]]);
 
             $this->assertInstanceOf(TupleResult::class, $result);
 
@@ -244,7 +244,7 @@ abstract class AbstractLinkTest extends TestCase {
             $data = $this->getData()[0];
 
             /** @var \Amp\Postgres\TupleResult $result */
-            $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1", $data[0]);
+            $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
 
             $this->assertInstanceOf(TupleResult::class, $result);
 
@@ -415,7 +415,7 @@ abstract class AbstractLinkTest extends TestCase {
 
             yield $transaction->savepoint('test');
 
-            $result = yield $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", $data[0]);
+            $result = yield $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
 
             yield $transaction->rollbackTo('test');
 

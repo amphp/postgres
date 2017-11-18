@@ -250,7 +250,7 @@ class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Promise {
+    public function execute(string $sql, array $params = []): Promise {
         return call(function () use ($sql, $params) {
             return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params));
         });

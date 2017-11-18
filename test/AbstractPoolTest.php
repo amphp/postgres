@@ -56,11 +56,11 @@ abstract class AbstractPoolTest extends TestCase {
      */
     public function getMethodsAndResults() {
         return [
-            [3, 'query', TupleResult::class, "SELECT * FROM test"],
-            [2, 'query', CommandResult::class, "INSERT INTO test VALUES (1, 7)"],
-            [5, 'listen', Listener::class, "test"],
-            [4, 'execute', TupleResult::class, "SELECT * FROM test WHERE id=\$1 AND time>\$2", 1, time()],
-            [4, 'notify', CommandResult::class, "test", "payload"],
+            [3, 'query', TupleResult::class, ["SELECT * FROM test"]],
+            [2, 'query', CommandResult::class, ["INSERT INTO test VALUES (1, 7)"]],
+            [5, 'listen', Listener::class, ["test"]],
+            [4, 'execute', TupleResult::class, ["SELECT * FROM test WHERE id=\$1 AND time>\$2", [1, time()]]],
+            [4, 'notify', CommandResult::class, ["test", "payload"]],
         ];
     }
 
@@ -70,9 +70,9 @@ abstract class AbstractPoolTest extends TestCase {
      * @param int $count
      * @param string $method
      * @param string $resultClass
-     * @param mixed ...$params
+     * @param mixed[] $params
      */
-    public function testSingleQuery(int $count, string $method, string $resultClass, ...$params) {
+    public function testSingleQuery(int $count, string $method, string $resultClass, array $params = []) {
         $result = $this->getMockBuilder($resultClass)
             ->disableOriginalConstructor()
             ->getMock();
@@ -99,9 +99,9 @@ abstract class AbstractPoolTest extends TestCase {
      * @param int $count
      * @param string $method
      * @param string $resultClass
-     * @param mixed ...$params
+     * @param mixed[] $params
      */
-    public function testConsecutiveQueries(int $count, string $method, string $resultClass, ...$params) {
+    public function testConsecutiveQueries(int $count, string $method, string $resultClass, array $params = []) {
         $rounds = 3;
         $result = $this->getMockBuilder($resultClass)
             ->disableOriginalConstructor()

@@ -177,7 +177,7 @@ abstract class AbstractPool implements Pool {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Promise {
+    public function execute(string $sql, array $params = []): Promise {
         return new Coroutine($this->doExecute($sql, $params));
     }
 
@@ -186,7 +186,7 @@ abstract class AbstractPool implements Pool {
         $connection = yield from $this->pop();
 
         try {
-            $result = yield $connection->execute($sql, ...$params);
+            $result = yield $connection->execute($sql, $params);
         } catch (\Throwable $exception) {
             $this->push($connection);
             throw $exception;

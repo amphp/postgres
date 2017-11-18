@@ -59,8 +59,8 @@ class PooledConnection implements Connection {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Promise {
-        return $this->connection->execute($sql, ...$params);
+    public function execute(string $sql, array $params = []): Promise {
+        return $this->connection->execute($sql, $params);
     }
 
     /**

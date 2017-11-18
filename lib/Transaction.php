@@ -107,12 +107,12 @@ class Transaction implements Handle, Operation {
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
-    public function execute(string $sql, ...$params): Promise {
+    public function execute(string $sql, array $params = []): Promise {
         if ($this->handle === null) {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        return $this->handle->execute($sql, ...$params);
+        return $this->handle->execute($sql, $params);
     }
 
 

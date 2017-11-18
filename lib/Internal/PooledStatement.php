@@ -34,8 +34,8 @@ class PooledStatement implements Statement {
     /**
      * {@inheritdoc}
      */
-    public function execute(...$params): Promise {
-        return $this->statement->execute(...$params);
+    public function execute(array $params = []): Promise {
+        return $this->statement->execute($params);
     }
 
     /**

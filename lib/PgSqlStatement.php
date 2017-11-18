@@ -50,7 +50,7 @@ class PgSqlStatement implements Statement {
      *
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
-    public function execute(...$params): Promise {
+    public function execute(array $params = []): Promise {
         return ($this->execute)($this->name, $params);
     }
 }

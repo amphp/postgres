@@ -17,16 +17,18 @@ class PgSqlConnection extends AbstractConnection {
      * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
      */
     public static function connect(string $connectionString, CancellationToken $token = null): Promise {
+        $connectionString = \str_replace(";", " ", $connectionString);
+
         if (!$connection = @\pg_connect($connectionString, \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
-            return new Failure(new FailureException("Failed to create connection resource"));
+            return new Failure(new ConnectionException("Failed to create connection resource"));
         }
 
         if (\pg_connection_status($connection) === \PGSQL_CONNECTION_BAD) {
-            return new Failure(new FailureException(\pg_last_error($connection)));
+            return new Failure(new ConnectionException(\pg_last_error($connection)));
         }
 
         if (!$socket = \pg_socket($connection)) {
-            return new Failure(new FailureException("Failed to access connection socket"));
+            return new Failure(new ConnectionException("Failed to access connection socket"));
         }
 
         $deferred = new Deferred;
@@ -40,7 +42,7 @@ class PgSqlConnection extends AbstractConnection {
                     return; // Still writing...
 
                 case \PGSQL_POLLING_FAILED:
-                    $deferred->fail(new FailureException(\pg_last_error($connection)));
+                    $deferred->fail(new ConnectionException(\pg_last_error($connection)));
                     return;
 
                 case \PGSQL_POLLING_OK:

@@ -20,7 +20,7 @@ interface Executor {
 
     /**
      * @param string $sql
-     * @param mixed ...$params
+     * @param mixed[] $params
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult>
      *
@@ -28,7 +28,7 @@ interface Executor {
      * @throws \Amp\Postgres\ConnectionException If the connection to the database is lost.
      * @throws \Amp\Postgres\QueryError If the operation fails due to an error in the query (such as a syntax error).
      */
-    public function execute(string $sql, ...$params): Promise;
+    public function execute(string $sql, array $params = []): Promise;
 
     /**
      * @param string $sql

@@ -6,11 +6,11 @@ use Amp\Promise;
 
 interface Statement {
     /**
-     * @param mixed ...$params
+     * @param mixed[] $params
      *
      * @return \Amp\Promise<\Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult>
      */
-    public function execute(...$params): Promise;
+    public function execute(array $params = []): Promise;
 
     /**
      * @return string The SQL string used to prepare the statement.

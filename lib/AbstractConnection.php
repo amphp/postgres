@@ -64,6 +64,8 @@ abstract class AbstractConnection implements Connection {
      * Releases the transaction lock.
      */
     private function release() {
+        \assert($this->busy !== null);
+
         $deferred = $this->busy;
         $this->busy = null;
         $deferred->resolve();
@@ -79,8 +81,8 @@ abstract class AbstractConnection implements Connection {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Promise {
-        return new Coroutine($this->send("execute", $sql, ...$params));
+    public function execute(string $sql, array $params = []): Promise {
+        return new Coroutine($this->send("execute", $sql, $params));
     }
 
     /**

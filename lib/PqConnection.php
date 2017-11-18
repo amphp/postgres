@@ -18,10 +18,12 @@ class PqConnection extends AbstractConnection {
      * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
      */
     public static function connect(string $connectionString, CancellationToken $token = null): Promise {
+        $connectionString = \str_replace(";", " ", $connectionString);
+
         try {
             $connection = new pq\Connection($connectionString, pq\Connection::ASYNC);
         } catch (pq\Exception $exception) {
-            return new Failure(new FailureException("Could not connect to PostgresSQL server", 0, $exception));
+            return new Failure(new ConnectionException("Could not connect to PostgreSQL server", 0, $exception));
         }
         $connection->nonblocking = true;
         $connection->unbuffered = true;
@@ -37,7 +39,7 @@ class PqConnection extends AbstractConnection {
                     return; // Still writing...
 
                 case pq\Connection::POLLING_FAILED:
-                    $deferred->fail(new FailureException($connection->errorMessage));
+                    $deferred->fail(new ConnectionException($connection->errorMessage));
                     return;
 
                 case pq\Connection::POLLING_OK:

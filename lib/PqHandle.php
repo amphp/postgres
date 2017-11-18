@@ -283,7 +283,7 @@ class PqHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, ...$params): Promise {
+    public function execute(string $sql, array $params = []): Promise {
         return new Coroutine($this->send([$this->handle, "execParamsAsync"], $sql, $params));
     }
 
