@@ -163,19 +163,15 @@ class PqHandle implements Handle {
                 Loop::enable($this->await);
             }
 
-            try {
-                $result = yield $this->deferred->promise();
-            } finally {
-                $this->deferred = null;
-            }
-
-            if (!$result instanceof pq\Result) {
-                throw new FailureException("Unknown query result");
-            }
+            $result = yield $this->deferred->promise();
         } catch (pq\Exception $exception) {
             throw new FailureException($this->handle->errorMessage, 0, $exception);
         } finally {
-            $this->busy = null;
+            $this->deferred = $this->busy = null;
+        }
+
+        if (!$result instanceof pq\Result) {
+            throw new FailureException("Unknown query result");
         }
 
         switch ($result->status) {
