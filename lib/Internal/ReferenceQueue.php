@@ -13,7 +13,13 @@ class ReferenceQueue {
 
     public function onDestruct(callable $onDestruct) {
         if (!$this->refCount) {
-            $onDestruct();
+            try {
+                $onDestruct();
+            } catch (\Throwable $exception) {
+                Loop::defer(function () use ($exception) {
+                    throw $exception; // Rethrow to event loop error handler.
+                });
+            }
             return;
         }
 
@@ -21,13 +27,12 @@ class ReferenceQueue {
     }
 
     public function reference() {
+        \assert($this->refCount, "The reference queue has already been fully unreferenced and destroyed");
         ++$this->refCount;
     }
 
     public function unreference() {
-        if (!$this->refCount) {
-            return;
-        }
+        \assert($this->refCount, "The reference queue has already been fully unreferenced and destroyed");
 
         if (--$this->refCount) {
             return;
@@ -46,6 +51,6 @@ class ReferenceQueue {
     }
 
     public function isReferenced(): bool {
-        return $this->refCount;
+        return (bool) $this->refCount;
     }
 }

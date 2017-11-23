@@ -86,7 +86,20 @@ class Transaction implements Handle, Operation {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        return $this->handle->query($sql);
+        $this->queue->reference();
+
+        $promise = $this->handle->query($sql);
+
+        $promise->onResolve(function ($exception, $result) {
+            if ($result instanceof Operation) {
+                $result->onDestruct([$this->queue, "unreference"]);
+                return;
+            }
+
+            $this->queue->unreference();
+        });
+
+        return $promise;
     }
 
     /**
@@ -99,7 +112,20 @@ class Transaction implements Handle, Operation {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        return $this->handle->prepare($sql);
+        $this->queue->reference();
+
+        $promise = $this->handle->prepare($sql);
+
+        $promise->onResolve(function ($exception, $statement) {
+            if ($statement instanceof Statement) {
+                $statement->onDestruct([$this->queue, "unreference"]);
+                return;
+            }
+
+            $this->queue->unreference();
+        });
+
+        return $promise;
     }
 
     /**
@@ -112,7 +138,20 @@ class Transaction implements Handle, Operation {
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        return $this->handle->execute($sql, $params);
+        $this->queue->reference();
+
+        $promise = $this->handle->execute($sql, $params);
+
+        $promise->onResolve(function ($exception, $result) {
+            if ($result instanceof Operation) {
+                $result->onDestruct([$this->queue, "unreference"]);
+                return;
+            }
+
+            $this->queue->unreference();
+        });
+
+        return $promise;
     }
 
 
@@ -168,7 +207,7 @@ class Transaction implements Handle, Operation {
     }
 
     /**
-     * Creates a savepoint with the given identifier. WARNING: Identifier is not sanitized, do not pass untrusted data.
+     * Creates a savepoint with the given identifier.
      *
      * @param string $identifier Savepoint identifier.
      *
@@ -194,8 +233,7 @@ class Transaction implements Handle, Operation {
     }
 
     /**
-     * Releases the savepoint with the given identifier. WARNING: Identifier is not sanitized, do not pass untrusted
-     * data.
+     * Releases the savepoint with the given identifier.
      *
      * @param string $identifier Savepoint identifier.
      *
