@@ -13,9 +13,6 @@ abstract class AbstractPool implements Pool {
     /** @var \SplQueue */
     private $idle;
 
-    /** @var \SplQueue */
-    private $busy;
-
     /** @var \SplObjectStorage */
     private $connections;
 
@@ -44,19 +41,18 @@ abstract class AbstractPool implements Pool {
     public function __construct() {
         $this->connections = new \SplObjectStorage;
         $this->idle = new \SplQueue;
-        $this->busy = new \SplQueue;
         $this->push = $this->callableFromInstanceMethod("push");
     }
 
     /**
-     * @return \Amp\Promise<\Amp\Postgres\Connection>
+     * {@inheritdoc}
      */
-    public function getConnection(): Promise {
-        return new Coroutine($this->doGetConnection());
-    }
-
-    private function doGetConnection(): \Generator {
-        return new Internal\PooledConnection(yield from $this->pop(), $this->push);
+    public function extractConnection(): Promise {
+        return \Amp\call(function () {
+            $connection = yield from $this->pop();
+            $this->connections->detach($connection);
+            return $connection;
+        });
     }
 
     /**

@@ -6,9 +6,12 @@ use Amp\Promise;
 
 interface Pool extends Link {
     /**
-     * @return \Amp\Promise<\Amp\Postgres\Connection>
+     * Extracts an idle connection from the pool. The connection is completely removed from the pool and cannot be
+     * put back into the pool. Useful for operations where connection state must be changed.
+     *
+     * @return \Amp\Promise<\Amp\Mysql\Connection>
      */
-    public function getConnection(): Promise;
+    public function extractConnection(): Promise;
 
     /**
      * @return int Current number of connections in the pool.

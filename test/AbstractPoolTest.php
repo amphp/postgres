@@ -214,7 +214,7 @@ abstract class AbstractPoolTest extends TestCase {
      *
      * @param int $count
      */
-    public function testGetConnection(int $count) {
+    public function testExtractConnection(int $count) {
         $connections = $this->makeConnectionSet($count);
         $query = "SELECT * FROM test";
 
@@ -229,7 +229,7 @@ abstract class AbstractPoolTest extends TestCase {
         Loop::run(function () use ($pool, $query, $count) {
             $promises = [];
             for ($i = 0; $i < $count; ++$i) {
-                $promises[] = $pool->getConnection();
+                $promises[] = $pool->extractConnection();
             }
 
             $results = yield Promise\all($promises);
