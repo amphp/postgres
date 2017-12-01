@@ -13,6 +13,21 @@ use function Amp\call;
 class PgSqlHandle implements Handle {
     use CallableMaker;
 
+    const DIAGNOSTIC_CODES = [
+        \PGSQL_DIAG_SEVERITY => "severity",
+        \PGSQL_DIAG_SQLSTATE => "sqlstate",
+        \PGSQL_DIAG_MESSAGE_PRIMARY => "message_primary",
+        \PGSQL_DIAG_MESSAGE_DETAIL => "message_detail",
+        \PGSQL_DIAG_MESSAGE_HINT => "message_hint",
+        \PGSQL_DIAG_STATEMENT_POSITION => "statement_position",
+        \PGSQL_DIAG_INTERNAL_POSITION => "internal_position",
+        \PGSQL_DIAG_INTERNAL_QUERY => "internal_query",
+        \PGSQL_DIAG_CONTEXT => "context",
+        \PGSQL_DIAG_SOURCE_FILE => "source_file",
+        \PGSQL_DIAG_SOURCE_LINE => "source_line",
+        \PGSQL_DIAG_SOURCE_FUNCTION => "source_function",
+    ];
+
     /** @var resource PostgreSQL connection handle. */
     private $handle;
 
@@ -206,7 +221,11 @@ class PgSqlHandle implements Handle {
 
             case \PGSQL_NONFATAL_ERROR:
             case \PGSQL_FATAL_ERROR:
-                throw new QueryError(\pg_result_error($result));
+                $diagnostics = [];
+                foreach (self::DIAGNOSTIC_CODES as $fieldCode => $desciption) {
+                    $diagnostics[$desciption] = \pg_result_error_field($result, $fieldCode);
+                }
+                throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
 
             case \PGSQL_BAD_RESPONSE:
                 throw new FailureException(\pg_result_error($result));
@@ -285,7 +304,11 @@ class PgSqlHandle implements Handle {
 
                 case \PGSQL_NONFATAL_ERROR:
                 case \PGSQL_FATAL_ERROR:
-                    throw new QueryError(\pg_result_error($result));
+                    $diagnostics = [];
+                    foreach (self::DIAGNOSTIC_CODES as $fieldCode => $desciption) {
+                        $diagnostics[$desciption] = \pg_result_error_field($result, $fieldCode);
+                    }
+                    throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
 
                 case \PGSQL_BAD_RESPONSE:
                     throw new FailureException(\pg_result_error($result));

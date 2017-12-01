@@ -9,6 +9,7 @@ use Amp\Postgres\CommandResult;
 use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryError;
+use Amp\Postgres\QueryExecutionError;
 use Amp\Postgres\Statement;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
@@ -103,13 +104,16 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    /**
-     * @expectedException \Amp\Postgres\QueryError
-     */
     public function testQueryWithSyntaxError() {
         Loop::run(function () {
             /** @var \Amp\Postgres\CommandResult $result */
-            $result = yield $this->connection->query("SELECT & FROM test");
+            try {
+                $result = yield $this->connection->query("SELECT & FROM test");
+                $this->fail(\sprintf("An instance of %s was expected to be thrown", QueryExecutionError::class));
+            } catch (QueryExecutionError $exception) {
+                $diagnostics  = $exception->getDiagnostics();
+                $this->assertArrayHasKey("sqlstate", $diagnostics);
+            }
         });
     }
 
@@ -141,7 +145,7 @@ abstract class AbstractLinkTest extends TestCase {
 
     /**
      * @depends testPrepare
-     * @expectedException \Amp\Postgres\QueryError
+     * @expectedException \Amp\Postgres\QueryExecutionError
      * @expectedExceptionMessage column "invalid" does not exist
      */
     public function testPrepareInvalidQuery() {
@@ -260,7 +264,7 @@ abstract class AbstractLinkTest extends TestCase {
 
     /**
      * @depends testExecute
-     * @expectedException \Amp\Postgres\QueryError
+     * @expectedException \Amp\Postgres\QueryExecutionError
      * @expectedExceptionMessage bind message supplies 0 parameters
      */
     public function testExecuteWithInvalidParams() {
