@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Promise;
 use Amp\Success;
 
-class PgSqlTupleResult implements TupleResult {
+class PgSqlResultSet implements ResultSet {
     /** @var resource PostgreSQL result resource. */
     private $handle;
 

@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Iterator;
 use Amp\Promise;
 
-interface TupleResult extends Iterator {
+interface ResultSet extends Iterator {
     const FETCH_ARRAY = 0;
     const FETCH_ASSOC = 1;
     const FETCH_OBJECT = 2;

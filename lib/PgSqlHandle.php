@@ -203,7 +203,7 @@ class PgSqlHandle implements Handle {
     /**
      * @param resource $result PostgreSQL result resource.
      *
-     * @return \Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult
+     * @return \Amp\Postgres\CommandResult|\Amp\Postgres\ResultSet
      *
      * @throws \Amp\Postgres\FailureException
      * @throws \Amp\Postgres\QueryError
@@ -217,7 +217,7 @@ class PgSqlHandle implements Handle {
                 return new PgSqlCommandResult($result);
 
             case \PGSQL_TUPLES_OK:
-                return new PgSqlTupleResult($result);
+                return new PgSqlResultSet($result);
 
             case \PGSQL_NONFATAL_ERROR:
             case \PGSQL_FATAL_ERROR:

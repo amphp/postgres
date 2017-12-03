@@ -22,7 +22,7 @@ Amp\Loop::run(function () {
     yield $statement->execute('google', 'com');
     yield $statement->execute('github', 'com');
 
-    /** @var \Amp\Postgres\TupleResult $result */
+    /** @var \Amp\Postgres\ResultSet $result */
     $result = yield $transaction->execute('SELECT * FROM test WHERE tld = $1', 'com');
 
     $format = "%-20s | %-10s\n";

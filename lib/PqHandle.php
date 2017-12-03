@@ -186,11 +186,11 @@ class PqHandle implements Handle {
                 return new PqCommandResult($result);
 
             case pq\Result::TUPLES_OK:
-                return new PqBufferedResult($result);
+                return new PqBufferedResultSet($result);
 
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
-                $result = new PqUnbufferedResult($this->fetch, $result);
+                $result = new PqUnbufferedResultSet($this->fetch, $result);
                 $result->onDestruct($this->release);
                 return $result;
 

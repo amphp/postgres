@@ -13,7 +13,7 @@ use Amp\Postgres\QueryExecutionError;
 use Amp\Postgres\Statement;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
-use Amp\Postgres\TupleResult;
+use Amp\Postgres\ResultSet;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractLinkTest extends TestCase {
@@ -45,10 +45,10 @@ abstract class AbstractLinkTest extends TestCase {
 
     public function testQueryWithTupleResult() {
         Loop::run(function () {
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query("SELECT * FROM test");
 
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
 
             $this->assertSame(2, $result->numFields());
 
@@ -64,19 +64,19 @@ abstract class AbstractLinkTest extends TestCase {
 
     public function testQueryWithUnconsumedTupleResult() {
         Loop::run(function () {
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query("SELECT * FROM test");
 
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
 
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query("SELECT * FROM test");
 
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(TupleResult::FETCH_OBJECT); ++$i) {
+            for ($i = 0; yield $result->advance(ResultSet::FETCH_OBJECT); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row->domain);
                 $this->assertSame($data[$i][1], $row->tld);
@@ -128,14 +128,14 @@ abstract class AbstractLinkTest extends TestCase {
 
             $data = $this->getData()[0];
 
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement->execute([$data[0]]);
 
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
 
             $this->assertSame(2, $result->numFields());
 
-            while (yield $result->advance(TupleResult::FETCH_ARRAY)) {
+            while (yield $result->advance(ResultSet::FETCH_ARRAY)) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[0], $row[0]);
                 $this->assertSame($data[1], $row[1]);
@@ -177,10 +177,10 @@ abstract class AbstractLinkTest extends TestCase {
 
             $data = $this->getData()[0];
 
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement2->execute([$data[0]]);
 
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
 
             $this->assertSame(2, $result->numFields());
 
@@ -213,10 +213,10 @@ abstract class AbstractLinkTest extends TestCase {
 
             $data = $this->getData()[0];
 
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement1->execute([$data[0]]);
 
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
 
             $this->assertSame(2, $result->numFields());
 
@@ -228,10 +228,10 @@ abstract class AbstractLinkTest extends TestCase {
 
             unset($statement1);
 
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement2->execute([$data[0]]);
 
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
 
             $this->assertSame(2, $result->numFields());
 
@@ -247,10 +247,10 @@ abstract class AbstractLinkTest extends TestCase {
         Loop::run(function () {
             $data = $this->getData()[0];
 
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
 
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
 
             $this->assertSame(2, $result->numFields());
 
@@ -278,7 +278,7 @@ abstract class AbstractLinkTest extends TestCase {
      */
     public function testSimultaneousQuery() {
         $callback = \Amp\coroutine(function ($value) {
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query("SELECT {$value} as value");
 
             if ($value) {
@@ -301,7 +301,7 @@ abstract class AbstractLinkTest extends TestCase {
      */
     public function testSimultaneousQueryWithOneFailing() {
         $callback = \Amp\coroutine(function ($query) {
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query($query);
 
             $data = $this->getData();
@@ -324,7 +324,7 @@ abstract class AbstractLinkTest extends TestCase {
                 yield $failing;
             });
         } catch (QueryError $exception) {
-            $this->assertInstanceOf(TupleResult::class, $result);
+            $this->assertInstanceOf(ResultSet::class, $result);
             return;
         }
 
@@ -334,7 +334,7 @@ abstract class AbstractLinkTest extends TestCase {
     public function testSimultaneousQueryAndPrepare() {
         $promises = [];
         $promises[] = new Coroutine((function () {
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query("SELECT * FROM test");
 
             $data = $this->getData();
@@ -350,7 +350,7 @@ abstract class AbstractLinkTest extends TestCase {
             /** @var \Amp\Postgres\Statement $statement */
             $statement = (yield $this->connection->prepare("SELECT * FROM test"));
 
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement->execute();
 
             $data = $this->getData();
@@ -372,7 +372,7 @@ abstract class AbstractLinkTest extends TestCase {
             /** @var \Amp\Postgres\Statement $statement */
             $statement = yield $this->connection->prepare("SELECT * FROM test");
 
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement->execute();
 
             $data = $this->getData();
@@ -385,7 +385,7 @@ abstract class AbstractLinkTest extends TestCase {
         })());
 
         $promises[] = new Coroutine((function () {
-            /** @var \Amp\Postgres\TupleResult $result */
+            /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->execute("SELECT * FROM test");
 
             $data = $this->getData();
