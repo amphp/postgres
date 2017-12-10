@@ -27,12 +27,7 @@ abstract class AbstractPoolTest extends TestCase {
      */
     protected function createConnection(): Connection {
         $mock = $this->createMock(Connection::class);
-        $mock->method('isAlive')
-            ->willReturnCallback(static function () {
-                static $count = 0;
-                return $count++ < 3; // Force defunct connection after 3 operations.
-            });
-
+        $mock->method('isAlive')->willReturn(true);
         return $mock;
     }
 

@@ -3,6 +3,7 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\AggregatePool;
+use Amp\Postgres\Connection;
 use Amp\Postgres\Pool;
 
 class AggregatePoolTest extends AbstractPoolTest {
@@ -46,5 +47,27 @@ class AggregatePoolTest extends AbstractPoolTest {
         $this->assertSame(2, $pool->getIdleConnectionCount());
         $promise = $pool->query("SELECT 1");
         $this->assertSame(1, $pool->getIdleConnectionCount());
+    }
+
+    /**
+     * @expectedException \Error
+     * @expectedExceptionMessage Connection is already a part of this pool
+     */
+    public function testDoubleAddConnection() {
+        $pool = $this->createPool([]);
+        $connection = $this->createConnection();
+        $pool->addConnection($connection);
+        $pool->addConnection($connection);
+    }
+
+    /**
+     * @expectedException \Error
+     * @expectedExceptionMessage The connection is dead
+     */
+    public function testAddDeadConnection() {
+        $pool = $this->createPool([]);
+        $connection = $this->createMock(Connection::class);
+        $connection->method('isAlive')->willReturn(false);
+        $pool->addConnection($connection);
     }
 }

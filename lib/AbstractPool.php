@@ -32,6 +32,9 @@ abstract class AbstractPool implements Pool {
     /** @var callable */
     private $push;
 
+    /** @var int */
+    private $pending = 0;
+
     /**
      * @return \Amp\Promise<\Amp\Postgres\Connection>
      *
@@ -72,10 +75,16 @@ abstract class AbstractPool implements Pool {
 
     /**
      * @param \Amp\Postgres\Connection $connection
+     *
+     * @throws \Error if the connection is already part of this pool or if the connection is dead.
      */
     protected function addConnection(Connection $connection) {
         if (isset($this->connections[$connection])) {
-            return;
+            throw new \Error("Connection is already a part of this pool");
+        }
+
+        if (!$connection->isAlive()) {
+            throw new \Error("The connection is dead");
         }
 
         $this->connections->attach($connection);
@@ -92,17 +101,13 @@ abstract class AbstractPool implements Pool {
      * @resolve \Amp\Postgres\Connection
      */
     private function pop(): \Generator {
-        while ($this->promise !== null) {
-            try {
-                yield $this->promise; // Prevent simultaneous connection creation.
-            } catch (\Throwable $exception) {
-                // Ignore failure or cancellation of other operations.
-            }
+        while ($this->promise !== null && $this->connections->count() + $this->pending >= $this->getMaxConnections()) {
+            yield $this->promise; // Prevent simultaneous connection creation when connection count is at maximum - 1.
         }
 
         while ($this->idle->isEmpty()) { // While loop to ensure an idle connection is available after promises below are resolved.
             try {
-                if ($this->connections->count() >= $this->getMaxConnections()) {
+                if ($this->connections->count() + $this->pending >= $this->getMaxConnections()) {
                     // All possible connections busy, so wait until one becomes available.
                     $this->deferred = new Deferred;
                     yield $this->promise = $this->deferred->promise(); // May be resolved with defunct connection.

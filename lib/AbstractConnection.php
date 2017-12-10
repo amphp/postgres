@@ -58,11 +58,11 @@ abstract class AbstractConnection implements Connection {
                     yield $this->busy->promise();
                 }
 
-                return yield $this->handle->{$methodName}(...$args);
+                return yield ([$this->handle, $methodName])(...$args);
             });
         }
 
-        return $this->handle->{$methodName}(...$args);
+        return ([$this->handle, $methodName])(...$args);
     }
 
     /**
