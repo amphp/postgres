@@ -66,10 +66,9 @@ class PqHandle implements Handle {
 
         $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
             if ($handle->poll() === pq\Connection::POLLING_FAILED) {
+                $exception = new ConnectionException($handle->errorMessage);
                 $handle = null; // Marks connection as dead.
                 Loop::disable($watcher);
-
-                $exception = new ConnectionException($handle->errorMessage);
 
                 foreach ($listeners as $listener) {
                     $listener->fail($exception);
@@ -97,9 +96,22 @@ class PqHandle implements Handle {
             }
         });
 
-        $this->await = Loop::onWritable($this->handle->socket, static function ($watcher) use (&$deferred, $handle) {
-            if (!$handle->flush()) {
-                return; // Not finished sending data, continue polling for writability.
+        $this->await = Loop::onWritable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
+            try {
+                if (!$handle->flush()) {
+                    return; // Not finished sending data, continue polling for writability.
+                }
+            } catch (pq\Exception $exception) {
+                $exception = new ConnectionException("Flushing the connection failed", 0, $exception);
+                $handle = null; // Marks connection as dead.
+
+                foreach ($listeners as $listener) {
+                    $listener->fail($exception);
+                }
+
+                if ($deferred !== null) {
+                    $deferred->fail($exception);
+                }
             }
 
             Loop::disable($watcher);

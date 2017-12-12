@@ -115,7 +115,7 @@ class PgSqlHandle implements Handle {
             }
         });
 
-        $this->await = Loop::onWritable($socket, static function ($watcher) use (&$deferred, $handle) {
+        $this->await = Loop::onWritable($socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
             $flush = \pg_flush($handle);
             if ($flush === 0) {
                 return; // Not finished sending data, listen again.
@@ -124,7 +124,16 @@ class PgSqlHandle implements Handle {
             Loop::disable($watcher);
 
             if ($flush === false) {
-                $deferred->fail(new FailureException(\pg_last_error($handle)));
+                $exception = new ConnectionException(\pg_last_error($handle));
+                $handle = null; // Marks connection as dead.
+
+                foreach ($listeners as $listener) {
+                    $listener->fail($exception);
+                }
+
+                if ($deferred !== null) {
+                    $deferred->fail($exception);
+                }
             }
         });
 
