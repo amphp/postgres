@@ -12,7 +12,7 @@ class Listener implements Iterator, Operation {
     /** @var string */
     private $channel;
 
-    /** @var callable */
+    /** @var callable|null */
     private $unlisten;
 
     /** @var \Amp\Postgres\Internal\ReferenceQueue */

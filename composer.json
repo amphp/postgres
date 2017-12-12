@@ -24,7 +24,8 @@
     "require-dev": {
         "amphp/phpunit-util": "^1",
         "phpunit/phpunit": "^6",
-        "friendsofphp/php-cs-fixer": "^2.3"
+        "friendsofphp/php-cs-fixer": "^2.3",
+        "phpstan/phpstan": "^0.9"
     },
     "autoload": {
         "psr-4": {

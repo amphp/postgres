@@ -10,7 +10,7 @@ class Transaction implements Handle, Operation {
     const REPEATABLE   = 2;
     const SERIALIZABLE = 4;
 
-    /** @var \Amp\Postgres\Handle */
+    /** @var \Amp\Postgres\Handle|null */
     private $handle;
 
     /** @var int */

@@ -23,7 +23,6 @@ class PgSqlResultSet implements ResultSet {
      */
     public function __construct($handle) {
         $this->handle = $handle;
-        $this->numRows = \pg_num_rows($this->handle);
     }
 
     /**
