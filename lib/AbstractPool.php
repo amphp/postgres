@@ -106,19 +106,26 @@ abstract class AbstractPool implements Pool {
         }
 
         while ($this->idle->isEmpty()) { // While loop to ensure an idle connection is available after promises below are resolved.
-            try {
-                if ($this->connections->count() + $this->pending >= $this->getMaxConnections()) {
-                    // All possible connections busy, so wait until one becomes available.
+            if ($this->connections->count() + $this->pending >= $this->getMaxConnections()) {
+                // All possible connections busy, so wait until one becomes available.
+                try {
                     $this->deferred = new Deferred;
                     yield $this->promise = $this->deferred->promise(); // May be resolved with defunct connection.
-                } else {
-                    // Max connection count has not been reached, so open another connection.
-                    $this->promise = $this->createConnection();
-                    $this->addConnection(yield $this->promise);
+                } finally {
+                    $this->deferred = null;
+                    $this->promise = null;
                 }
-            } finally {
-                $this->deferred = null;
-                $this->promise = null;
+            } else {
+                // Max connection count has not been reached, so open another connection.
+                ++$this->pending;
+                try {
+                    $connection = yield $this->createConnection();
+                } finally {
+                    --$this->pending;
+                }
+
+                $this->connections->attach($connection);
+                return $connection;
             }
         }
 
