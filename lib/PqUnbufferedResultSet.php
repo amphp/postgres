@@ -34,6 +34,7 @@ class PqUnbufferedResultSet implements ResultSet, Operation {
         $this->producer = new Producer(static function (callable $emit) use ($queue, $result, $fetch) {
             try {
                 do {
+                    $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
                     $next = $fetch(); // Request next result before current is consumed.
                     yield $emit($result);
                     $result = yield $next;
@@ -68,13 +69,16 @@ class PqUnbufferedResultSet implements ResultSet, Operation {
             return $this->currentRow;
         }
 
+        /** @var \pq\Result $result */
+        $result = $this->producer->getCurrent();
+
         switch ($this->type) {
             case self::FETCH_ASSOC:
-                return $this->currentRow = $this->producer->getCurrent()->fetchRow(pq\Result::FETCH_ASSOC);
+                return $this->currentRow = $result->fetchRow(pq\Result::FETCH_ASSOC);
             case self::FETCH_ARRAY:
-                return $this->currentRow = $this->producer->getCurrent()->fetchRow(pq\Result::FETCH_ARRAY);
+                return $this->currentRow = $result->fetchRow(pq\Result::FETCH_ARRAY);
             case self::FETCH_OBJECT:
-                return $this->currentRow = $this->producer->getCurrent()->fetchRow(pq\Result::FETCH_OBJECT);
+                return $this->currentRow = $result->fetchRow(pq\Result::FETCH_OBJECT);
             default:
                 throw new \Error("Invalid result fetch type");
         }

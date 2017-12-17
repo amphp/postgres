@@ -24,6 +24,7 @@ class PqBufferedResultSet implements ResultSet {
      */
     public function __construct(pq\Result $result) {
         $this->result = $result;
+        $this->result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
     }
 
     /**

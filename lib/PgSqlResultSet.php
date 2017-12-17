@@ -18,11 +18,24 @@ class PgSqlResultSet implements ResultSet {
     /** @var int Next row fetch type. */
     private $type = self::FETCH_ASSOC;
 
+    /** @var int[] */
+    private $fieldTypes = [];
+
+    /** @var \Amp\Postgres\Internal\ArrayParser */
+    private $parser;
+
     /**
      * @param resource $handle PostgreSQL result resource.
      */
     public function __construct($handle) {
         $this->handle = $handle;
+
+        $numFields = \pg_num_fields($this->handle);
+        for ($i = 0; $i < $numFields; ++$i) {
+            $this->fieldTypes[] = \pg_field_type_oid($this->handle, $i);
+        }
+
+        $this->parser = new Internal\ArrayParser;
     }
 
     /**
@@ -58,19 +71,7 @@ class PgSqlResultSet implements ResultSet {
             throw new \Error("No more rows remain in the result set");
         }
 
-        switch ($this->type) {
-            case self::FETCH_ASSOC:
-                $result = \pg_fetch_array($this->handle, null, \PGSQL_ASSOC);
-                break;
-            case self::FETCH_ARRAY:
-                $result = \pg_fetch_array($this->handle, null, \PGSQL_NUM);
-                break;
-            case self::FETCH_OBJECT:
-                $result = \pg_fetch_object($this->handle);
-                break;
-            default:
-                throw new \Error("Invalid result fetch type");
-        }
+        $result = \pg_fetch_array($this->handle, null, \PGSQL_ASSOC);
 
         if ($result === false) {
             $message = \pg_result_error($this->handle);
@@ -78,7 +79,134 @@ class PgSqlResultSet implements ResultSet {
             throw new FailureException($message);
         }
 
-        return $this->currentRow = $result;
+        // See https://github.com/postgres/postgres/blob/REL_10_STABLE/src/include/catalog/pg_type.h for OID types.
+        $column = 0;
+        foreach ($result as $key => $value) {
+            if ($value === null) {
+                ++$column;
+                continue;
+            }
+
+            switch ($this->fieldTypes[$column]) {
+                case 16: // bool
+                    $result[$key] = $value === 't';
+                    break;
+
+                case 20: // int8
+                case 21: // int2
+                case 23: // int4
+                case 26: // oid
+                case 27: // tid
+                case 28: // xid
+                    $result[$key] = (int) $result[$key];
+                    break;
+
+                case 700: // real
+                case 701: // double-precision
+                    $result[$key] = (float) $result[$key];
+                    break;
+
+                case 1000: // boolean[]
+                    $result[$key] = $this->parser->parse($result[$key], function (string $value): bool {
+                        return $value === 't';
+                    });
+                    break;
+
+                case 1005: // int2[]
+                case 1007: // int4[]
+                case 1010: // tid[]
+                case 1011: // xid[]
+                case 1016: // int8[]
+                case 1028: // oid[]
+                    $result[$key] = $this->parser->parse($result[$key], function (string $value): int {
+                        return (int) $value;
+                    });
+                    break;
+
+                case 1021: // real[]
+                case 1022: // double-precision[]
+                    $result[$key] = $this->parser->parse($result[$key], function (string $value): float {
+                        return (float) $value;
+                    });
+                    break;
+
+                case 1020: // box[] (semi-colon delimited)
+                    $result[$key] = $this->parser->parse($result[$key], null, ';');
+                    break;
+
+                case 199:  // json[]
+                case 629:  // line[]
+                case 651:  // cidr[]
+                case 719:  // circle[]
+                case 775:  // macaddr8[]
+                case 791:  // money[]
+                case 1001: // bytea[]
+                case 1002: // char[]
+                case 1003: // name[]
+                case 1006: // int2vector[]
+                case 1008: // regproc[]
+                case 1009: // text[]
+                case 1013: // oidvector[]
+                case 1014: // bpchar[]
+                case 1015: // varchar[]
+                case 1019: // path[]
+                case 1023: // abstime[]
+                case 1024: // realtime[]
+                case 1025: // tinterval[]
+                case 1027: // polygon[]
+                case 1034: // aclitem[]
+                case 1040: // macaddr[]
+                case 1041: // inet[]
+                case 1115: // timestamp[]
+                case 1182: // date[]
+                case 1183: // time[]
+                case 1185: // timestampz[]
+                case 1187: // interval[]
+                case 1231: // numeric[]
+                case 1263: // cstring[]
+                case 1270: // timetz[]
+                case 1561: // bit
+                case 1563: // varbit[]
+                case 2201: // refcursor[]
+                case 2207: // regprocedure[]
+                case 2208: // regoper[]
+                case 2209: // regoperator[]
+                case 2210: // regclass[]
+                case 2211: // regtype[]
+                case 2949: // txid_snapshot[]
+                case 2951: // uuid[]
+                case 3221: // pg_lsn[]
+                case 3643: // tsvector[]
+                case 3644: // gtsvector[]
+                case 3645: // tsquery[]
+                case 3735: // regconfig[]
+                case 3770: // regdictionary[]
+                case 3807: // jsonb[]
+                case 3905: // int4range[]
+                case 3907: // numrange[]
+                case 3909: // tsrange[]
+                case 3911: // tstzrange[]
+                case 3913: // daterange[]
+                case 3927: // int8range[]
+                case 4097: // regrole[]
+                case 4090: // regnamespace[]
+                    $result[$key] = $this->parser->parse($result[$key]);
+                    break;
+            }
+
+            ++$column;
+        }
+
+        switch ($this->type) {
+            case self::FETCH_ASSOC:
+                return $this->currentRow = $result;
+            case self::FETCH_ARRAY:
+                return $this->currentRow = \array_values($result);
+            case self::FETCH_OBJECT:
+                return $this->currentRow = (object) $result;
+            default:
+                throw new \Error("Invalid result fetch type");
+        }
     }
 
     /**
