@@ -15,6 +15,12 @@ class ArrayParser {
      * @throws \Amp\Postgres\ParseException
      */
     public function parse(string $data, callable $cast = null, string $delimiter = ','): array {
+        $data = \trim($data);
+
+        if ($data[0] !== '{' || \substr($data, -1) !== '}') {
+            throw new ParseException("Missing opening or closing brackets");
+        }
+
         $parser = $this->parser($data, $cast, $delimiter);
         $data = \iterator_to_array($parser);
 
@@ -26,12 +32,6 @@ class ArrayParser {
     }
 
     private function parser(string $data, callable $cast = null, string $delimiter = ','): \Generator {
-        $data = \trim($data);
-
-        if ($data[0] !== '{' || \substr($data, -1) !== '}') {
-            throw new ParseException("Missing opening or closing brackets");
-        }
-
         $data = \ltrim(\substr($data, 1));
 
         do {
