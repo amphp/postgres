@@ -42,7 +42,7 @@ class ArrayParser {
             if ($data[0] === '{') { // Array
                 $parser = $this->parser($data, $cast, $delimiter);
                 yield \iterator_to_array($parser);
-                list($data, $end) = $this->trim($parser->getReturn(), 0);
+                list($data, $end) = $this->trim($parser->getReturn(), 0, $delimiter);
                 continue;
             }
 
@@ -57,7 +57,7 @@ class ArrayParser {
 
                 $yield = \str_replace('\\"', '"', \substr($data, 1, $position - 1));
 
-                list($data, $end) = $this->trim($data, $position + 1);
+                list($data, $end) = $this->trim($data, $position + 1, $delimiter);
             } else { // Unquoted value
                 $position = 0;
                 while (isset($data[$position]) && $data[$position] !== $delimiter && $data[$position] !== '}') {
@@ -66,22 +66,21 @@ class ArrayParser {
 
                 $yield = \trim(\substr($data, 0, $position));
 
-                list($data, $end) = $this->trim($data, $position);
+                list($data, $end) = $this->trim($data, $position, $delimiter);
+
+                if (\strcasecmp($yield, "NULL") === 0) { // Literal NULL is always unquoted.
+                    yield null;
+                    continue;
+                }
             }
 
-            if (\strcasecmp($yield, "NULL") === 0) {
-                yield null;
-            } elseif ($cast) {
-                yield $cast($yield);
-            } else {
-                yield $yield;
-            }
+            yield $cast ? $cast($yield) : $yield;
         } while ($end !== '}');
 
         return $data;
     }
 
-    private function trim(string $data, int $position): array {
+    private function trim(string $data, int $position, string $delimiter): array {
         do {
             if (!isset($data[$position])) {
                 throw new ParseException("Unexpected end of data");
@@ -89,6 +88,10 @@ class ArrayParser {
 
             $end = $data[$position];
         } while (\ltrim($end) === '' && isset($data[++$position]));
+
+        if ($end !== $delimiter && $end !== '}') {
+            throw new ParseException("Invalid delimiter");
+        }
 
         $data = \ltrim(\substr($data, $position + 1));
 
