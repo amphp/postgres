@@ -21,6 +21,9 @@ class PgSqlResultSet implements ResultSet {
     /** @var int[] */
     private $fieldTypes = [];
 
+    /** @var string[] */
+    private $fieldNames = [];
+
     /** @var \Amp\Postgres\Internal\ArrayParser */
     private $parser;
 
@@ -32,6 +35,7 @@ class PgSqlResultSet implements ResultSet {
 
         $numFields = \pg_num_fields($this->handle);
         for ($i = 0; $i < $numFields; ++$i) {
+            $this->fieldNames[] = \pg_field_name($this->handle, $i);
             $this->fieldTypes[] = \pg_field_type_oid($this->handle, $i);
         }
 
@@ -71,7 +75,7 @@ class PgSqlResultSet implements ResultSet {
             throw new \Error("No more rows remain in the result set");
         }
 
-        $result = \pg_fetch_array($this->handle, null, \PGSQL_ASSOC);
+        $result = \pg_fetch_array($this->handle, null, \PGSQL_NUM);
 
         if ($result === false) {
             $message = \pg_result_error($this->handle);
@@ -165,7 +169,7 @@ class PgSqlResultSet implements ResultSet {
                 case 1231: // numeric[]
                 case 1263: // cstring[]
                 case 1270: // timetz[]
-                case 1561: // bit
+                case 1561: // bit[]
                 case 1563: // varbit[]
                 case 2201: // refcursor[]
                 case 2207: // regprocedure[]
@@ -188,8 +192,8 @@ class PgSqlResultSet implements ResultSet {
                 case 3911: // tstzrange[]
                 case 3913: // daterange[]
                 case 3927: // int8range[]
-                case 4097: // regrole[]
                 case 4090: // regnamespace[]
+                case 4097: // regrole[]
                     $result[$key] = $this->parser->parse($result[$key]);
                     break;
             }
@@ -197,16 +201,24 @@ class PgSqlResultSet implements ResultSet {
             ++$column;
         }
 
-        switch ($this->type) {
-            case self::FETCH_ASSOC:
-                return $this->currentRow = $result;
-            case self::FETCH_ARRAY:
-                return $this->currentRow = \array_values($result);
-            case self::FETCH_OBJECT:
-                return $this->currentRow = (object) $result;
-            default:
-                throw new \Error("Invalid result fetch type");
+        if ($this->type === self::FETCH_ARRAY) {
+            return $this->currentRow = $result;
         }
+
+        $assoc = [];
+        foreach ($this->fieldNames as $index => $name) {
+            $assoc[$name] = $result[$index];
+        }
+
+        if ($this->type === self::FETCH_ASSOC) {
+            return $this->currentRow = $assoc;
+        }
+
+        if ($this->type === self::FETCH_OBJECT) {
+            return $this->currentRow = (object) $assoc;
+        }
+
+        throw new \Error("Invalid result fetch type");
     }
 
     /**
@@ -231,7 +243,11 @@ class PgSqlResultSet implements ResultSet {
      * @throws \Error If the field number does not exist in the result.
      */
     public function fieldName(int $fieldNum): string {
-        return \pg_field_name($this->handle, $this->filterNameOrNum($fieldNum));
+        if (0 > $fieldNum || $this->numFields() <= $fieldNum) {
+            throw new \Error(\sprintf('No field with index %d in result', $fieldNum));
+        }
+
+        return \pg_field_name($this->handle, $fieldNum);
     }
 
     /**
@@ -252,6 +268,8 @@ class PgSqlResultSet implements ResultSet {
     }
 
     /**
+     * @deprecated \pg_field_type() performs a blocking query, so this method will be removed in a future version.
+     *
      * @param int|string $fieldNameOrNum Field name or index.
      *
      * @return string Name of the field type.
@@ -263,6 +281,8 @@ class PgSqlResultSet implements ResultSet {
     }
 
     /**
+     * @deprecated Will be removed in a future version.
+     *
      * @param int|string $fieldNameOrNum Field name or index.
      *
      * @return int Storage required for field. -1 indicates a variable length field.
