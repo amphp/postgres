@@ -14,7 +14,7 @@ class AggregatePoolTest extends AbstractPoolTest {
      */
     protected function createPool(array $connections): Pool {
         $mock = $this->getMockBuilder(AggregatePool::class)
-            ->setConstructorArgs(['', 0, count($connections)])
+            ->setConstructorArgs([0])
             ->setMethods(['createConnection'])
             ->getMock();
 

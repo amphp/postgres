@@ -52,6 +52,9 @@ class PqHandle implements Handle {
     /** @var callable */
     private $deallocate;
 
+    /** @var int */
+    private $lastUsedAt;
+
     /**
      * Connection constructor.
      *
@@ -59,12 +62,16 @@ class PqHandle implements Handle {
      */
     public function __construct(pq\Connection $handle) {
         $this->handle = $handle;
+        $this->lastUsedAt = \time();
 
         $handle = &$this->handle;
+        $lastUsedAt = &$this->lastUsedAt;
         $deferred = &$this->deferred;
         $listeners = &$this->listeners;
 
-        $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
+        $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle) {
+            $lastUsedAt = \time();
+
             if ($handle->poll() === pq\Connection::POLLING_FAILED) {
                 $exception = new ConnectionException($handle->errorMessage);
                 $handle = null; // Marks connection as dead.
@@ -131,8 +138,7 @@ class PqHandle implements Handle {
      * Frees Io watchers from loop.
      */
     public function __destruct() {
-        Loop::cancel($this->poll);
-        Loop::cancel($this->await);
+        $this->free();
     }
 
     /**
@@ -140,6 +146,33 @@ class PqHandle implements Handle {
      */
     public function isAlive(): bool {
         return $this->handle !== null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function lastUsedAt(): int {
+        return $this->lastUsedAt;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function close() {
+        if ($this->deferred) {
+            $deferred = $this->deferred;
+            $this->deferred = null;
+            $deferred->fail(new ConnectionException("The connection was closed"));
+        }
+
+        $this->handle = null;
+
+        $this->free();
+    }
+
+    private function free() {
+        Loop::cancel($this->poll);
+        Loop::cancel($this->await);
     }
 
     /**
@@ -162,7 +195,7 @@ class PqHandle implements Handle {
         }
 
         if (!$this->handle) {
-            throw new ConnectionException("The connection to the database has been lost");
+            throw new ConnectionException("The connection to the database has been closed");
         }
 
         try {
@@ -285,6 +318,10 @@ class PqHandle implements Handle {
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
+        if (!$this->handle) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
         return new Coroutine($this->send([$this->handle, "execAsync"], $sql));
     }
 
@@ -292,6 +329,10 @@ class PqHandle implements Handle {
      * {@inheritdoc}
      */
     public function execute(string $sql, array $params = []): Promise {
+        if (!$this->handle) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
         return new Coroutine($this->send([$this->handle, "execParamsAsync"], $sql, $params));
     }
 
@@ -299,6 +340,10 @@ class PqHandle implements Handle {
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
+        if (!$this->handle) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
         $name = self::STATEMENT_NAME_PREFIX . \sha1($sql);
 
         if (isset($this->statements[$name])) {
@@ -398,7 +443,7 @@ class PqHandle implements Handle {
      */
     public function quoteString(string $data): string {
         if (!$this->handle) {
-            throw new ConnectionException("The connection to the database has been lost");
+            throw new \Error("The connection to the database has been closed");
         }
 
         return $this->handle->quote($data);
@@ -409,7 +454,7 @@ class PqHandle implements Handle {
      */
     public function quoteName(string $name): string {
         if (!$this->handle) {
-            throw new ConnectionException("The connection to the database has been lost");
+            throw new \Error("The connection to the database has been closed");
         }
 
         return $this->handle->quoteName($name);

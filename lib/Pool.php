@@ -27,4 +27,14 @@ interface Pool extends Link {
      * @return int Maximum number of connections.
      */
     public function getMaxConnections(): int;
+
+    /**
+     * @param bool $reset True to automatically RESET ALL on connections in the pool before using them.
+     */
+    public function resetConnections(bool $reset);
+
+    /**
+     * @param int $timeout Number of seconds before idle connections are removed from the pool. Use 0 for no timeout.
+     */
+    public function setIdleTimeout(int $timeout);
 }

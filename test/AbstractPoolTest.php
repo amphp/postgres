@@ -36,7 +36,7 @@ abstract class AbstractPoolTest extends TestCase {
      *
      * @return \Amp\Postgres\Connection[]|\PHPUnit_Framework_MockObject_MockObject[]
      */
-    private function makeConnectionSet(int $count) {
+    protected function makeConnectionSet(int $count) {
         $connections = [];
 
         for ($i = 0; $i < $count; ++$i) {
@@ -81,6 +81,7 @@ abstract class AbstractPoolTest extends TestCase {
             ->will($this->returnValue(new Delayed(10, $result)));
 
         $pool = $this->createPool($connections);
+        $pool->resetConnections(false);
 
         Loop::run(function () use ($method, $pool, $params, $result, $resultClass) {
             $return = yield $pool->{$method}(...$params);
@@ -111,6 +112,7 @@ abstract class AbstractPoolTest extends TestCase {
         }
 
         $pool = $this->createPool($connections);
+        $pool->resetConnections(false);
 
         Loop::run(function () use ($resultClass, $count, $rounds, $pool, $method, $params) {
             $promises = [];
@@ -153,6 +155,7 @@ abstract class AbstractPoolTest extends TestCase {
             ->will($this->returnValue(new Delayed(10, $result)));
 
         $pool = $this->createPool($connections);
+        $pool->resetConnections(false);
 
         Loop::run(function () use ($pool, $result) {
             $return = yield $pool->transaction(Transaction::COMMITTED);
@@ -183,6 +186,7 @@ abstract class AbstractPoolTest extends TestCase {
         }
 
         $pool = $this->createPool($connections);
+        $pool->resetConnections(false);
 
         Loop::run(function () use ($count, $rounds, $pool) {
             $promises = [];
@@ -220,6 +224,7 @@ abstract class AbstractPoolTest extends TestCase {
         }
 
         $pool = $this->createPool($connections);
+        $pool->resetConnections(false);
 
         Loop::run(function () use ($pool, $query, $count) {
             $promises = [];

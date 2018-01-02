@@ -55,6 +55,9 @@ class PgSqlHandle implements Handle {
     /** @var \Amp\Postgres\Internal\StatementStorage[] */
     private $statements = [];
 
+    /** @var int */
+    private $lastUsedAt;
+
     /**
      * Connection constructor.
      *
@@ -64,11 +67,16 @@ class PgSqlHandle implements Handle {
     public function __construct($handle, $socket) {
         $this->handle = $handle;
 
+        $this->lastUsedAt = \time();
+
         $handle = &$this->handle;
+        $lastUsedAt = &$this->lastUsedAt;
         $deferred = &$this->deferred;
         $listeners = &$this->listeners;
 
-        $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
+        $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle) {
+            $lastUsedAt = \time();
+
             if (!\pg_consume_input($handle)) {
                 $handle = null; // Marks connection as dead.
                 Loop::disable($watcher);
@@ -149,6 +157,25 @@ class PgSqlHandle implements Handle {
      * Frees Io watchers from loop.
      */
     public function __destruct() {
+        $this->free();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function close() {
+        if ($this->deferred) {
+            $deferred = $this->deferred;
+            $this->deferred = null;
+            $deferred->fail(new ConnectionException("The connection was closed"));
+        }
+
+        $this->free();
+
+        $this->handle = null;
+    }
+
+    private function free() {
         if (\is_resource($this->handle)) {
             \pg_close($this->handle);
         }
@@ -162,6 +189,13 @@ class PgSqlHandle implements Handle {
      */
     public function isAlive(): bool {
         return $this->handle !== null;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function lastUsedAt(): int {
+        return $this->lastUsedAt;
     }
 
     /**
@@ -184,7 +218,7 @@ class PgSqlHandle implements Handle {
         }
 
         if (!\is_resource($this->handle)) {
-            throw new ConnectionException("The connection to the database has been lost");
+            throw new ConnectionException("The connection to the database has been closed");
         }
 
         $result = $function($this->handle, ...$args);
@@ -270,6 +304,10 @@ class PgSqlHandle implements Handle {
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
+        if (!\is_resource($this->handle)) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
         return call(function () use ($sql) {
             return $this->createResult(yield from $this->send("pg_send_query", $sql));
         });
@@ -279,6 +317,10 @@ class PgSqlHandle implements Handle {
      * {@inheritdoc}
      */
     public function execute(string $sql, array $params = []): Promise {
+        if (!\is_resource($this->handle)) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
         return call(function () use ($sql, $params) {
             return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params));
         });
@@ -288,6 +330,10 @@ class PgSqlHandle implements Handle {
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
+        if (!\is_resource($this->handle)) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
         $name = self::STATEMENT_NAME_PREFIX . \sha1($sql);
 
         if (isset($this->statements[$name])) {
@@ -401,7 +447,7 @@ class PgSqlHandle implements Handle {
      */
     public function quoteString(string $data): string {
         if (!\is_resource($this->handle)) {
-            throw new ConnectionException("The connection to the database has been lost");
+            throw new \Error("The connection to the database has been closed");
         }
 
         return \pg_escape_literal($this->handle, $data);
@@ -412,7 +458,7 @@ class PgSqlHandle implements Handle {
      */
     public function quoteName(string $name): string {
         if (!\is_resource($this->handle)) {
-            throw new ConnectionException("The connection to the database has been lost");
+            throw new \Error("The connection to the database has been closed");
         }
 
         return \pg_escape_identifier($this->handle, $name);

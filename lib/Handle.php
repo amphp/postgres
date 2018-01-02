@@ -11,6 +11,11 @@ interface Handle extends Executor {
     public function isAlive(): bool;
 
     /**
+     * @return int Timestamp of last activity on the handle.
+     */
+    public function lastUsedAt(): int;
+
+    /**
      * Quotes (escapes) the given string for use as a string literal or identifier in a query. This method wraps the
      * string in single quotes, so additional quotes should not be added in the query.
      *
@@ -18,7 +23,7 @@ interface Handle extends Executor {
      *
      * @return string Quoted string wrapped in single quotes.
      *
-     * @throws \Amp\Postgres\ConnectionException If the connection to the database has been lost.
+     * @throws \Error If the connection to the database has been closed.
      */
     public function quoteString(string $data): string;
 
@@ -29,7 +34,7 @@ interface Handle extends Executor {
      *
      * @return string Quoted identifier.
      *
-     * @throws \Amp\Postgres\ConnectionException If the connection to the database has been lost.
+     * @throws \Error If the connection to the database has been closed.
      */
     public function quoteName(string $name): string;
 }

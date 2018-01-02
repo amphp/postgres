@@ -51,6 +51,24 @@ class Transaction implements Handle, Operation {
     /**
      * {@inheritdoc}
      */
+    public function lastUsedAt(): int {
+        return $this->handle->lastUsedAt();
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * Closes and commits all changes in the transaction.
+     */
+    public function close() {
+        if ($this->handle) {
+            $this->commit(); // Invokes $this->queue->unreference().
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
     public function onDestruct(callable $onComplete) {
         $this->queue->onDestruct($onComplete);
     }

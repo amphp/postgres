@@ -51,4 +51,9 @@ interface Executor {
      * @throws \Amp\Postgres\ConnectionException If the connection to the database is lost.
      */
     public function notify(string $channel, string $payload = ""): Promise;
+
+    /**
+     * Closes the executor. No further queries may be performed.
+     */
+    public function close();
 }

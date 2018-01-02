@@ -44,6 +44,20 @@ abstract class AbstractConnection implements Connection {
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function lastUsedAt(): int {
+        return $this->handle->lastUsedAt();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function close() {
+        $this->handle->close();
+    }
+
+    /**
      * @param string $methodName Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *

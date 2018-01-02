@@ -5,11 +5,14 @@ namespace Amp\Postgres;
 use Amp\CallableMaker;
 use Amp\Coroutine;
 use Amp\Deferred;
+use Amp\Loop;
 use Amp\Promise;
 use function Amp\call;
 
 abstract class AbstractPool implements Pool {
     use CallableMaker;
+
+    const DEFAULT_IDLE_TIMEOUT = 60;
 
     /** @var \SplQueue */
     private $idle;
@@ -35,6 +38,18 @@ abstract class AbstractPool implements Pool {
     /** @var int */
     private $pending = 0;
 
+    /** @var bool */
+    private $resetConnections = true;
+
+    /** @var int */
+    private $idleTimeout = self::DEFAULT_IDLE_TIMEOUT;
+
+    /** @var string */
+    private $timeoutWatcher;
+
+    /** @var bool */
+    private $closed = false;
+
     /**
      * @return \Amp\Promise<\Amp\Postgres\Connection>
      *
@@ -43,9 +58,61 @@ abstract class AbstractPool implements Pool {
     abstract protected function createConnection(): Promise;
 
     public function __construct() {
-        $this->connections = new \SplObjectStorage;
-        $this->idle = new \SplQueue;
+        $this->connections = $connections = new \SplObjectStorage;
+        $this->idle = $idle = new \SplQueue;
         $this->push = $this->callableFromInstanceMethod("push");
+
+        $idleTimeout = &$this->idleTimeout;
+
+        $this->timeoutWatcher = Loop::repeat(1000, static function () use (&$idleTimeout, $connections, $idle) {
+            $now = \time();
+            while (!$idle->isEmpty()) {
+                /** @var \Amp\Postgres\Connection $connection */
+                $connection = $idle->bottom();
+
+                if ($connection->lastUsedAt() + $idleTimeout > $now) {
+                    return;
+                }
+
+                // Remove connection from pool.
+                $idle->shift();
+                $connections->detach($connection);
+                $connection->close();
+            }
+        });
+
+        Loop::unreference($this->timeoutWatcher);
+    }
+
+    public function __destruct() {
+        Loop::cancel($this->timeoutWatcher);
+    }
+
+    public function resetConnections(bool $reset = true) {
+        $this->resetConnections = $reset;
+    }
+
+    public function setIdleTimeout(int $timeout) {
+        if ($timeout < 0) {
+            throw new \Error("Timeout must be greater than or equal to 0");
+        }
+
+        $this->idleTimeout = $timeout;
+
+        if ($this->idleTimeout > 0) {
+            Loop::enable($this->timeoutWatcher);
+        } else {
+            Loop::disable($this->timeoutWatcher);
+        }
+    }
+
+    public function close() {
+        $this->closed = true;
+        foreach ($this->connections as $connection) {
+            $connection->close();
+        }
+        $this->idle = new \SplQueue;
+        $this->connections = new \SplObjectStorage;
     }
 
     /**
@@ -130,7 +197,13 @@ abstract class AbstractPool implements Pool {
         }
 
         // Shift a connection off the idle queue.
-        return $this->idle->shift();
+        $connection = $this->idle->shift();
+
+        if ($this->resetConnections) {
+            yield $connection->query("RESET ALL");
+        }
+
+        return $connection;
     }
 
     /**
@@ -156,6 +229,10 @@ abstract class AbstractPool implements Pool {
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
+        if ($this->closed) {
+            throw new \Error("The pool has been closed");
+        }
+
         return call(function () use ($sql) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
@@ -183,6 +260,10 @@ abstract class AbstractPool implements Pool {
      * {@inheritdoc}
      */
     public function execute(string $sql, array $params = []): Promise {
+        if ($this->closed) {
+            throw new \Error("The pool has been closed");
+        }
+
         return call(function () use ($sql, $params) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
@@ -210,6 +291,10 @@ abstract class AbstractPool implements Pool {
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
+        if ($this->closed) {
+            throw new \Error("The pool has been closed");
+        }
+
         return call(function () use ($sql) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
@@ -234,6 +319,10 @@ abstract class AbstractPool implements Pool {
      * {@inheritdoc}
      */
     public function notify(string $channel, string $payload = ""): Promise {
+        if ($this->closed) {
+            throw new \Error("The pool has been closed");
+        }
+
         return call(function () use ($channel, $payload) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
@@ -252,6 +341,10 @@ abstract class AbstractPool implements Pool {
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
+        if ($this->closed) {
+            throw new \Error("The pool has been closed");
+        }
+
         return call(function () use ($channel) {
             ++$this->listenerCount;
 
@@ -291,6 +384,10 @@ abstract class AbstractPool implements Pool {
      * {@inheritdoc}
      */
     public function transaction(int $isolation = Transaction::COMMITTED): Promise {
+        if ($this->closed) {
+            throw new \Error("The pool has been closed");
+        }
+
         return call(function () use ($isolation) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
