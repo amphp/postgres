@@ -2,22 +2,43 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\AggregatePool;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
+use Amp\Postgres\Pool;
+use Amp\Promise;
+use Amp\Success;
 
 /**
  * @requires extension pgsql
  */
 class PgSqlPoolTest extends AbstractLinkTest {
+    const POOL_SIZE = 3;
+
     /** @var resource[] PostgreSQL connection resources. */
     protected $handles = [];
 
     public function createLink(string $connectionString): Link {
-        $pool = new AggregatePool;
+        for ($i = 0; $i < self::POOL_SIZE; ++$i) {
+            $this->handles[] = \pg_connect($connectionString, \PGSQL_CONNECT_FORCE_NEW);
+        }
 
-        $handle = \pg_connect($connectionString, \PGSQL_CONNECT_FORCE_NEW);
-        $socket = \pg_socket($handle);
+        $pool = $this->getMockBuilder(Pool::class)
+            ->setConstructorArgs(['connection string', \count($this->handles)])
+            ->setMethods(['createConnection'])
+            ->getMock();
+
+        $pool->method('createConnection')
+            ->will($this->returnCallback(function (): Promise {
+                static $count = 0;
+                if (!isset($this->handles[$count])) {
+                    $this->fail("createConnection called too many times");
+                }
+                $handle = $this->handles[$count];
+                ++$count;
+                return new Success(new PgSqlConnection($handle, \pg_socket($handle)));
+            }));
+
+        $handle = \reset($this->handles);
 
         \pg_query($handle, "DROP TABLE IF EXISTS test");
 
@@ -35,17 +56,6 @@ class PgSqlPoolTest extends AbstractLinkTest {
             }
         }
 
-        $this->handles[] = $handle;
-
-        $pool->addConnection(new PgSqlConnection($handle, $socket));
-
-        $handle = \pg_connect($connectionString, \PGSQL_CONNECT_FORCE_NEW);
-        $socket = \pg_socket($handle);
-
-        $this->handles[] = $handle;
-
-        $pool->addConnection(new PgSqlConnection($handle, $socket));
-
         return $pool;
     }
 
@@ -56,5 +66,9 @@ class PgSqlPoolTest extends AbstractLinkTest {
 
         \pg_query($this->handles[0], "ROLLBACK");
         \pg_query($this->handles[0], "DROP TABLE test");
+
+        foreach ($this->handles as $handle) {
+            \pg_close($handle);
+        }
     }
 }

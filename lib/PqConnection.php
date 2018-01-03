@@ -10,7 +10,7 @@ use Amp\NullCancellationToken;
 use Amp\Promise;
 use pq;
 
-class PqConnection extends AbstractConnection {
+class PqConnection extends Connection {
     /**
      * @param string $connectionString
      * @param \Amp\CancellationToken $token

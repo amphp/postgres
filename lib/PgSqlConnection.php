@@ -9,7 +9,7 @@ use Amp\Loop;
 use Amp\NullCancellationToken;
 use Amp\Promise;
 
-class PgSqlConnection extends AbstractConnection {
+class PgSqlConnection extends Connection {
     /**
      * @param string $connectionString
      * @param \Amp\CancellationToken $token

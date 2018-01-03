@@ -2,23 +2,45 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\AggregatePool;
 use Amp\Postgres\Link;
+use Amp\Postgres\Pool;
 use Amp\Postgres\PqConnection;
+use Amp\Promise;
+use Amp\Success;
 
 /**
  * @requires extension pq
  */
 class PqPoolTest extends AbstractLinkTest {
+    const POOL_SIZE = 3;
+
     /** @var \pq\Connection[] */
     protected $handles = [];
 
     public function createLink(string $connectionString): Link {
-        $pool = new AggregatePool;
+        for ($i = 0; $i < self::POOL_SIZE; ++$i) {
+            $this->handles[] = $handle = new \pq\Connection($connectionString);
+            $handle->nonblocking = true;
+            $handle->unbuffered = true;
+        }
 
-        $handle = new \pq\Connection($connectionString);
-        $handle->nonblocking = true;
-        $handle->unbuffered = true;
+        $pool = $this->getMockBuilder(Pool::class)
+            ->setConstructorArgs(['connection string', \count($this->handles)])
+            ->setMethods(['createConnection'])
+            ->getMock();
+
+        $pool->method('createConnection')
+            ->will($this->returnCallback(function (): Promise {
+                static $count = 0;
+                if (!isset($this->handles[$count])) {
+                    $this->fail("createConnection called too many times");
+                }
+                $handle = $this->handles[$count];
+                ++$count;
+                return new Success(new PqConnection($handle));
+            }));
+
+        $handle = \reset($this->handles);
 
         $handle->exec("DROP TABLE IF EXISTS test");
 
@@ -35,18 +57,6 @@ class PqPoolTest extends AbstractLinkTest {
                 $this->fail('Could not insert test data.');
             }
         }
-
-        $this->handles[] = $handle;
-
-        $pool->addConnection(new PqConnection($handle));
-
-        $handle = new \pq\Connection($connectionString);
-        $handle->nonblocking = true;
-        $handle->unbuffered = true;
-
-        $this->handles[] = $handle;
-
-        $pool->addConnection(new PqConnection($handle));
 
         return $pool;
     }

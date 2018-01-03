@@ -4,7 +4,6 @@ namespace Amp\Postgres\Test;
 
 use Amp\Delayed;
 use Amp\Loop;
-use Amp\Postgres\ConnectionPool;
 use Amp\Postgres\Pool;
 use Amp\Promise;
 use Amp\Success;
@@ -16,7 +15,7 @@ class ConnectionPoolTest extends AbstractPoolTest {
      * @return \PHPUnit_Framework_MockObject_MockObject|\Amp\Postgres\Pool
      */
     protected function createPool(array $connections): Pool {
-        $mock = $this->getMockBuilder(ConnectionPool::class)
+        $mock = $this->getMockBuilder(Pool::class)
             ->setConstructorArgs(['connection string', \count($connections)])
             ->setMethods(['createConnection'])
             ->getMock();
@@ -35,12 +34,12 @@ class ConnectionPoolTest extends AbstractPoolTest {
      * @expectedExceptionMessage Pool must contain at least one connection
      */
     public function testInvalidMaxConnections() {
-        $pool = new ConnectionPool('connection string', 0);
+        $pool = new Pool('connection string', 0);
     }
 
     public function testIdleConnectionsRemovedAfterTimeout() {
         Loop::run(function () {
-            $pool = new ConnectionPool('host=localhost user=postgres');
+            $pool = new Pool('host=localhost user=postgres');
             $pool->setIdleTimeout(2);
             $count = 3;
 

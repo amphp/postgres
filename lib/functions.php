@@ -34,6 +34,6 @@ function connect(string $connectionString, CancellationToken $token = null): Pro
  *
  * @return \Amp\Postgres\Pool
  */
-function pool(string $connectionString, int $maxConnections = ConnectionPool::DEFAULT_MAX_CONNECTIONS): Pool {
-    return new ConnectionPool($connectionString, $maxConnections);
+function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS): Pool {
+    return new Pool($connectionString, $maxConnections);
 }
