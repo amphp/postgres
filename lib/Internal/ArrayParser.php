@@ -6,9 +6,9 @@ use Amp\Postgres\ParseException;
 
 class ArrayParser {
     /**
-     * @param string $data
-     * @param callable|null $cast
-     * @param string $delimiter
+     * @param string $data String representation of PostgreSQL array.
+     * @param callable|null $cast Callback to cast parsed values.
+     * @param string $delimiter Delimiter used to separate values.
      *
      * @return array Parsed column data.
      *
@@ -31,6 +31,17 @@ class ArrayParser {
         return $data;
     }
 
+    /**
+     * Recursive generator parser yielding array values.
+     *
+     * @param string $data Remaining buffer data.
+     * @param callable|null $cast Callback to cast parsed values.
+     * @param string $delimiter Delimiter used to separate values.
+     *
+     * @return \Generator
+     *
+     * @throws \Amp\Postgres\ParseException
+     */
     private function parser(string $data, callable $cast = null, string $delimiter = ','): \Generator {
         $data = \ltrim(\substr($data, 1));
 
@@ -42,22 +53,30 @@ class ArrayParser {
             if ($data[0] === '{') { // Array
                 $parser = $this->parser($data, $cast, $delimiter);
                 yield \iterator_to_array($parser);
-                list($data, $end) = $this->trim($parser->getReturn(), 0, $delimiter);
+                $data = $parser->getReturn();
+                $end = $this->trim($data, 0, $delimiter);
                 continue;
             }
 
             if ($data[0] === '"') { // Quoted value
-                $position = 1;
-                do {
-                    $position = \strpos($data, '"', $position);
-                    if ($position === false) {
-                        throw new ParseException("Could not find matching quote in quoted value");
+                for ($position = 1; isset($data[$position]); ++$position) {
+                    if ($data[$position] === '\\') {
+                        ++$position; // Skip next character
+                        continue;
                     }
-                } while ($data[$position - 1] === '\\' && ++$position); // Check for escaped "
 
-                $yield = \str_replace('\\"', '"', \substr($data, 1, $position - 1));
+                    if ($data[$position] === '"') {
+                        break;
+                    }
+                }
 
-                list($data, $end) = $this->trim($data, $position + 1, $delimiter);
+                if (!isset($data[$position])) {
+                    throw new ParseException("Could not find matching quote in quoted value");
+                }
+
+                $yield = \stripslashes(\substr($data, 1, $position - 1));
+
+                $end = $this->trim($data, $position + 1, $delimiter);
             } else { // Unquoted value
                 $position = 0;
                 while (isset($data[$position]) && $data[$position] !== $delimiter && $data[$position] !== '}') {
@@ -66,7 +85,7 @@ class ArrayParser {
 
                 $yield = \trim(\substr($data, 0, $position));
 
-                list($data, $end) = $this->trim($data, $position, $delimiter);
+                $end = $this->trim($data, $position, $delimiter);
 
                 if (\strcasecmp($yield, "NULL") === 0) { // Literal NULL is always unquoted.
                     yield null;
@@ -80,21 +99,30 @@ class ArrayParser {
         return $data;
     }
 
-    private function trim(string $data, int $position, string $delimiter): array {
-        do {
-            if (!isset($data[$position])) {
-                throw new ParseException("Unexpected end of data");
-            }
+    /**
+     * @param string $data Data trimmed past next delimiter and any whitespace to the right of the delimiter.
+     * @param int $position Position to start search for delimiter.
+     * @param string $delimiter Delimiter used to separate values.
+     *
+     * @return string First non-whitespace character after given position.
+     *
+     * @throws \Amp\Postgres\ParseException
+     */
+    private function trim(string &$data, int $position, string $delimiter): string {
+        $data = \ltrim(\substr($data, $position));
 
-            $end = $data[$position];
-        } while (\ltrim($end) === '' && isset($data[++$position]));
+        if ($data === '') {
+            throw new ParseException("Unexpected end of data");
+        }
+
+        $end = $data[0];
 
         if ($end !== $delimiter && $end !== '}') {
             throw new ParseException("Invalid delimiter");
         }
 
-        $data = \ltrim(\substr($data, $position + 1));
+        $data = \ltrim(\substr($data, 1));
 
-        return [$data, $end];
+        return $end;
     }
 }

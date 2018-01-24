@@ -106,6 +106,13 @@ class ArrayParserTest extends TestCase {
         $this->assertSame($array, $this->parser->parse($string, $cast));
     }
 
+    public function testEscapedBackslashesInQuotedValue() {
+        $array = ["test\\ing", "esca\\ped\\"];
+        $string = '{"test\\\\ing", "esca\\\\ped\\\\"}';
+
+        $this->assertSame($array, $this->parser->parse($string));
+    }
+
     /**
      * @expectedException \Amp\Postgres\ParseException
      * @expectedExceptionMessage Missing opening or closing brackets
