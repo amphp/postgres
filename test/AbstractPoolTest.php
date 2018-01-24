@@ -240,4 +240,32 @@ abstract class AbstractPoolTest extends TestCase {
             }
         });
     }
+
+    public function testConnectionClosedWhileInPool() {
+        Loop::run(function () {
+            $connections = $this->makeConnectionSet(1);
+
+            $connection = $this->createMock(Connection::class);
+            $connection->method('isAlive')->willReturnOnConsecutiveCalls(true, true, true, false);
+
+            $count = \array_unshift($connections, $connection);
+
+            foreach ($connections as $connection) {
+                $connection->method('query')
+                    ->willReturn(new Delayed(10));
+            }
+
+            $pool = $this->createPool($connections);
+            $pool->resetConnections(false);
+
+            // Perform queries to load mock connections into pool.
+            for ($i = 0; $i < $count; ++$i) {
+                yield $pool->query("SELECT 1");
+            }
+
+            $extracted = yield $pool->extractConnection();
+            $this->assertNotSame($connections[0], $extracted);
+            $this->assertSame($connections[1], $extracted);
+        });
+    }
 }

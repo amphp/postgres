@@ -120,6 +120,7 @@ class Pool implements Link {
         }
         $this->idle = new \SplQueue;
         $this->connections = new \SplObjectStorage;
+        $this->listeningConnection = null;
     }
 
     /**
@@ -167,51 +168,72 @@ class Pool implements Link {
      * @return \Generator
      *
      * @resolve \Amp\Postgres\Connection
+     *
+     * @throws \Amp\Postgres\FailureException If creating a new connection fails.
+     * @throws \Error If the pool has been closed.
      */
     private function pop(): \Generator {
+        if ($this->closed) {
+            throw new \Error("The pool has been closed");
+        }
+
         while ($this->promise !== null && $this->connections->count() + $this->pending >= $this->getMaxConnections()) {
             yield $this->promise; // Prevent simultaneous connection creation when connection count is at maximum - 1.
         }
 
-        while ($this->idle->isEmpty()) { // While loop to ensure an idle connection is available after promises below are resolved.
-            if ($this->connections->count() + $this->pending >= $this->getMaxConnections()) {
+        do {
+            // While loop to ensure an idle connection is available after promises below are resolved.
+            while ($this->idle->isEmpty()) {
+                if ($this->connections->count() + $this->pending < $this->getMaxConnections()) {
+                    // Max connection count has not been reached, so open another connection.
+                    ++$this->pending;
+                    try {
+                        $connection = yield $this->createConnection($this->connectionString);
+                        if (!$connection instanceof Connection) {
+                            throw new \Error(\sprintf(
+                                "%s::createConnection() must resolve to an instance of %s",
+                                static::class,
+                                Connection::class
+                            ));
+                        }
+                    } finally {
+                        --$this->pending;
+                    }
+
+                    $this->connections->attach($connection);
+                    return $connection;
+                }
+
                 // All possible connections busy, so wait until one becomes available.
                 try {
                     $this->deferred = new Deferred;
-                    yield $this->promise = $this->deferred->promise(); // May be resolved with defunct connection.
+                    // May be resolved with defunct connection, but that connection will not be added to $this->idle.
+                    yield $this->promise = $this->deferred->promise();
                 } finally {
                     $this->deferred = null;
                     $this->promise = null;
                 }
-            } else {
-                // Max connection count has not been reached, so open another connection.
-                ++$this->pending;
-                try {
-                    $connection = yield $this->createConnection($this->connectionString);
-                    if (!$connection instanceof Connection) {
-                        throw new \Error(\sprintf(
-                            "%s::createConnection() must resolve to an instance of %s",
-                            static::class,
-                            Connection::class
-                        ));
-                    }
-                } finally {
-                    --$this->pending;
-                }
-
-                $this->connections->attach($connection);
-                return $connection;
             }
-        }
 
-        // Shift a connection off the idle queue.
-        $connection = $this->idle->shift();
+            /** @var \Amp\Postgres\Connection $connection */
+            $connection = $this->idle->shift();
 
-        if ($this->resetConnections) {
-            yield $connection->query("RESET ALL");
-        }
+            if ($connection->isAlive()) {
+                try {
+                    if ($this->resetConnections) {
+                        yield $connection->query("RESET ALL");
+                    }
 
-        return $connection;
+                    return $connection;
+                } catch (FailureException $exception) {
+                    // Fall-through to remove connection below.
+                }
+            }
+
+            $this->connections->detach($connection);
+        } while (!$this->closed);
+
+        throw new FailureException("Pool closed before an active connection could be obtained");
     }
 
     /**
@@ -237,10 +259,6 @@ class Pool implements Link {
      * {@inheritdoc}
      */
     public function query(string $sql): Promise {
-        if ($this->closed) {
-            throw new \Error("The pool has been closed");
-        }
-
         return call(function () use ($sql) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
@@ -268,10 +286,6 @@ class Pool implements Link {
      * {@inheritdoc}
      */
     public function execute(string $sql, array $params = []): Promise {
-        if ($this->closed) {
-            throw new \Error("The pool has been closed");
-        }
-
         return call(function () use ($sql, $params) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
@@ -299,10 +313,6 @@ class Pool implements Link {
      * {@inheritdoc}
      */
     public function prepare(string $sql): Promise {
-        if ($this->closed) {
-            throw new \Error("The pool has been closed");
-        }
-
         return call(function () use ($sql) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
@@ -327,10 +337,6 @@ class Pool implements Link {
      * {@inheritdoc}
      */
     public function notify(string $channel, string $payload = ""): Promise {
-        if ($this->closed) {
-            throw new \Error("The pool has been closed");
-        }
-
         return call(function () use ($channel, $payload) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
@@ -349,10 +355,6 @@ class Pool implements Link {
      * {@inheritdoc}
      */
     public function listen(string $channel): Promise {
-        if ($this->closed) {
-            throw new \Error("The pool has been closed");
-        }
-
         return call(function () use ($channel) {
             ++$this->listenerCount;
 
@@ -392,10 +394,6 @@ class Pool implements Link {
      * {@inheritdoc}
      */
     public function transaction(int $isolation = Transaction::COMMITTED): Promise {
-        if ($this->closed) {
-            throw new \Error("The pool has been closed");
-        }
-
         return call(function () use ($isolation) {
             /** @var \Amp\Postgres\Connection $connection */
             $connection = yield from $this->pop();
