@@ -145,6 +145,93 @@ abstract class AbstractLinkTest extends TestCase {
 
     /**
      * @depends testPrepare
+     */
+    public function testPrepareWithNamedParams() {
+        Loop::run(function () {
+            $query = "SELECT * FROM test WHERE domain=:domain AND tld=:tld";
+
+            /** @var \Amp\Postgres\Statement $statement */
+            $statement = yield $this->connection->prepare($query);
+
+            $data = $this->getData()[0];
+
+            $this->assertSame("SELECT * FROM test WHERE domain=\$1 AND tld=\$2", $statement->getQuery());
+
+            /** @var \Amp\Postgres\ResultSet $result */
+            $result = yield $statement->execute(['domain' => $data[0], 'tld' => $data[1]]);
+
+            $this->assertInstanceOf(ResultSet::class, $result);
+
+            $this->assertSame(2, $result->numFields());
+
+            while (yield $result->advance(ResultSet::FETCH_ARRAY)) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row[0]);
+                $this->assertSame($data[1], $row[1]);
+            }
+        });
+    }
+
+    /**
+     * @depends testPrepare
+     */
+    public function testPrepareWithUnnamedParams() {
+        Loop::run(function () {
+            $query = "SELECT * FROM test WHERE domain=? AND tld=?";
+
+            /** @var \Amp\Postgres\Statement $statement */
+            $statement = yield $this->connection->prepare($query);
+
+            $data = $this->getData()[0];
+
+            $this->assertSame("SELECT * FROM test WHERE domain=\$1 AND tld=\$2", $statement->getQuery());
+
+            /** @var \Amp\Postgres\ResultSet $result */
+            $result = yield $statement->execute([$data[0], $data[1]]);
+
+            $this->assertInstanceOf(ResultSet::class, $result);
+
+            $this->assertSame(2, $result->numFields());
+
+            while (yield $result->advance(ResultSet::FETCH_ARRAY)) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row[0]);
+                $this->assertSame($data[1], $row[1]);
+            }
+        });
+    }
+
+    /**
+     * @depends testPrepare
+     */
+    public function testPrepareWithNamedParamsWithDataAppearingAsNamedParam() {
+        Loop::run(function () {
+            $query = "SELECT * FROM test WHERE domain=:domain OR domain=':domain'";
+
+            /** @var \Amp\Postgres\Statement $statement */
+            $statement = yield $this->connection->prepare($query);
+
+            $data = $this->getData()[0];
+
+            $this->assertSame("SELECT * FROM test WHERE domain=\$1 OR domain=':domain'", $statement->getQuery());
+
+            /** @var \Amp\Postgres\ResultSet $result */
+            $result = yield $statement->execute(['domain' => $data[0]]);
+
+            $this->assertInstanceOf(ResultSet::class, $result);
+
+            $this->assertSame(2, $result->numFields());
+
+            while (yield $result->advance(ResultSet::FETCH_ARRAY)) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row[0]);
+                $this->assertSame($data[1], $row[1]);
+            }
+        });
+    }
+
+    /**
+     * @depends testPrepare
      * @expectedException \Amp\Postgres\QueryExecutionError
      * @expectedExceptionMessage column "invalid" does not exist
      */
@@ -264,12 +351,47 @@ abstract class AbstractLinkTest extends TestCase {
 
     /**
      * @depends testExecute
-     * @expectedException \Amp\Postgres\QueryExecutionError
-     * @expectedExceptionMessage bind message supplies 0 parameters
+     */
+    public function testExecuteWithNamedParams() {
+        Loop::run(function () {
+            $data = $this->getData()[0];
+
+            /** @var \Amp\Postgres\ResultSet $result */
+            $result = yield $this->connection->execute(
+                "SELECT * FROM test WHERE domain=:domain",
+                ['domain' =>  $data[0]]
+            );
+
+            $this->assertInstanceOf(ResultSet::class, $result);
+
+            $this->assertSame(2, $result->numFields());
+
+            while (yield $result->advance()) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row['domain']);
+                $this->assertSame($data[1], $row['tld']);
+            }
+        });
+    }
+    /**
+     * @depends testExecute
+     * @expectedException \Error
+     * @expectedExceptionMessage Value for unnamed parameter at position 0 missing
      */
     public function testExecuteWithInvalidParams() {
         Loop::run(function () {
             $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1");
+        });
+    }
+
+    /**
+     * @depends testExecute
+     * @expectedException \Error
+     * @expectedExceptionMessage Value for named parameter 'domain' missing
+     */
+    public function testExecuteWithInvalidNamedParams() {
+        Loop::run(function () {
+            $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=:domain", ['tld' => 'com']);
         });
     }
 

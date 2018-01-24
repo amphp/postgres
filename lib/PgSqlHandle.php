@@ -321,6 +321,9 @@ class PgSqlHandle implements Handle {
             throw new \Error("The connection to the database has been closed");
         }
 
+        $sql = Internal\parseNamedParams($sql, $names);
+        $params = Internal\replaceNamedParams($params, $names);
+
         return call(function () use ($sql, $params) {
             return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params));
         });
@@ -334,6 +337,8 @@ class PgSqlHandle implements Handle {
             throw new \Error("The connection to the database has been closed");
         }
 
+        $sql = Internal\parseNamedParams($sql, $names);
+
         $name = self::STATEMENT_NAME_PREFIX . \sha1($sql);
 
         if (isset($this->statements[$name])) {
@@ -344,18 +349,18 @@ class PgSqlHandle implements Handle {
                 return $storage->promise;
             }
 
-            return new Success(new PgSqlStatement($name, $sql, $this->executeCallback, $this->deallocateCallback));
+            return new Success(new PgSqlStatement($name, $sql, $names, $this->executeCallback, $this->deallocateCallback));
         }
 
         $this->statements[$name] = $storage = new Internal\StatementStorage;
 
-        $promise = $storage->promise = call(function () use ($name, $sql) {
+        $promise = $storage->promise = call(function () use ($name, $names, $sql) {
             /** @var resource $result PostgreSQL result resource. */
             $result = yield from $this->send("pg_send_prepare", $name, $sql);
 
             switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
                 case \PGSQL_COMMAND_OK:
-                    return new PgSqlStatement($name, $sql, $this->executeCallback, $this->deallocateCallback);
+                    return new PgSqlStatement($name, $sql, $names, $this->executeCallback, $this->deallocateCallback);
 
                 case \PGSQL_NONFATAL_ERROR:
                 case \PGSQL_FATAL_ERROR:

@@ -20,6 +20,9 @@ class PgSqlStatement implements Statement {
     /** @var \Amp\Postgres\Internal\ReferenceQueue */
     private $queue;
 
+    /** @var string[] */
+    private $names;
+
     /**
      * @internal
      *
@@ -28,9 +31,10 @@ class PgSqlStatement implements Statement {
      * @param callable $execute
      * @param callable $deallocate
      */
-    public function __construct(string $name, string $sql, callable $execute, callable $deallocate) {
+    public function __construct(string $name, string $sql, array $names, callable $execute, callable $deallocate) {
         $this->name = $name;
         $this->sql = $sql;
+        $this->names = $names;
         $this->execute = $execute;
         $this->deallocate = $deallocate;
         $this->queue = new Internal\ReferenceQueue;
@@ -56,7 +60,7 @@ class PgSqlStatement implements Statement {
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
     public function execute(array $params = []): Promise {
-        return ($this->execute)($this->name, $params);
+        return ($this->execute)($this->name, Internal\replaceNamedParams($params, $this->names));
     }
 
     /**

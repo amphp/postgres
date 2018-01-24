@@ -18,15 +18,20 @@ class PqStatement implements Statement {
     /** @var \Amp\Postgres\Internal\ReferenceQueue */
     private $queue;
 
+    /** @var array */
+    private $names;
+
     /**
      * @internal
      *
      * @param \pq\Statement $statement
+     * @param string[] $names Parameter indices to parameter names.
      * @param callable $execute
      * @param callable $deallocate
      */
-    public function __construct(pq\Statement $statement, callable $execute, callable $deallocate) {
+    public function __construct(pq\Statement $statement, array $names, callable $execute, callable $deallocate) {
         $this->statement = $statement;
+        $this->names = $names;
         $this->execute = $execute;
         $this->deallocate = $deallocate;
         $this->queue = new Internal\ReferenceQueue;
@@ -52,7 +57,7 @@ class PqStatement implements Statement {
      * @throws \Amp\Postgres\FailureException If executing the statement fails.
      */
     public function execute(array $params = []): Promise {
-        return ($this->execute)([$this->statement, "execAsync"], $params);
+        return ($this->execute)([$this->statement, "execAsync"], Internal\replaceNamedParams($params, $this->names));
     }
 
     /**

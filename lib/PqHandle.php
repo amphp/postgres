@@ -333,6 +333,9 @@ class PqHandle implements Handle {
             throw new \Error("The connection to the database has been closed");
         }
 
+        $sql = Internal\parseNamedParams($sql, $names);
+        $params = Internal\replaceNamedParams($params, $names);
+
         return new Coroutine($this->send([$this->handle, "execParamsAsync"], $sql, $params));
     }
 
@@ -344,6 +347,8 @@ class PqHandle implements Handle {
             throw new \Error("The connection to the database has been closed");
         }
 
+        $sql = Internal\parseNamedParams($sql, $names);
+
         $name = self::STATEMENT_NAME_PREFIX . \sha1($sql);
 
         if (isset($this->statements[$name])) {
@@ -354,15 +359,15 @@ class PqHandle implements Handle {
                 return $storage->promise;
             }
 
-            return new Success(new PqStatement($storage->statement, $this->send, $this->deallocate));
+            return new Success(new PqStatement($storage->statement, $names, $this->send, $this->deallocate));
         }
 
         $this->statements[$name] = $storage = new Internal\PqStatementStorage;
 
-        $promise = $storage->promise = call(function () use ($storage, $name, $sql) {
+        $promise = $storage->promise = call(function () use ($storage, $names, $name, $sql) {
             $statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $sql);
             $storage->statement = $statement;
-            return new PqStatement($statement, $this->send, $this->deallocate);
+            return new PqStatement($statement, $names, $this->send, $this->deallocate);
         });
         $promise->onResolve(function ($exception) use ($storage, $name) {
             if ($exception) {
