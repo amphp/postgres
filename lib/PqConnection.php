@@ -25,8 +25,11 @@ class PqConnection extends Connection {
         } catch (pq\Exception $exception) {
             return new Failure(new ConnectionException("Could not connect to PostgreSQL server", 0, $exception));
         }
+
         $connection->nonblocking = true;
-        $connection->unbuffered = true;
+
+        // Disabling unbuffered results for now as there appears to be a bug when unbuffered results contain arrays.
+        // $connection->unbuffered = true;
 
         $deferred = new Deferred;
 
