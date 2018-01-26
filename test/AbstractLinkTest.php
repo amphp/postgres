@@ -155,7 +155,7 @@ abstract class AbstractLinkTest extends TestCase {
 
             $data = $this->getData()[0];
 
-            $this->assertSame("SELECT * FROM test WHERE domain=\$1 AND tld=\$2", $statement->getQuery());
+            $this->assertSame($query, $statement->getQuery());
 
             /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement->execute(['domain' => $data[0], 'tld' => $data[1]]);
@@ -184,7 +184,7 @@ abstract class AbstractLinkTest extends TestCase {
 
             $data = $this->getData()[0];
 
-            $this->assertSame("SELECT * FROM test WHERE domain=\$1 AND tld=\$2", $statement->getQuery());
+            $this->assertSame($query, $statement->getQuery());
 
             /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement->execute([$data[0], $data[1]]);
@@ -213,7 +213,7 @@ abstract class AbstractLinkTest extends TestCase {
 
             $data = $this->getData()[0];
 
-            $this->assertSame("SELECT * FROM test WHERE domain=\$1 OR domain=':domain'", $statement->getQuery());
+            $this->assertSame($query, $statement->getQuery());
 
             /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $statement->execute(['domain' => $data[0]]);

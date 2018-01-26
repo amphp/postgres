@@ -135,7 +135,7 @@ class Transaction implements Handle, Operation {
         $promise = $this->handle->prepare($sql);
 
         $promise->onResolve(function ($exception, $statement) {
-            if ($statement instanceof Statement) {
+            if ($statement instanceof Operation) {
                 $statement->onDestruct([$this->queue, "unreference"]);
                 return;
             }

@@ -8,9 +8,11 @@ use Amp\Postgres\CommandResult;
 use Amp\Postgres\Connection;
 use Amp\Postgres\Listener;
 use Amp\Postgres\Pool;
+use Amp\Postgres\PqStatement;
 use Amp\Postgres\ResultSet;
 use Amp\Postgres\Transaction;
 use Amp\Promise;
+use Amp\Success;
 use PHPUnit\Framework\TestCase;
 use function Amp\call;
 
@@ -266,6 +268,44 @@ abstract class AbstractPoolTest extends TestCase {
             $extracted = yield $pool->extractConnection();
             $this->assertNotSame($connections[0], $extracted);
             $this->assertSame($connections[1], $extracted);
+        });
+    }
+
+    public function testPooledStatementWhenConnectionCloses() {
+        Loop::run(function () {
+            $connections = [];
+            $params = [1, 2, 3];
+
+            $statement = $this->createMock(PqStatement::class);
+            $statement->method('isAlive')
+                ->willReturn(false);
+            $statement->expects($this->never())
+                ->method('execute');
+
+            $connection = $this->createMock(Connection::class);
+            $connection->expects($this->once())
+                ->method('prepare')
+                ->willReturn(new Success($statement));
+            $connections[] = $connection;
+
+            $statement = $this->createMock(PqStatement::class);
+            $statement->method('isAlive')
+                ->willReturn(true);
+            $statement->expects($this->once())
+                ->method('execute')
+                ->with($params);
+
+            $connection = $this->createMock(Connection::class);
+            $connection->expects($this->once())
+                ->method('prepare')
+                ->willReturn(new Success($statement));
+            $connections[] = $connection;
+
+            $pool = $this->createPool($connections);
+            $pool->resetConnections(false);
+
+            $statement = yield $pool->prepare("SQL");
+            $statement->execute($params);
         });
     }
 }

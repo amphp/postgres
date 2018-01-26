@@ -113,6 +113,16 @@ class Pool implements Link {
         }
     }
 
+    /**
+     * @return bool
+     */
+    public function isAlive(): bool {
+        return !$this->closed;
+    }
+
+    /**
+     * Close all connections in the pool. No further queries may be made after a pool is closed.
+     */
     public function close() {
         $this->closed = true;
         foreach ($this->connections as $connection) {
@@ -325,11 +335,16 @@ class Pool implements Link {
                 throw $exception;
             }
 
+            \assert(
+                $statement instanceof Operation,
+                Statement::class . " instances returned from connections must implement " . Operation::class
+            );
+
             $statement->onDestruct(function () use ($connection) {
                 $this->push($connection);
             });
 
-            return $statement;
+            return new PooledStatement($this, $statement);
         });
     }
 

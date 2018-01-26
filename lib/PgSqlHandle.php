@@ -40,12 +40,6 @@ class PgSqlHandle implements Handle {
     /** @var string */
     private $await;
 
-    /** @var callable */
-    private $executeCallback;
-
-    /** @var callable */
-    private $deallocateCallback;
-
     /** @var \Amp\Emitter[] */
     private $listeners = [];
 
@@ -148,8 +142,6 @@ class PgSqlHandle implements Handle {
         Loop::disable($this->poll);
         Loop::disable($this->await);
 
-        $this->executeCallback = $this->callableFromInstanceMethod("sendExecute");
-        $this->deallocateCallback = $this->callableFromInstanceMethod("sendDeallocate");
         $this->unlisten = $this->callableFromInstanceMethod("unlisten");
     }
 
@@ -280,24 +272,41 @@ class PgSqlHandle implements Handle {
         }
     }
 
-    private function sendExecute(string $name, array $params): Promise {
+    /**
+     * @param string $name
+     * @param array $params
+     *
+     * @return \Amp\Promise
+     */
+    public function statementExecute(string $name, array $params): Promise {
         return call(function () use ($name, $params) {
             return $this->createResult(yield from $this->send("pg_send_execute", $name, $params));
         });
     }
 
-    private function sendDeallocate(string $name) {
+    /**
+     * @param string $name
+     *
+     * @return \Amp\Promise
+     *
+     * @throws \Error
+     */
+    public function statementDeallocate(string $name): Promise {
+        if (!\is_resource($this->handle)) {
+            return new Success; // Connection closed, no need to deallocate.
+        }
+
         \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
 
         $storage = $this->statements[$name];
 
         if (--$storage->count) {
-            return;
+            return new Success;
         }
 
         unset($this->statements[$name]);
 
-        Promise\rethrow($this->query(\sprintf("DEALLOCATE %s", $name)));
+        return $this->query(\sprintf("DEALLOCATE %s", $name));
     }
 
     /**
@@ -337,9 +346,9 @@ class PgSqlHandle implements Handle {
             throw new \Error("The connection to the database has been closed");
         }
 
-        $sql = Internal\parseNamedParams($sql, $names);
+        $modifiedSql = Internal\parseNamedParams($sql, $names);
 
-        $name = self::STATEMENT_NAME_PREFIX . \sha1($sql);
+        $name = self::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
         if (isset($this->statements[$name])) {
             $storage = $this->statements[$name];
@@ -349,18 +358,18 @@ class PgSqlHandle implements Handle {
                 return $storage->promise;
             }
 
-            return new Success(new PgSqlStatement($name, $sql, $names, $this->executeCallback, $this->deallocateCallback));
+            return new Success(new PgSqlStatement($this, $name, $sql, $names));
         }
 
         $this->statements[$name] = $storage = new Internal\StatementStorage;
 
-        $promise = $storage->promise = call(function () use ($name, $names, $sql) {
+        $promise = $storage->promise = call(function () use ($name, $names, $sql, $modifiedSql) {
             /** @var resource $result PostgreSQL result resource. */
-            $result = yield from $this->send("pg_send_prepare", $name, $sql);
+            $result = yield from $this->send("pg_send_prepare", $name, $modifiedSql);
 
             switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
                 case \PGSQL_COMMAND_OK:
-                    return new PgSqlStatement($name, $sql, $names, $this->executeCallback, $this->deallocateCallback);
+                    return new PgSqlStatement($this, $name, $sql, $names);
 
                 case \PGSQL_NONFATAL_ERROR:
                 case \PGSQL_FATAL_ERROR:

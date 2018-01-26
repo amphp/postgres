@@ -3,66 +3,58 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
-use pq;
 
-class PqStatement implements Statement {
-    /** @var \pq\Statement */
-    private $statement;
+class PqStatement implements Statement, Operation {
+    /** @var \Amp\Postgres\PqHandle */
+    private $handle;
 
-    /** @var callable */
-    private $execute;
+    /** @var string */
+    private $name;
 
-    /** @var callable */
-    private $deallocate;
+    /** @var string */
+    private $sql;
 
     /** @var \Amp\Postgres\Internal\ReferenceQueue */
     private $queue;
 
     /** @var array */
-    private $names;
+    private $params;
 
     /**
-     * @internal
-     *
-     * @param \pq\Statement $statement
-     * @param string[] $names Parameter indices to parameter names.
-     * @param callable $execute
-     * @param callable $deallocate
+     * @param \Amp\Postgres\PqHandle $handle
+     * @param string $name Statement name.
+     * @param string $sql Original prepared SQL query.
+     * @param string[] $params Parameter indices to parameter names.
      */
-    public function __construct(pq\Statement $statement, array $names, callable $execute, callable $deallocate) {
-        $this->statement = $statement;
-        $this->names = $names;
-        $this->execute = $execute;
-        $this->deallocate = $deallocate;
+    public function __construct(PqHandle $handle, string $name, string $sql, array $params) {
+        $this->handle = $handle;
+        $this->name = $name;
+        $this->params = $params;
+        $this->sql = $sql;
         $this->queue = new Internal\ReferenceQueue;
     }
 
     public function __destruct() {
-        ($this->deallocate)($this->statement->name);
+        $this->handle->statementDeallocate($this->name);
         $this->queue->unreference();
     }
 
-    /**
-     * @return string
-     */
+    /** {@inheritdoc} */
+    public function isAlive(): bool {
+        return $this->handle->isAlive();
+    }
+
+    /** {@inheritdoc} */
     public function getQuery(): string {
-        return $this->statement->query;
+        return $this->sql;
     }
 
-    /**
-     * @param mixed ...$params
-     *
-     * @return \Amp\Promise<\Amp\Postgres\Result>
-     *
-     * @throws \Amp\Postgres\FailureException If executing the statement fails.
-     */
+    /** {@inheritdoc} */
     public function execute(array $params = []): Promise {
-        return ($this->execute)([$this->statement, "execAsync"], Internal\replaceNamedParams($params, $this->names));
+        return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
     }
 
-    /**
-     * @param callable $onDestruct
-     */
+    /** {@inheritdoc} */
     public function onDestruct(callable $onDestruct) {
         $this->queue->onDestruct($onDestruct);
     }

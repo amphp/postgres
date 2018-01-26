@@ -4,68 +4,57 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-class PgSqlStatement implements Statement {
+class PgSqlStatement implements Statement, Operation {
+    /** @var \Amp\Postgres\PgSqlHandle */
+    private $handle;
+
     /** @var string */
     private $name;
 
     /** @var string */
     private $sql;
 
-    /** @var callable */
-    private $execute;
-
-    /** @var callable */
-    private $deallocate;
-
     /** @var \Amp\Postgres\Internal\ReferenceQueue */
     private $queue;
 
     /** @var string[] */
-    private $names;
+    private $params;
 
     /**
-     * @internal
-     *
+     * @param \Amp\Postgres\PgSqlHandle $handle
      * @param string $name
      * @param string $sql
-     * @param callable $execute
-     * @param callable $deallocate
+     * @param string[] $params
      */
-    public function __construct(string $name, string $sql, array $names, callable $execute, callable $deallocate) {
+    public function __construct(PgSqlHandle $handle, string $name, string $sql, array $params) {
+        $this->handle = $handle;
         $this->name = $name;
         $this->sql = $sql;
-        $this->names = $names;
-        $this->execute = $execute;
-        $this->deallocate = $deallocate;
+        $this->params = $params;
         $this->queue = new Internal\ReferenceQueue;
     }
 
     public function __destruct() {
-        ($this->deallocate)($this->name);
+        $this->handle->statementDeallocate($this->name);
         $this->queue->unreference();
     }
 
-    /**
-     * @return string
-     */
+    /** {@inheritdoc} */
+    public function isAlive(): bool {
+        return $this->handle->isAlive();
+    }
+
+    /** {@inheritdoc} */
     public function getQuery(): string {
         return $this->sql;
     }
 
-    /**
-     * @param mixed ...$params
-     *
-     * @return \Amp\Promise<\Amp\Postgres\Result>
-     *
-     * @throws \Amp\Postgres\FailureException If executing the statement fails.
-     */
+    /** {@inheritdoc} */
     public function execute(array $params = []): Promise {
-        return ($this->execute)($this->name, Internal\replaceNamedParams($params, $this->names));
+        return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
     }
 
-    /**
-     * @param callable $onDestruct
-     */
+    /** {@inheritdoc} */
     public function onDestruct(callable $onDestruct) {
         $this->queue->onDestruct($onDestruct);
     }

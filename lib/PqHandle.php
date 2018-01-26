@@ -38,9 +38,6 @@ class PqHandle implements Handle {
     private $statements = [];
 
     /** @var callable */
-    private $send;
-
-    /** @var callable */
     private $fetch;
 
     /** @var callable */
@@ -48,9 +45,6 @@ class PqHandle implements Handle {
 
     /** @var callable */
     private $release;
-
-    /** @var callable */
-    private $deallocate;
 
     /** @var int */
     private $lastUsedAt;
@@ -127,11 +121,9 @@ class PqHandle implements Handle {
         Loop::disable($this->poll);
         Loop::disable($this->await);
 
-        $this->send = coroutine($this->callableFromInstanceMethod("send"));
         $this->fetch = coroutine($this->callableFromInstanceMethod("fetch"));
         $this->unlisten = $this->callableFromInstanceMethod("unlisten");
         $this->release = $this->callableFromInstanceMethod("release");
-        $this->deallocate = $this->callableFromInstanceMethod("deallocate");
     }
 
     /**
@@ -296,9 +288,33 @@ class PqHandle implements Handle {
         $deferred->resolve();
     }
 
-    private function deallocate(string $name) {
+    /**
+     * Executes the named statement using the given parameters.
+     *
+     * @param string $name
+     * @param array $params
+     *
+     * @return \Amp\Promise
+     * @throws \Amp\Postgres\FailureException
+     */
+    public function statementExecute(string $name, array $params): Promise {
+        \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
+
+        $statement = $this->statements[$name]->statement;
+
+        return new Coroutine($this->send([$statement, "execAsync"], $params));
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return \Amp\Promise
+     *
+     * @throws \Amp\Postgres\FailureException
+     */
+    public function statementDeallocate(string $name): Promise {
         if (!$this->handle) {
-            return; // Connection dead.
+            return new Success; // Connection dead.
         }
 
         \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
@@ -306,12 +322,12 @@ class PqHandle implements Handle {
         $storage = $this->statements[$name];
 
         if (--$storage->count) {
-            return;
+            return new Success;
         }
 
         unset($this->statements[$name]);
 
-        Promise\rethrow(new Coroutine($this->send([$storage->statement, "deallocateAsync"])));
+        return new Coroutine($this->send([$storage->statement, "deallocateAsync"]));
     }
 
     /**
@@ -347,9 +363,9 @@ class PqHandle implements Handle {
             throw new \Error("The connection to the database has been closed");
         }
 
-        $sql = Internal\parseNamedParams($sql, $names);
+        $modifiedSql = Internal\parseNamedParams($sql, $names);
 
-        $name = self::STATEMENT_NAME_PREFIX . \sha1($sql);
+        $name = self::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
         if (isset($this->statements[$name])) {
             $storage = $this->statements[$name];
@@ -359,15 +375,15 @@ class PqHandle implements Handle {
                 return $storage->promise;
             }
 
-            return new Success(new PqStatement($storage->statement, $names, $this->send, $this->deallocate));
+            return new Success(new PqStatement($this, $name, $sql, $names));
         }
 
         $this->statements[$name] = $storage = new Internal\PqStatementStorage;
 
-        $promise = $storage->promise = call(function () use ($storage, $names, $name, $sql) {
-            $statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $sql);
+        $promise = $storage->promise = call(function () use ($storage, $names, $name, $sql, $modifiedSql) {
+            $statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $modifiedSql);
             $storage->statement = $statement;
-            return new PqStatement($statement, $names, $this->send, $this->deallocate);
+            return new PqStatement($this, $name, $sql, $names);
         });
         $promise->onResolve(function ($exception) use ($storage, $name) {
             if ($exception) {

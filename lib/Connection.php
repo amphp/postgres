@@ -106,6 +106,8 @@ abstract class Connection implements Handle, Link {
 
     /**
      * {@inheritdoc}
+     *
+     * Statement instances returned by this method must also implement Operation.
      */
     public function prepare(string $sql): Promise {
         return $this->send("prepare", $sql);
