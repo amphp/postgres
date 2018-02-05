@@ -5,7 +5,7 @@ namespace Amp\Postgres\Internal;
 use function Amp\Postgres\cast;
 
 const STATEMENT_PARAM_REGEX = <<<'REGEX'
-~(["'`])(?:\\(?:\\|\1)|(?!\1).)*+\1(*SKIP)(*F)|(\$(\d+)|\?)|:([a-zA-Z_]+)~ms
+~(["'`])(?:\\(?:\\|\1)|(?!\1).)*+\1(*SKIP)(*FAIL)|(\$(\d+)|\?)|(?<!:):([a-zA-Z_][a-zA-Z0-9_]*)~ms
 REGEX;
 
 /**
