@@ -15,8 +15,15 @@ class PgSqlConnection extends Connection {
      * @param \Amp\CancellationToken $token
      *
      * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
+     *
+     * @throws \Error If pecl-ev is used as a loop extension.
      */
     public static function connect(string $connectionString, CancellationToken $token = null): Promise {
+        // @codeCoverageIgnoreStart
+        if (Loop::get()->getHandle() instanceof \EvLoop) {
+            throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
+        } // @codeCoverageIgnoreEnd
+
         $connectionString = \str_replace(";", " ", $connectionString);
 
         if (!$connection = @\pg_connect($connectionString, \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {

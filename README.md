@@ -24,7 +24,11 @@ composer require amphp/postgres
 - PHP 7.0+
 - [ext-pgsql](https://secure.php.net/pgsql) or [pecl-pq](https://pecl.php.net/package/pq)
 
+Note: [pecl-ev](https://pecl.php.net/package/ev) is not compatible with ext-pgsql. If you wish to use pecl-ev for the event loop backend, you must use pecl-pq.
+
 ## Documentation & Examples
+
+Prepared statements and parameterized queries support named placeholders, as well as `?` and standard numeric (i.e. `$1`) placeholders.
 
 More examples can be found in the [`examples`](examples) directory.
 
@@ -34,10 +38,10 @@ Amp\Loop::run(function () {
     $pool = Amp\Postgres\pool("host=localhost user=postgres dbname=test");
 
     /** @var \Amp\Postgres\Statement $statement */
-    $statement = yield $pool->prepare("SELECT * FROM test WHERE id=$1");
+    $statement = yield $pool->prepare("SELECT * FROM test WHERE id = :id");
 
     /** @var \Amp\Postgres\ResultSet $result */
-    $result = yield $statement->execute([1337]);
+    $result = yield $statement->execute(['id' => 1337]);
     while (yield $result->advance()) {
         $row = $result->getCurrent();
         // $row is an array (map) of column values. e.g.: $row['column_name']
