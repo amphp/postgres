@@ -29,11 +29,11 @@
     },
     "autoload": {
         "psr-4": {
-            "Amp\\Postgres\\": "lib"
+            "Amp\\Postgres\\": "src"
         },
         "files": [
-            "lib/functions.php",
-            "lib/Internal/functions.php"
+            "src/functions.php",
+            "src/Internal/functions.php"
         ]
     },
     "autoload-dev": {
