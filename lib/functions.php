@@ -3,9 +3,28 @@
 namespace Amp\Postgres;
 
 use Amp\CancellationToken;
+use Amp\Loop;
 use Amp\Promise;
 
+const LOOP_CONNECTOR_IDENTIFIER = Connector::class;
+
+function connector(Connector $connector = null): Connector {
+    if ($connector === null) {
+        $connector = Loop::getState(LOOP_CONNECTOR_IDENTIFIER);
+        if ($connector) {
+            return $connector;
+        }
+
+        $connector = new DefaultConnector;
+    }
+
+    Loop::setState(LOOP_CONNECTOR_IDENTIFIER, $connector);
+    return $connector;
+}
+
 /**
+ * Create a connection using the global Connector instance.
+ *
  * @param string $connectionString
  * @param \Amp\CancellationToken $token
  *
@@ -17,25 +36,19 @@ use Amp\Promise;
  * @codeCoverageIgnore
  */
 function connect(string $connectionString, CancellationToken $token = null): Promise {
-    if (\extension_loaded("pq")) {
-        return PqConnection::connect($connectionString, $token);
-    }
-
-    if (\extension_loaded("pgsql")) {
-        return PgSqlConnection::connect($connectionString, $token);
-    }
-
-    throw new \Error("amphp/postgres requires either pecl-pq or ext-pgsql");
+    return connector()->connect($connectionString, $token);
 }
 
 /**
+ * Create a pool using the global Connector instance.
+ *
  * @param string $connectionString
  * @param int $maxConnections
  *
  * @return \Amp\Postgres\Pool
  */
 function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS): Pool {
-    return new Pool($connectionString, $maxConnections);
+    return new Pool($connectionString, $maxConnections, connector());
 }
 
 /**

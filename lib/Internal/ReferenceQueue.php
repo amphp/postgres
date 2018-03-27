@@ -4,7 +4,7 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Loop;
 
-class ReferenceQueue {
+final class ReferenceQueue {
     /** @var callable[]|null */
     private $onDestruct = [];
 

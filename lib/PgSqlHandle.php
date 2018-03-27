@@ -10,7 +10,7 @@ use Amp\Promise;
 use Amp\Success;
 use function Amp\call;
 
-class PgSqlHandle implements Handle {
+final class PgSqlHandle implements Handle {
     use CallableMaker;
 
     const DIAGNOSTIC_CODES = [

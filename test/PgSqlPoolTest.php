@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\Connector;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\Pool;
@@ -22,12 +23,8 @@ class PgSqlPoolTest extends AbstractLinkTest {
             $this->handles[] = \pg_connect($connectionString, \PGSQL_CONNECT_FORCE_NEW);
         }
 
-        $pool = $this->getMockBuilder(Pool::class)
-            ->setConstructorArgs(['connection string', \count($this->handles)])
-            ->setMethods(['createConnection'])
-            ->getMock();
-
-        $pool->method('createConnection')
+        $connector = $this->createMock(Connector::class);
+        $connector->method('connect')
             ->will($this->returnCallback(function (): Promise {
                 static $count = 0;
                 if (!isset($this->handles[$count])) {
@@ -37,6 +34,8 @@ class PgSqlPoolTest extends AbstractLinkTest {
                 ++$count;
                 return new Success(new PgSqlConnection($handle, \pg_socket($handle)));
             }));
+
+        $pool = new Pool('connection string', \count($this->handles), $connector);
 
         $handle = \reset($this->handles);
 

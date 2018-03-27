@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\Connector;
 use Amp\Postgres\Link;
 use Amp\Postgres\Pool;
 use Amp\Postgres\PqConnection;
@@ -24,12 +25,8 @@ class PqPoolTest extends AbstractLinkTest {
             $handle->unbuffered = true;
         }
 
-        $pool = $this->getMockBuilder(Pool::class)
-            ->setConstructorArgs(['connection string', \count($this->handles)])
-            ->setMethods(['createConnection'])
-            ->getMock();
-
-        $pool->method('createConnection')
+        $connector = $this->createMock(Connector::class);
+        $connector->method('connect')
             ->will($this->returnCallback(function (): Promise {
                 static $count = 0;
                 if (!isset($this->handles[$count])) {
@@ -39,6 +36,8 @@ class PqPoolTest extends AbstractLinkTest {
                 ++$count;
                 return new Success(new PqConnection($handle));
             }));
+
+        $pool = new Pool('connection string', \count($this->handles), $connector);
 
         $handle = \reset($this->handles);
 

@@ -9,11 +9,14 @@ use Amp\Loop;
 use Amp\Promise;
 use function Amp\call;
 
-class Pool implements Link {
+final class Pool implements Link {
     use CallableMaker;
 
     const DEFAULT_MAX_CONNECTIONS = 100;
     const DEFAULT_IDLE_TIMEOUT = 60;
+
+    /** @var \Amp\Postgres\Connector */
+    private $connector;
 
     /** @var string */
     private $connectionString;
@@ -57,7 +60,13 @@ class Pool implements Link {
     /** @var bool */
     private $closed = false;
 
-    public function __construct(string $connectionString, int $maxConnections = self::DEFAULT_MAX_CONNECTIONS) {
+    public function __construct(
+        string $connectionString,
+        int $maxConnections = self::DEFAULT_MAX_CONNECTIONS,
+        Connector $connector = null
+    ) {
+        $this->connector = $connector ?? connector();
+
         $this->connectionString = $connectionString;
 
         $this->maxConnections = $maxConnections;
@@ -145,15 +154,6 @@ class Pool implements Link {
     }
 
     /**
-     * @return \Amp\Promise<\Amp\Postgres\Connection>
-     *
-     * @throws \Amp\Postgres\FailureException
-     */
-    protected function createConnection(string $connectionString): Promise {
-        return connect($connectionString);
-    }
-
-    /**
      * {@inheritdoc}
      */
     public function getConnectionCount(): int {
@@ -198,7 +198,7 @@ class Pool implements Link {
                     // Max connection count has not been reached, so open another connection.
                     ++$this->pending;
                     try {
-                        $connection = yield $this->createConnection($this->connectionString);
+                        $connection = yield $this->connector->connect($this->connectionString);
                         if (!$connection instanceof Connection) {
                             throw new \Error(\sprintf(
                                 "%s::createConnection() must resolve to an instance of %s",

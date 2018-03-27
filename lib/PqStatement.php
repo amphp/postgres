@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-class PqStatement implements Statement, Operation {
+final class PqStatement implements Statement, Operation {
     /** @var \Amp\Postgres\PqHandle */
     private $handle;
 

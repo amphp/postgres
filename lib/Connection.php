@@ -39,21 +39,21 @@ abstract class Connection implements Handle, Link {
     /**
      * {@inheritdoc}
      */
-    public function isAlive(): bool {
+    final public function isAlive(): bool {
         return $this->handle->isAlive();
     }
 
     /**
      * {@inheritdoc}
      */
-    public function lastUsedAt(): int {
+    final public function lastUsedAt(): int {
         return $this->handle->lastUsedAt();
     }
 
     /**
      * {@inheritdoc}
      */
-    public function close() {
+    final public function close() {
         $this->handle->close();
     }
 
@@ -93,14 +93,14 @@ abstract class Connection implements Handle, Link {
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): Promise {
+    final public function query(string $sql): Promise {
         return $this->send("query", $sql);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, array $params = []): Promise {
+    final public function execute(string $sql, array $params = []): Promise {
         return $this->send("execute", $sql, $params);
     }
 
@@ -109,7 +109,7 @@ abstract class Connection implements Handle, Link {
      *
      * Statement instances returned by this method must also implement Operation.
      */
-    public function prepare(string $sql): Promise {
+    final public function prepare(string $sql): Promise {
         return $this->send("prepare", $sql);
     }
 
@@ -117,21 +117,21 @@ abstract class Connection implements Handle, Link {
     /**
      * {@inheritdoc}
      */
-    public function notify(string $channel, string $payload = ""): Promise {
+    final public function notify(string $channel, string $payload = ""): Promise {
         return $this->send("notify", $channel, $payload);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function listen(string $channel): Promise {
+    final public function listen(string $channel): Promise {
         return $this->send("listen", $channel);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function transaction(int $isolation = Transaction::COMMITTED): Promise {
+    final public function transaction(int $isolation = Transaction::COMMITTED): Promise {
         return call(function () use ($isolation) {
             switch ($isolation) {
                 case Transaction::UNCOMMITTED:
@@ -165,14 +165,14 @@ abstract class Connection implements Handle, Link {
     /**
      * {@inheritdoc}
      */
-    public function quoteString(string $data): string {
+    final public function quoteString(string $data): string {
         return $this->handle->quoteString($data);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function quoteName(string $name): string {
+    final public function quoteName(string $name): string {
         return $this->handle->quoteName($name);
     }
 }

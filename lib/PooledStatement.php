@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Promise;
 use function Amp\call;
 
-class PooledStatement implements Statement {
+final class PooledStatement implements Statement {
     /** @var \Amp\Postgres\Pool */
     private $pool;
 

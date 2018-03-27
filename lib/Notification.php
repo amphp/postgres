@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Struct;
 
-class Notification {
+final class Notification {
     use Struct;
 
     /** @var string Channel name. */

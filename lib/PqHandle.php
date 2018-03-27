@@ -13,7 +13,7 @@ use pq;
 use function Amp\call;
 use function Amp\coroutine;
 
-class PqHandle implements Handle {
+final class PqHandle implements Handle {
     use CallableMaker;
 
     /** @var \pq\Connection PostgreSQL connection object. */

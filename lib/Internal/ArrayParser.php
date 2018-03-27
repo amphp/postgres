@@ -4,7 +4,7 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\ParseException;
 
-class ArrayParser {
+final class ArrayParser {
     /**
      * @param string $data String representation of PostgreSQL array.
      * @param callable|null $cast Callback to cast parsed values.

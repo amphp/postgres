@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-class Transaction implements Handle, Operation {
+final class Transaction implements Handle, Operation {
     const UNCOMMITTED  = 0;
     const COMMITTED    = 1;
     const REPEATABLE   = 2;

@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Iterator;
 use Amp\Promise;
 
-class Listener implements Iterator, Operation {
+final class Listener implements Iterator, Operation {
     /** @var \Amp\Iterator */
     private $iterator;
 

@@ -6,7 +6,7 @@ use Amp\Promise;
 use Amp\Success;
 use pq;
 
-class PqBufferedResultSet implements ResultSet {
+final class PqBufferedResultSet implements ResultSet {
     /** @var \pq\Result */
     private $result;
 

@@ -7,7 +7,7 @@ use Amp\Producer;
 use Amp\Promise;
 use pq;
 
-class PqUnbufferedResultSet implements ResultSet, Operation {
+final class PqUnbufferedResultSet implements ResultSet, Operation {
     /** @var int */
     private $numCols;
 

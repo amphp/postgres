@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use pq;
 
-class PqCommandResult implements CommandResult {
+final class PqCommandResult implements CommandResult {
     /** @var \pq\Result PostgreSQL result object. */
     private $result;
 
