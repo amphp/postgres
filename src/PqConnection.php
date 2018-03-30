@@ -27,9 +27,7 @@ final class PqConnection extends Connection {
         }
 
         $connection->nonblocking = true;
-
-        // Disabling unbuffered results for now as there appears to be a bug when unbuffered results contain arrays.
-        // $connection->unbuffered = true;
+        $connection->unbuffered = true;
 
         $deferred = new Deferred;
 

@@ -262,7 +262,7 @@ final class PqHandle implements Handle {
         }
 
         if (!$result) {
-            return null; // Connection closing, end result set.
+            throw new ConnectionException("Connection closed");
         }
 
         switch ($result->status) {
@@ -298,7 +298,7 @@ final class PqHandle implements Handle {
      * @throws \Amp\Postgres\FailureException
      */
     public function statementExecute(string $name, array $params): Promise {
-        \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
+        \assert(isset($this->statements[$name]), "Named statement not found when executing");
 
         $statement = $this->statements[$name]->statement;
 

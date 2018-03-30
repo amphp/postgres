@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\Coroutine;
 use Amp\Producer;
 use Amp\Promise;
 use pq;
@@ -35,20 +34,13 @@ final class PqUnbufferedResultSet implements ResultSet, Operation {
             try {
                 do {
                     $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
-                    $next = $fetch(); // Request next result before current is consumed.
                     yield $emit($result);
-                    $result = yield $next;
+                    $result = yield $fetch();
                 } while ($result instanceof pq\Result);
             } finally {
                 $queue->unreference();
             }
         });
-    }
-
-    public function __destruct() {
-        if (!$this->queue->isReferenced()) { // Producer above did not complete, so consume remaining results.
-            Promise\rethrow(new Coroutine($this->dispose()));
-        }
     }
 
     /**
@@ -81,14 +73,6 @@ final class PqUnbufferedResultSet implements ResultSet, Operation {
                 return $this->currentRow = $result->fetchRow(pq\Result::FETCH_OBJECT);
             default:
                 throw new \Error("Invalid result fetch type");
-        }
-    }
-
-    private function dispose(): \Generator {
-        try {
-            while (yield $this->producer->advance()); // Discard unused result rows.
-        } catch (\Throwable $exception) {
-            // Ignore failure while discarding results.
         }
     }
 
