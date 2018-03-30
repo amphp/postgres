@@ -21,4 +21,9 @@ interface Statement {
      * @return string The SQL string used to prepare the statement.
      */
     public function getQuery(): string;
+
+    /**
+     * @return int Timestamp of when the statement was last used.
+     */
+    public function lastUsedAt(): int;
 }

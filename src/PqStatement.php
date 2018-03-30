@@ -20,6 +20,9 @@ final class PqStatement implements Statement, Operation {
     /** @var array */
     private $params;
 
+    /** @var int */
+    private $lastUsedAt;
+
     /**
      * @param \Amp\Postgres\PqHandle $handle
      * @param string $name Statement name.
@@ -32,6 +35,7 @@ final class PqStatement implements Statement, Operation {
         $this->params = $params;
         $this->sql = $sql;
         $this->queue = new Internal\ReferenceQueue;
+        $this->lastUsedAt = \time();
     }
 
     public function __destruct() {
@@ -50,7 +54,13 @@ final class PqStatement implements Statement, Operation {
     }
 
     /** {@inheritdoc} */
+    public function lastUsedAt(): int {
+        return $this->lastUsedAt;
+    }
+
+    /** {@inheritdoc} */
     public function execute(array $params = []): Promise {
+        $this->lastUsedAt = \time();
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
     }
 

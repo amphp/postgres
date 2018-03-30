@@ -1,0 +1,67 @@
+<?php
+
+namespace Amp\Postgres\Test;
+
+use Amp\Delayed;
+use Amp\Loop;
+use Amp\Postgres\Pool;
+use Amp\Postgres\PooledStatement;
+use Amp\Postgres\ResultSet;
+use Amp\Postgres\Statement;
+use PHPUnit\Framework\TestCase;
+
+class PooledStatementTest extends TestCase {
+    public function testActiveStatementsRemainAfterTimeout() {
+        Loop::run(function () {
+            $pool = new Pool('host=localhost user=postgres');
+
+            $statement = $this->createMock(Statement::class);
+            $statement->method('getQuery')
+                ->willReturn('SELECT 1');
+            $statement->method('lastUsedAt')
+                ->willReturn(\time());
+            $statement->expects($this->once())
+                ->method('execute');
+
+            $pooledStatement = new PooledStatement($pool, $statement);
+
+            $this->assertTrue($pooledStatement->isAlive());
+            $this->assertSame(\time(), $pooledStatement->lastUsedAt());
+
+            yield new Delayed(1500); // Give timeout watcher enough time to execute.
+
+            $pooledStatement->execute();
+
+            $this->assertTrue($pooledStatement->isAlive());
+            $this->assertSame(\time(), $pooledStatement->lastUsedAt());
+        });
+    }
+
+    public function testIdleStatementsRemovedAfterTimeout() {
+        Loop::run(function () {
+            $pool = new Pool('host=localhost user=postgres');
+
+            $statement = $this->createMock(Statement::class);
+            $statement->method('getQuery')
+                ->willReturn('SELECT 1');
+            $statement->method('lastUsedAt')
+                ->willReturn(0);
+            $statement->expects($this->never())
+                ->method('execute');
+
+            $pooledStatement = new PooledStatement($pool, $statement);
+
+            $this->assertTrue($pooledStatement->isAlive());
+            $this->assertSame(\time(), $pooledStatement->lastUsedAt());
+
+            yield new Delayed(1500); // Give timeout watcher enough time to execute and remove mock statement object.
+
+            $result = yield $pooledStatement->execute();
+
+            $this->assertInstanceOf(ResultSet::class, $result);
+
+            $this->assertTrue($pooledStatement->isAlive());
+            $this->assertSame(\time(), $pooledStatement->lastUsedAt());
+        });
+    }
+}

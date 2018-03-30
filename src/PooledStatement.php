@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres;
 
+use Amp\Loop;
 use Amp\Promise;
 use function Amp\call;
 
@@ -9,16 +10,51 @@ final class PooledStatement implements Statement {
     /** @var \Amp\Postgres\Pool */
     private $pool;
 
-    /** @var \Amp\Postgres\Statement */
-    private $statement;
+    /** @var \SplQueue */
+    private $statements;
+
+    /** @var string */
+    private $sql;
+
+    /** @var int */
+    private $lastUsedAt;
+
+    /** @var string */
+    private $timeoutWatcher;
 
     /**
      * @param \Amp\Postgres\Pool $pool Pool used to re-create the statement if the original closes.
      * @param \Amp\Postgres\Statement $statement
      */
     public function __construct(Pool $pool, Statement $statement) {
-        $this->statement = $statement;
+        $this->lastUsedAt = \time();
+        $this->statements = $statements = new \SplQueue;
         $this->pool = $pool;
+        $this->sql = $statement->getQuery();
+
+        $this->statements->push($statement);
+
+        $this->timeoutWatcher = Loop::repeat(1000, static function () use ($pool, $statements) {
+            $now = \time();
+            $idleTimeout = $pool->getIdleTimeout();
+
+            while (!$statements->isEmpty()) {
+                /** @var \Amp\Postgres\Statement $statement */
+                $statement = $statements->bottom();
+
+                if ($statement->lastUsedAt() + $idleTimeout > $now) {
+                    return;
+                }
+
+                $statements->shift();
+            }
+        });
+
+        Loop::unreference($this->timeoutWatcher);
+    }
+
+    public function __destruct() {
+        Loop::cancel($this->timeoutWatcher);
     }
 
     /**
@@ -27,13 +63,34 @@ final class PooledStatement implements Statement {
      * Unlike regular statements, as long as the pool is open this statement will not die.
      */
     public function execute(array $params = []): Promise {
-        if ($this->statement->isAlive()) {
-            return $this->statement->execute($params);
-        }
+        $this->lastUsedAt = \time();
 
         return call(function () use ($params) {
-            $this->statement = yield $this->pool->prepare($this->statement->getQuery());
-            return yield $this->statement->execute($params);
+            if (!$this->statements->isEmpty()) {
+                do {
+                    /** @var \Amp\Postgres\Statement $statement */
+                    $statement = $this->statements->shift();
+                } while (!$statement->isAlive() && !$this->statements->isEmpty());
+            } else {
+                $statement = yield $this->pool->prepare($this->sql);
+            }
+
+            try {
+                $result = yield $statement->execute($params);
+            } catch (\Throwable $exception) {
+                $this->statements->push($statement);
+                throw $exception;
+            }
+
+            if ($result instanceof Operation) {
+                $result->onDestruct(function () use ($statement) {
+                    $this->statements->push($statement);
+                });
+            } else {
+                $this->statements->push($statement);
+            }
+
+            return $result;
         });
     }
 
@@ -44,6 +101,11 @@ final class PooledStatement implements Statement {
 
     /** {@inheritdoc} */
     public function getQuery(): string {
-        return $this->statement->getQuery();
+        return $this->sql;
+    }
+
+    /** {@inheritdoc} */
+    public function lastUsedAt(): int {
+        return $this->lastUsedAt;
     }
 }

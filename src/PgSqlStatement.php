@@ -20,6 +20,9 @@ final class PgSqlStatement implements Statement, Operation {
     /** @var string[] */
     private $params;
 
+    /** @var int */
+    private $lastUsedAt;
+
     /**
      * @param \Amp\Postgres\PgSqlHandle $handle
      * @param string $name
@@ -32,6 +35,7 @@ final class PgSqlStatement implements Statement, Operation {
         $this->sql = $sql;
         $this->params = $params;
         $this->queue = new Internal\ReferenceQueue;
+        $this->lastUsedAt = \time();
     }
 
     public function __destruct() {
@@ -47,6 +51,11 @@ final class PgSqlStatement implements Statement, Operation {
     /** {@inheritdoc} */
     public function getQuery(): string {
         return $this->sql;
+    }
+
+    /** {@inheritdoc} */
+    public function lastUsedAt(): int {
+        return $this->lastUsedAt;
     }
 
     /** {@inheritdoc} */

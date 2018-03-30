@@ -108,18 +108,16 @@ final class Pool implements Link {
         $this->resetConnections = $reset;
     }
 
+    public function getIdleTimeout(): int {
+        return $this->idleTimeout;
+    }
+
     public function setIdleTimeout(int $timeout) {
-        if ($timeout < 0) {
-            throw new \Error("Timeout must be greater than or equal to 0");
+        if ($timeout < 1) {
+            throw new \Error("Timeout must be greater than or equal to 1");
         }
 
         $this->idleTimeout = $timeout;
-
-        if ($this->idleTimeout > 0) {
-            Loop::enable($this->timeoutWatcher);
-        } else {
-            Loop::disable($this->timeoutWatcher);
-        }
     }
 
     /**
