@@ -34,7 +34,7 @@ final class PqUnbufferedResultSet implements ResultSet, Operation {
             try {
                 do {
                     $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
-                    yield $emit($result);
+                    $emit($result);
                     $result = yield $fetch();
                 } while ($result instanceof pq\Result);
             } finally {
