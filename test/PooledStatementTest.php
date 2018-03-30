@@ -4,11 +4,12 @@ namespace Amp\Postgres\Test;
 
 use Amp\Delayed;
 use Amp\Loop;
+use Amp\PHPUnit\TestCase;
 use Amp\Postgres\Pool;
 use Amp\Postgres\PooledStatement;
 use Amp\Postgres\ResultSet;
 use Amp\Postgres\Statement;
-use PHPUnit\Framework\TestCase;
+use Amp\Success;
 
 class PooledStatementTest extends TestCase {
     public function testActiveStatementsRemainAfterTimeout() {
@@ -23,7 +24,7 @@ class PooledStatementTest extends TestCase {
             $statement->expects($this->once())
                 ->method('execute');
 
-            $pooledStatement = new PooledStatement($pool, $statement);
+            $pooledStatement = new PooledStatement($pool, $statement, $this->createCallback(0));
 
             $this->assertTrue($pooledStatement->isAlive());
             $this->assertSame(\time(), $pooledStatement->lastUsedAt());
@@ -49,7 +50,15 @@ class PooledStatementTest extends TestCase {
             $statement->expects($this->never())
                 ->method('execute');
 
-            $pooledStatement = new PooledStatement($pool, $statement);
+            $prepare = function () {
+                $statement = $this->createMock(Statement::class);
+                $statement->expects($this->once())
+                    ->method('execute')
+                    ->willReturn(new Success($this->createMock(ResultSet::class)));
+                return new Success($statement);
+            };
+
+            $pooledStatement = new PooledStatement($pool, $statement, $prepare);
 
             $this->assertTrue($pooledStatement->isAlive());
             $this->assertSame(\time(), $pooledStatement->lastUsedAt());

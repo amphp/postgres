@@ -8,6 +8,7 @@ use Amp\Deferred;
 use Amp\Loop;
 use Amp\Promise;
 use function Amp\call;
+use function Amp\coroutine;
 
 final class Pool implements Link {
     use CallableMaker;
@@ -43,7 +44,7 @@ final class Pool implements Link {
     private $listenerCount = 0;
 
     /** @var callable */
-    private $push;
+    private $prepare;
 
     /** @var int */
     private $pending = 0;
@@ -76,7 +77,7 @@ final class Pool implements Link {
 
         $this->connections = $connections = new \SplObjectStorage;
         $this->idle = $idle = new \SplQueue;
-        $this->push = $this->callableFromInstanceMethod("push");
+        $this->prepare = coroutine($this->callableFromInstanceMethod("doPrepare"));
 
         $idleTimeout = &$this->idleTimeout;
 
@@ -138,6 +139,7 @@ final class Pool implements Link {
         $this->idle = new \SplQueue;
         $this->connections = new \SplObjectStorage;
         $this->listeningConnection = null;
+        $this->prepare = null;
     }
 
     /**
@@ -322,28 +324,33 @@ final class Pool implements Link {
      */
     public function prepare(string $sql): Promise {
         return call(function () use ($sql) {
-            /** @var \Amp\Postgres\Connection $connection */
-            $connection = yield from $this->pop();
-
-            try {
-                /** @var \Amp\Postgres\Statement $statement */
-                $statement = yield $connection->prepare($sql);
-            } catch (\Throwable $exception) {
-                $this->push($connection);
-                throw $exception;
-            }
-
-            \assert(
-                $statement instanceof Operation,
-                Statement::class . " instances returned from connections must implement " . Operation::class
-            );
-
-            $statement->onDestruct(function () use ($connection) {
-                $this->push($connection);
-            });
-
-            return new PooledStatement($this, $statement);
+            $statement = yield from $this->doPrepare($sql);
+            return new PooledStatement($this, $statement, $this->prepare);
         });
+    }
+
+    private function doPrepare(string $sql): \Generator {
+        /** @var \Amp\Postgres\Connection $connection */
+        $connection = yield from $this->pop();
+
+        try {
+            /** @var \Amp\Postgres\Statement $statement */
+            $statement = yield $connection->prepare($sql);
+        } catch (\Throwable $exception) {
+            $this->push($connection);
+            throw $exception;
+        }
+
+        \assert(
+            $statement instanceof Operation,
+            Statement::class . " instances returned from connections must implement " . Operation::class
+        );
+
+        $statement->onDestruct(function () use ($connection) {
+            $this->push($connection);
+        });
+
+        return $statement;
     }
 
     /**

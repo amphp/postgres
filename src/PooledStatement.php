@@ -22,14 +22,19 @@ final class PooledStatement implements Statement {
     /** @var string */
     private $timeoutWatcher;
 
+    /** @var callable */
+    private $prepare;
+
     /**
      * @param \Amp\Postgres\Pool $pool Pool used to re-create the statement if the original closes.
      * @param \Amp\Postgres\Statement $statement
+     * @param callable $prepare
      */
-    public function __construct(Pool $pool, Statement $statement) {
+    public function __construct(Pool $pool, Statement $statement, callable $prepare) {
         $this->lastUsedAt = \time();
         $this->statements = $statements = new \SplQueue;
         $this->pool = $pool;
+        $this->prepare = $prepare;
         $this->sql = $statement->getQuery();
 
         $this->statements->push($statement);
@@ -72,7 +77,7 @@ final class PooledStatement implements Statement {
                     $statement = $this->statements->shift();
                 } while (!$statement->isAlive() && !$this->statements->isEmpty());
             } else {
-                $statement = yield $this->pool->prepare($this->sql);
+                $statement = yield ($this->prepare)($this->sql);
             }
 
             try {
