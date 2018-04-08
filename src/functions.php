@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\CancellationToken;
 use Amp\Loop;
 use Amp\Promise;
 
@@ -15,7 +14,7 @@ function connector(Connector $connector = null): Connector {
             return $connector;
         }
 
-        $connector = new DefaultConnector;
+        $connector = new TimeoutConnector;
     }
 
     Loop::setState(LOOP_CONNECTOR_IDENTIFIER, $connector);
@@ -26,17 +25,17 @@ function connector(Connector $connector = null): Connector {
  * Create a connection using the global Connector instance.
  *
  * @param string $connectionString
- * @param \Amp\CancellationToken $token
  *
  * @return \Amp\Promise<\Amp\Postgres\Connection>
  *
  * @throws \Amp\Postgres\FailureException If connecting fails.
+ *
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
  *
  * @codeCoverageIgnore
  */
-function connect(string $connectionString, CancellationToken $token = null): Promise {
-    return connector()->connect($connectionString, $token);
+function connect(string $connectionString): Promise {
+    return connector()->connect($connectionString);
 }
 
 /**

@@ -2,17 +2,32 @@
 
 namespace Amp\Postgres;
 
-use Amp\CancellationToken;
 use Amp\Promise;
+use Amp\TimeoutCancellationToken;
 
-final class DefaultConnector implements Connector {
+final class TimeoutConnector implements Connector {
+    const DEFAULT_TIMEOUT = 5000;
+
+    /** @var int */
+    private $timeout;
+
+    /**
+     * @param int $timeout Milliseconds until connections attempts are cancelled.
+     */
+    public function __construct(int $timeout = self::DEFAULT_TIMEOUT) {
+        $this->timeout = $timeout;
+    }
+
     /**
      * {@inheritdoc}
      *
      * @throws \Amp\Postgres\FailureException If connecting fails.
+     *
      * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
      */
-    public function connect(string $connectionString, CancellationToken $token = null): Promise {
+    public function connect(string $connectionString): Promise {
+        $token = new TimeoutCancellationToken($this->timeout);
+
         if (\extension_loaded("pq")) {
             return PqConnection::connect($connectionString, $token);
         }
