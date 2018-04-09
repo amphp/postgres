@@ -321,11 +321,13 @@ final class Pool implements Link {
 
     /**
      * {@inheritdoc}
+     *
+     * Prepared statements returned by this method will stay alive as long as the pool remains open.
      */
     public function prepare(string $sql): Promise {
         return call(function () use ($sql) {
             $statement = yield from $this->doPrepare($sql);
-            return new PooledStatement($this, $statement, $this->prepare);
+            return new Internal\PooledStatement($this, $statement, $this->prepare);
         });
     }
 

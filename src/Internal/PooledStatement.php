@@ -1,8 +1,11 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
 use Amp\Loop;
+use Amp\Postgres\Operation;
+use Amp\Postgres\Pool;
+use Amp\Postgres\Statement;
 use Amp\Promise;
 use function Amp\call;
 

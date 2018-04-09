@@ -6,7 +6,7 @@ use Amp\Delayed;
 use Amp\Loop;
 use Amp\PHPUnit\TestCase;
 use Amp\Postgres\Pool;
-use Amp\Postgres\PooledStatement;
+use Amp\Postgres\Internal\PooledStatement;
 use Amp\Postgres\ResultSet;
 use Amp\Postgres\Statement;
 use Amp\Success;
