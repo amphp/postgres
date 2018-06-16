@@ -53,6 +53,13 @@ interface Executor {
     public function notify(string $channel, string $payload = ""): Promise;
 
     /**
+     * Indicates if the connection to the database is still alive.
+     *
+     * @return bool
+     */
+    public function isAlive(): bool;
+
+    /**
      * Closes the executor. No further queries may be performed.
      */
     public function close();

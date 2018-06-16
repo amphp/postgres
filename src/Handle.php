@@ -4,13 +4,6 @@ namespace Amp\Postgres;
 
 interface Handle extends Executor {
     /**
-     * Indicates if the connection to the database is still alive.
-     *
-     * @return bool
-     */
-    public function isAlive(): bool;
-
-    /**
      * @return int Timestamp of last activity on the handle.
      */
     public function lastUsedAt(): int;
