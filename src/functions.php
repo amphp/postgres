@@ -4,6 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\Connector;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class;
 

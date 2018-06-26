@@ -3,6 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Connector;
 use Amp\TimeoutCancellationToken;
 
 final class TimeoutConnector implements Connector {

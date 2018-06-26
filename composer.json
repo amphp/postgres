@@ -19,7 +19,8 @@
         }
     ],
     "require": {
-        "amphp/amp": "^2"
+        "amphp/amp": "^2",
+        "amphp/sql": "dev-master"
     },
     "require-dev": {
         "amphp/phpunit-util": "^1",

@@ -7,6 +7,7 @@ use Amp\Coroutine;
 use Amp\Deferred;
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\Connector;
 use function Amp\call;
 use function Amp\coroutine;
 
@@ -16,7 +17,7 @@ final class Pool implements Link {
     const DEFAULT_MAX_CONNECTIONS = 100;
     const DEFAULT_IDLE_TIMEOUT = 60;
 
-    /** @var \Amp\Postgres\Connector */
+    /** @var \Amp\Sql\Connector */
     private $connector;
 
     /** @var string */

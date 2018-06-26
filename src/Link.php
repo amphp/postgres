@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-interface Link extends Executor {
+interface Link extends \Amp\Sql\Link {
     /**
      * @param int $isolation
      *
