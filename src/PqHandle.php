@@ -8,6 +8,8 @@ use Amp\Deferred;
 use Amp\Emitter;
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\ConnectionException;
+use Amp\Sql\FailureException;
 use Amp\Success;
 use pq;
 use function Amp\call;
@@ -173,9 +175,9 @@ final class PqHandle implements Handle {
      *
      * @return \Generator
      *
-     * @resolve \Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult|\pq\Statement
+     * @resolve \Amp\Sql\CommandResult|\pq\Statement
      *
-     * @throws \Amp\Postgres\FailureException
+     * @throws FailureException
      */
     private function send(callable $method, ...$args): \Generator {
         while ($this->busy) {
@@ -294,8 +296,8 @@ final class PqHandle implements Handle {
      * @param string $name
      * @param array $params
      *
-     * @return \Amp\Promise
-     * @throws \Amp\Postgres\FailureException
+     * @return Promise
+     * @throws FailureException
      */
     public function statementExecute(string $name, array $params): Promise {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
@@ -308,9 +310,9 @@ final class PqHandle implements Handle {
     /**
      * @param string $name
      *
-     * @return \Amp\Promise
+     * @return Promise
      *
-     * @throws \Amp\Postgres\FailureException
+     * @throws FailureException
      */
     public function statementDeallocate(string $name): Promise {
         if (!$this->handle) {
@@ -439,7 +441,7 @@ final class PqHandle implements Handle {
     /**
      * @param string $channel
      *
-     * @return \Amp\Promise
+     * @return Promise
      *
      * @throws \Error
      */

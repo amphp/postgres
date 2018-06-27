@@ -7,6 +7,9 @@ use Amp\Deferred;
 use Amp\Emitter;
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\ConnectionException;
+use Amp\Sql\FailureException;
+use Amp\Sql\QueryError;
 use Amp\Success;
 use function Amp\call;
 
@@ -198,7 +201,7 @@ final class PgSqlHandle implements Handle {
      *
      * @resolve resource
      *
-     * @throws \Amp\Postgres\FailureException
+     * @throws FailureException
      */
     private function send(callable $function, ...$args): \Generator {
         while ($this->deferred) {
@@ -238,10 +241,10 @@ final class PgSqlHandle implements Handle {
     /**
      * @param resource $result PostgreSQL result resource.
      *
-     * @return \Amp\Postgres\CommandResult|\Amp\Postgres\ResultSet
+     * @return \Amp\Sql\CommandResult|\Amp\Postgres\ResultSet
      *
-     * @throws \Amp\Postgres\FailureException
-     * @throws \Amp\Postgres\QueryError
+     * @throws FailureException
+     * @throws QueryError
      */
     private function createResult($result) {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {

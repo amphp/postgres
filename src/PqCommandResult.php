@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres;
 
+use Amp\Sql\CommandResult;
 use pq;
 
 final class PqCommandResult implements CommandResult {

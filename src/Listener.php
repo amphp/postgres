@@ -69,7 +69,7 @@ final class Listener implements Iterator, Operation {
     /**
      * Unlistens from the channel. No more values will be emitted from this listener.
      *
-     * @return \Amp\Promise<\Amp\Postgres\CommandResult>
+     * @return \Amp\Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Error If this method was previously invoked.
      */

@@ -54,7 +54,7 @@ abstract class AbstractConnectTest extends TestCase {
 
     /**
      * @depends testConnectCancellationBeforeConnect
-     * @expectedException \Amp\Postgres\FailureException
+     * @expectedException \Amp\Sql\FailureException
      */
     public function testConnectInvalidUser() {
         Loop::run(function () {
@@ -64,7 +64,7 @@ abstract class AbstractConnectTest extends TestCase {
 
     /**
      * @depends testConnectCancellationBeforeConnect
-     * @expectedException \Amp\Postgres\FailureException
+     * @expectedException \Amp\Sql\FailureException
      */
     public function testConnectInvalidConnectionString() {
         Loop::run(function () {
@@ -74,7 +74,7 @@ abstract class AbstractConnectTest extends TestCase {
 
     /**
      * @depends testConnectCancellationBeforeConnect
-     * @expectedException \Amp\Postgres\FailureException
+     * @expectedException \Amp\Sql\FailureException
      */
     public function testConnectInvalidHost() {
         Loop::run(function () {

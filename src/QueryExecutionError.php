@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres;
 
+use Amp\Sql\QueryError;
+
 class QueryExecutionError extends QueryError {
     /** @var mixed[] */
     private $diagnostics;

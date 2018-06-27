@@ -63,7 +63,7 @@ abstract class Connection implements Handle, Link {
      *
      * @return \Amp\Promise
      *
-     * @throws \Amp\Postgres\FailureException
+     * @throws \Amp\Sql\FailureException
      */
     private function send(string $methodName, ...$args): Promise {
         if ($this->busy) {

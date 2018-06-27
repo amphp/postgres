@@ -5,15 +5,15 @@ namespace Amp\Postgres\Test;
 use Amp\Coroutine;
 use Amp\Delayed;
 use Amp\Loop;
-use Amp\Postgres\CommandResult;
 use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
-use Amp\Postgres\QueryError;
 use Amp\Postgres\QueryExecutionError;
 use Amp\Postgres\ResultSet;
 use Amp\Postgres\Statement;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
+use Amp\Sql\CommandResult;
+use Amp\Sql\QueryError;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractLinkTest extends TestCase {
@@ -86,7 +86,7 @@ abstract class AbstractLinkTest extends TestCase {
 
     public function testQueryWithCommandResult() {
         Loop::run(function () {
-            /** @var \Amp\Postgres\CommandResult $result */
+            /** @var CommandResult $result */
             $result = yield $this->connection->query("INSERT INTO test VALUES ('canon', 'jp')");
 
             $this->assertInstanceOf(CommandResult::class, $result);
@@ -95,18 +95,18 @@ abstract class AbstractLinkTest extends TestCase {
     }
 
     /**
-     * @expectedException \Amp\Postgres\QueryError
+     * @expectedException QueryError
      */
     public function testQueryWithEmptyQuery() {
         Loop::run(function () {
-            /** @var \Amp\Postgres\CommandResult $result */
+            /** @var \Amp\Sql\CommandResult $result */
             $result = yield $this->connection->query('');
         });
     }
 
     public function testQueryWithSyntaxError() {
         Loop::run(function () {
-            /** @var \Amp\Postgres\CommandResult $result */
+            /** @var \Amp\Sql\CommandResult $result */
             try {
                 $result = yield $this->connection->query("SELECT & FROM test");
                 $this->fail(\sprintf("An instance of %s was expected to be thrown", QueryExecutionError::class));
@@ -640,7 +640,7 @@ abstract class AbstractLinkTest extends TestCase {
 
     /**
      * @depends testListen
-     * @expectedException \Amp\Postgres\QueryError
+     * @expectedException QueryError
      * @expectedExceptionMessage Already listening on channel
      */
     public function testListenOnSameChannel() {

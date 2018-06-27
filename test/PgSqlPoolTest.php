@@ -2,11 +2,11 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\Connector;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\Pool;
 use Amp\Promise;
-use Amp\Sql\Connector;
 use Amp\Success;
 
 /**

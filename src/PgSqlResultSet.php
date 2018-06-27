@@ -3,6 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\FailureException;
 use Amp\Success;
 
 final class PgSqlResultSet implements ResultSet {

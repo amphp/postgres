@@ -4,7 +4,6 @@ namespace Amp\Postgres;
 
 use Amp\Loop;
 use Amp\Promise;
-use Amp\Sql\Connector;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class;
 
@@ -29,7 +28,7 @@ function connector(Connector $connector = null): Connector {
  *
  * @return \Amp\Promise<\Amp\Postgres\Connection>
  *
- * @throws \Amp\Postgres\FailureException If connecting fails.
+ * @throws \Amp\Sql\FailureException If connecting fails.
  *
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
  *

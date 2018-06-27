@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres;
 
+use Amp\Sql\CommandResult;
+
 final class PgSqlCommandResult implements CommandResult {
     /** @var resource PostgreSQL result resource. */
     private $handle;

@@ -7,7 +7,7 @@ use Amp\Coroutine;
 use Amp\Deferred;
 use Amp\Loop;
 use Amp\Promise;
-use Amp\Sql\Connector;
+use Amp\Sql\FailureException;
 use function Amp\call;
 use function Amp\coroutine;
 
@@ -17,7 +17,7 @@ final class Pool implements Link {
     const DEFAULT_MAX_CONNECTIONS = 100;
     const DEFAULT_IDLE_TIMEOUT = 60;
 
-    /** @var \Amp\Sql\Connector */
+    /** @var Connector */
     private $connector;
 
     /** @var string */
@@ -180,7 +180,7 @@ final class Pool implements Link {
      *
      * @resolve \Amp\Postgres\Connection
      *
-     * @throws \Amp\Postgres\FailureException If creating a new connection fails.
+     * @throws FailureException If creating a new connection fails.
      * @throws \Error If the pool has been closed.
      */
     private function pop(): \Generator {

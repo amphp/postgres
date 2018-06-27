@@ -8,7 +8,7 @@ interface Statement {
     /**
      * @param mixed[] $params
      *
-     * @return \Amp\Promise<\Amp\Postgres\CommandResult|\Amp\Postgres\TupleResult>
+     * @return \Amp\Promise<\Amp\Sql\CommandResult>
      */
     public function execute(array $params = []): Promise;
 

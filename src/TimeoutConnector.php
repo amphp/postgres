@@ -4,6 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 use Amp\Sql\Connector;
+use Amp\Sql\FailureException;
 use Amp\TimeoutCancellationToken;
 
 final class TimeoutConnector implements Connector {
@@ -22,7 +23,7 @@ final class TimeoutConnector implements Connector {
     /**
      * {@inheritdoc}
      *
-     * @throws \Amp\Postgres\FailureException If connecting fails.
+     * @throws FailureException If connecting fails.
      *
      * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
      */

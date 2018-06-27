@@ -3,8 +3,9 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Transaction as SqlTransaction;
 
-final class Transaction implements Handle, Operation {
+final class Transaction implements Handle, SqlTransaction {
     const UNCOMMITTED  = 0;
     const COMMITTED    = 1;
     const REPEATABLE   = 2;
@@ -189,7 +190,7 @@ final class Transaction implements Handle, Operation {
     /**
      * Commits the transaction and makes it inactive.
      *
-     * @return \Amp\Promise<\Amp\Postgres\CommandResult>
+     * @return \Amp\Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
@@ -208,7 +209,7 @@ final class Transaction implements Handle, Operation {
     /**
      * Rolls back the transaction and makes it inactive.
      *
-     * @return \Amp\Promise<\Amp\Postgres\CommandResult>
+     * @return \Amp\Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
@@ -229,7 +230,7 @@ final class Transaction implements Handle, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Amp\Promise<\Amp\Postgres\CommandResult>
+     * @return \Amp\Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
@@ -242,7 +243,7 @@ final class Transaction implements Handle, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Amp\Promise<\Amp\Postgres\CommandResult>
+     * @return \Amp\Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
@@ -255,7 +256,7 @@ final class Transaction implements Handle, Operation {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Amp\Promise<\Amp\Postgres\CommandResult>
+     * @return \Amp\Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */

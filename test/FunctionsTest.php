@@ -22,7 +22,7 @@ class FunctionsTest extends TestCase {
     }
 
     /**
-     * @expectedException \Amp\Postgres\FailureException
+     * @expectedException \Amp\Sql\FailureException
      */
     public function testConnectInvalidUser() {
         Loop::run(function () {
@@ -31,7 +31,7 @@ class FunctionsTest extends TestCase {
     }
 
     /**
-     * @expectedException \Amp\Postgres\FailureException
+     * @expectedException \Amp\Sql\FailureException
      */
     public function testConnectInvalidConnectionString() {
         Loop::run(function () {
@@ -40,7 +40,7 @@ class FunctionsTest extends TestCase {
     }
 
     /**
-     * @expectedException \Amp\Postgres\FailureException
+     * @expectedException \Amp\Sql\FailureException
      */
     public function testConnectInvalidHost() {
         Loop::run(function () {
