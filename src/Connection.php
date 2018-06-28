@@ -9,6 +9,7 @@ use Amp\Promise;
 use Amp\Sql\Connection as SqlConnection;
 use Amp\Sql\ConnectionConfig;
 use function Amp\call;
+use Amp\Sql\FailureException;
 
 abstract class Connection implements SqlConnection, Handle {
     /** @var \Amp\Postgres\Handle */
@@ -40,13 +41,19 @@ abstract class Connection implements SqlConnection, Handle {
      * {@inheritdoc}
      */
     final public function isAlive(): bool {
-        return $this->handle->isAlive();
+        return $this->handle && $this->handle->isAlive();
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws FailureException
      */
     final public function lastUsedAt(): int {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return $this->handle->lastUsedAt();
     }
 
@@ -54,7 +61,9 @@ abstract class Connection implements SqlConnection, Handle {
      * {@inheritdoc}
      */
     final public function close() {
-        $this->handle->close();
+        if ($this->handle) {
+            $this->handle->close();
+        }
     }
 
     /**
@@ -66,6 +75,10 @@ abstract class Connection implements SqlConnection, Handle {
      * @throws \Amp\Sql\FailureException
      */
     private function send(string $methodName, ...$args): Promise {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         if ($this->busy) {
             return call(function () use ($methodName, $args) {
                 while ($this->busy) {
@@ -94,6 +107,10 @@ abstract class Connection implements SqlConnection, Handle {
      * {@inheritdoc}
      */
     final public function query(string $sql): Promise {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return $this->send("query", $sql);
     }
 
@@ -101,6 +118,10 @@ abstract class Connection implements SqlConnection, Handle {
      * {@inheritdoc}
      */
     final public function execute(string $sql, array $params = []): Promise {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return $this->send("execute", $sql, $params);
     }
 
@@ -110,6 +131,10 @@ abstract class Connection implements SqlConnection, Handle {
      * Statement instances returned by this method must also implement Operation.
      */
     final public function prepare(string $sql): Promise {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return $this->send("prepare", $sql);
     }
 
@@ -118,20 +143,36 @@ abstract class Connection implements SqlConnection, Handle {
      * {@inheritdoc}
      */
     final public function notify(string $channel, string $payload = ""): Promise {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return $this->send("notify", $channel, $payload);
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws FailureException
      */
     final public function listen(string $channel): Promise {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return $this->send("listen", $channel);
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws FailureException
      */
     final public function transaction(int $isolation = Transaction::COMMITTED): Promise {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return call(function () use ($isolation) {
             switch ($isolation) {
                 case Transaction::UNCOMMITTED:
@@ -164,15 +205,27 @@ abstract class Connection implements SqlConnection, Handle {
 
     /**
      * {@inheritdoc}
+     *
+     * @throws FailureException
      */
     final public function quoteString(string $data): string {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return $this->handle->quoteString($data);
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @throws FailureException
      */
     final public function quoteName(string $name): string {
+        if (! $this->handle) {
+            throw new FailureException('Not connected');
+        }
+
         return $this->handle->quoteName($name);
     }
 }
