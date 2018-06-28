@@ -2,39 +2,38 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
 use Amp\CancellationToken;
 use Amp\Deferred;
+use Amp\NullCancellationToken;
 use Amp\Promise;
+use Amp\Sql\ConnectionConfig;
 use function Amp\call;
 
 abstract class Connection implements Handle, Link {
-    use CallableMaker;
-
     /** @var \Amp\Postgres\Handle */
-    private $handle;
+    protected $handle;
 
     /** @var \Amp\Deferred|null Used to only allow one transaction at a time. */
     private $busy;
 
     /** @var callable */
-    private $release;
+    protected $release;
 
-    /**
-     * @param string $connectionString
-     * @param \Amp\CancellationToken $token
-     *
-     * @return \Amp\Promise<\Amp\Postgres\Connection>
-     */
-    abstract public static function connect(string $connectionString, CancellationToken $token = null): Promise;
+    /** @var ConnectionConfig */
+    protected $config;
+
+    /** @var CancellationToken */
+    protected $token;
 
     /**
      * @param \Amp\Postgres\Handle $handle
      */
-    public function __construct(Handle $handle) {
-        $this->handle = $handle;
-        $this->release = $this->callableFromInstanceMethod("release");
+    public function __construct(ConnectionConfig $config, CancellationToken $token = null) {
+        $this->config = $config;
+        $this->token = $token ?? new NullCancellationToken();
     }
+
+    abstract public function connect(): Promise;
 
     /**
      * {@inheritdoc}

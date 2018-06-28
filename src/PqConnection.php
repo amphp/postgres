@@ -2,23 +2,25 @@
 
 namespace Amp\Postgres;
 
-use Amp\CancellationToken;
+use Amp\CallableMaker;
 use Amp\Deferred;
 use Amp\Failure;
 use Amp\Loop;
-use Amp\NullCancellationToken;
 use Amp\Promise;
+use Amp\Sql\ConnectionException;
 use pq;
 
 final class PqConnection extends Connection {
+    use CallableMaker;
+
     /**
      * @param string $connectionString
      * @param \Amp\CancellationToken $token
      *
      * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
      */
-    public static function connect(string $connectionString, CancellationToken $token = null): Promise {
-        $connectionString = \str_replace(";", " ", $connectionString);
+    public function connect(): Promise {
+        $connectionString = \str_replace(";", " ", $this->config->connectionString());
 
         try {
             $connection = new pq\Connection($connectionString, pq\Connection::ASYNC);
@@ -44,7 +46,8 @@ final class PqConnection extends Connection {
                     return;
 
                 case pq\Connection::POLLING_OK:
-                    $deferred->resolve(new self($connection));
+                    $this->handle = new PqHandle($connection);
+                    $deferred->resolve();
                     return;
             }
         };
@@ -54,22 +57,14 @@ final class PqConnection extends Connection {
 
         $promise = $deferred->promise();
 
-        $token = $token ?? new NullCancellationToken;
-        $id = $token->subscribe([$deferred, "fail"]);
+        $id = $this->token->subscribe([$deferred, "fail"]);
 
-        $promise->onResolve(function () use ($poll, $await, $id, $token) {
-            $token->unsubscribe($id);
+        $promise->onResolve(function () use ($poll, $await, $id) {
+            $this->token->unsubscribe($id);
             Loop::cancel($poll);
             Loop::cancel($await);
         });
 
         return $promise;
-    }
-
-    /**
-     * @param \pq\Connection $handle
-     */
-    public function __construct(pq\Connection $handle) {
-        parent::__construct(new PqHandle($handle));
     }
 }

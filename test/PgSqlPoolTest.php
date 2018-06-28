@@ -30,9 +30,8 @@ class PgSqlPoolTest extends AbstractLinkTest {
                 if (!isset($this->handles[$count])) {
                     $this->fail("createConnection called too many times");
                 }
-                $handle = $this->handles[$count];
                 ++$count;
-                return new Success(new PgSqlConnection($handle, \pg_socket($handle)));
+                return new Success();
             }));
 
         $pool = new Pool('connection string', \count($this->handles), $connector);

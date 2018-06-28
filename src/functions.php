@@ -4,6 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\ConnectionConfig;
 use Amp\Sql\Connector;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class;
@@ -35,8 +36,8 @@ function connector(Connector $connector = null): Connector {
  *
  * @codeCoverageIgnore
  */
-function connect(string $connectionString): Promise {
-    return connector()->connect($connectionString);
+function connect(ConnectionConfig $config): Promise {
+    return connector()->connect($config);
 }
 
 /**
