@@ -3,6 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\ConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
 use Amp\TimeoutCancellationToken;
@@ -27,8 +28,9 @@ final class TimeoutConnector implements Connector {
      *
      * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
      */
-    public function connect(string $connectionString): Promise {
+    public function connect(ConnectionConfig $connectionConfig): Promise {
         $token = new TimeoutCancellationToken($this->timeout);
+        $connectionString = $connectionConfig->connectionString();
 
         if (\extension_loaded("pq")) {
             return PqConnection::connect($connectionString, $token);

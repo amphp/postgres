@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\Connector;
+use Amp\Sql\Connector;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\Pool;

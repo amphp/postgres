@@ -7,6 +7,7 @@ use Amp\Coroutine;
 use Amp\Deferred;
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
 use function Amp\call;
 use function Amp\coroutine;
