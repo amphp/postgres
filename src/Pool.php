@@ -9,10 +9,12 @@ use Amp\Loop;
 use Amp\Promise;
 use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
+use Amp\Sql\Pool as SqlPool;
 use function Amp\call;
 use function Amp\coroutine;
 
-final class Pool implements Link {
+final class Pool implements SqlPool
+{
     use CallableMaker;
 
     const DEFAULT_MAX_CONNECTIONS = 100;

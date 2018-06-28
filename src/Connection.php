@@ -6,10 +6,11 @@ use Amp\CancellationToken;
 use Amp\Deferred;
 use Amp\NullCancellationToken;
 use Amp\Promise;
+use Amp\Sql\Connection as SqlConnection;
 use Amp\Sql\ConnectionConfig;
 use function Amp\call;
 
-abstract class Connection implements Handle, Link {
+abstract class Connection implements SqlConnection, Handle {
     /** @var \Amp\Postgres\Handle */
     protected $handle;
 
