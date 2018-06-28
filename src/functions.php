@@ -47,7 +47,7 @@ function connect(string $connectionString): Promise {
  * @return \Amp\Postgres\Pool
  */
 function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS): Pool {
-    return new Pool($connectionString, $maxConnections, connector());
+    return new DefaultPool($connectionString, $maxConnections, connector());
 }
 
 /**

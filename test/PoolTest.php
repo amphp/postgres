@@ -4,7 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Delayed;
 use Amp\Loop;
-use Amp\Postgres\Pool;
+use Amp\Postgres\DefaultPool;
 use PHPUnit\Framework\TestCase;
 
 class PoolTest extends TestCase {
@@ -13,12 +13,12 @@ class PoolTest extends TestCase {
      * @expectedExceptionMessage Pool must contain at least one connection
      */
     public function testInvalidMaxConnections() {
-        $pool = new Pool('connection string', 0);
+        $pool = new DefaultPool('connection string', 0);
     }
 
     public function testIdleConnectionsRemovedAfterTimeout() {
         Loop::run(function () {
-            $pool = new Pool('host=localhost user=postgres');
+            $pool = new DefaultPool('host=localhost user=postgres');
             $pool->setIdleTimeout(2);
             $count = 3;
 

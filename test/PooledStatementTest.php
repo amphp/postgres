@@ -6,7 +6,7 @@ use Amp\Delayed;
 use Amp\Loop;
 use Amp\PHPUnit\TestCase;
 use Amp\Postgres\Internal\PooledStatement;
-use Amp\Postgres\Pool;
+use Amp\Postgres\DefaultPool;
 use Amp\Postgres\ResultSet;
 use Amp\Postgres\Statement;
 use Amp\Success;
@@ -14,7 +14,7 @@ use Amp\Success;
 class PooledStatementTest extends TestCase {
     public function testActiveStatementsRemainAfterTimeout() {
         Loop::run(function () {
-            $pool = new Pool('host=localhost user=postgres');
+            $pool = new DefaultPool('host=localhost user=postgres');
 
             $statement = $this->createMock(Statement::class);
             $statement->method('getQuery')
@@ -40,7 +40,7 @@ class PooledStatementTest extends TestCase {
 
     public function testIdleStatementsRemovedAfterTimeout() {
         Loop::run(function () {
-            $pool = new Pool('host=localhost user=postgres');
+            $pool = new DefaultPool('host=localhost user=postgres');
 
             $statement = $this->createMock(Statement::class);
             $statement->method('getQuery')
