@@ -4,8 +4,9 @@ namespace Amp\Postgres;
 
 use Amp\Loop;
 use Amp\Promise;
-use Amp\Sql\ConnectionConfig;
+use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
 use Amp\Sql\Connector;
+use Amp\Sql\Pool as SqlPool;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class;
 
@@ -37,7 +38,7 @@ function connector(Connector $connector = null): Connector
  *
  * @codeCoverageIgnore
  */
-function connect(ConnectionConfig $config): Promise
+function connect(SqlConnectionConfig $config): Promise
 {
     return connector()->connect($config);
 }
@@ -50,9 +51,9 @@ function connect(ConnectionConfig $config): Promise
  *
  * @return Pool
  */
-function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS): Pool
+function pool(string $connectionString, int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS): Pool
 {
-    return new Pool($connectionString, $maxConnections, connector());
+    return new DefaultPool(new ConnectionConfig($connectionString), $maxConnections, connector());
 }
 
 /**

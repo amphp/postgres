@@ -5,8 +5,9 @@ namespace Amp\Postgres\Test;
 use Amp\Delayed;
 use Amp\Loop;
 use Amp\PHPUnit\TestCase;
+use Amp\Postgres\ConnectionConfig;
 use Amp\Postgres\Internal\PooledStatement;
-use Amp\Postgres\Pool;
+use Amp\Postgres\DefaultPool;
 use Amp\Postgres\ResultSet;
 use Amp\Sql\Statement;
 use Amp\Success;
@@ -16,7 +17,7 @@ class PooledStatementTest extends TestCase
     public function testActiveStatementsRemainAfterTimeout()
     {
         Loop::run(function () {
-            $pool = new Pool('host=localhost user=postgres');
+            $pool = new DefaultPool(new ConnectionConfig('host=localhost user=postgres'));
 
             $statement = $this->createMock(Statement::class);
             $statement->method('getQuery')
@@ -43,7 +44,7 @@ class PooledStatementTest extends TestCase
     public function testIdleStatementsRemovedAfterTimeout()
     {
         Loop::run(function () {
-            $pool = new Pool('host=localhost user=postgres');
+            $pool = new DefaultPool(new ConnectionConfig('host=localhost user=postgres'));
 
             $statement = $this->createMock(Statement::class);
             $statement->method('getQuery')

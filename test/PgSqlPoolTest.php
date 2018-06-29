@@ -2,8 +2,9 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\ConnectionConfig;
 use Amp\Postgres\Link;
-use Amp\Postgres\Pool;
+use Amp\Postgres\DefaultPool;
 use Amp\Promise;
 use Amp\Sql\Connector;
 use Amp\Success;
@@ -35,7 +36,7 @@ class PgSqlPoolTest extends AbstractLinkTest
                 return new Success();
             }));
 
-        $pool = new Pool('connection string', \count($this->handles), $connector);
+        $pool = new DefaultPool(new ConnectionConfig('connection string'), \count($this->handles), $connector);
 
         $handle = \reset($this->handles);
 
