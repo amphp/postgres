@@ -4,7 +4,8 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Struct;
 
-class StatementStorage {
+class StatementStorage
+{
     use Struct;
 
     /** @var |null */

@@ -12,13 +12,15 @@ use Amp\Success;
 /**
  * @requires extension pq
  */
-class PqPoolTest extends AbstractLinkTest {
+class PqPoolTest extends AbstractLinkTest
+{
     const POOL_SIZE = 3;
 
     /** @var \pq\Connection[] */
     protected $handles = [];
 
-    public function createLink(string $connectionString): Link {
+    public function createLink(string $connectionString): Link
+    {
         for ($i = 0; $i < self::POOL_SIZE; ++$i) {
             $this->handles[] = $handle = new \pq\Connection($connectionString);
             $handle->nonblocking = true;
@@ -60,7 +62,8 @@ class PqPoolTest extends AbstractLinkTest {
         return $pool;
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         $this->handles[0]->exec("ROLLBACK");
         $this->handles[0]->exec("DROP TABLE test");
     }

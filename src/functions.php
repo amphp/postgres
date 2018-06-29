@@ -9,7 +9,8 @@ use Amp\Sql\Connector;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class;
 
-function connector(Connector $connector = null): Connector {
+function connector(Connector $connector = null): Connector
+{
     if ($connector === null) {
         $connector = Loop::getState(LOOP_CONNECTOR_IDENTIFIER);
         if ($connector) {
@@ -36,7 +37,8 @@ function connector(Connector $connector = null): Connector {
  *
  * @codeCoverageIgnore
  */
-function connect(ConnectionConfig $config): Promise {
+function connect(ConnectionConfig $config): Promise
+{
     return connector()->connect($config);
 }
 
@@ -48,7 +50,8 @@ function connect(ConnectionConfig $config): Promise {
  *
  * @return Pool
  */
-function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS): Pool {
+function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS): Pool
+{
     return new Pool($connectionString, $maxConnections, connector());
 }
 
@@ -61,7 +64,8 @@ function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_
  *
  * @throws \Error If $value is an object without a __toString() method, a resource, or an unknown type.
  */
-function cast($value) {
+function cast($value)
+{
     switch ($type = \gettype($value)) {
         case "NULL":
         case "integer":
@@ -96,7 +100,8 @@ function cast($value) {
  *
  * @throws \Error If $array contains an object without a __toString() method, a resource, or an unknown type.
  */
-function encode(array $array): string {
+function encode(array $array): string
+{
     $array = \array_map(function ($value) {
         switch (\gettype($value)) {
             case "NULL":

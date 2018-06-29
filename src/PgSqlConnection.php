@@ -12,7 +12,8 @@ use Amp\Promise;
 use Amp\Sql\ConnectionConfig;
 use Amp\Sql\ConnectionException;
 
-final class PgSqlConnection extends Connection {
+final class PgSqlConnection extends Connection
+{
     use CallableMaker;
 
     /**
@@ -23,7 +24,8 @@ final class PgSqlConnection extends Connection {
      *
      * @throws \Error If pecl-ev is used as a loop extension.
      */
-    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise {
+    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
+    {
         // @codeCoverageIgnoreStart
         if (Loop::get()->getHandle() instanceof \EvLoop) {
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
@@ -88,7 +90,8 @@ final class PgSqlConnection extends Connection {
      * @param resource $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
      */
-    public function __construct($handle, $socket) {
+    public function __construct($handle, $socket)
+    {
         parent::__construct(new PgSqlHandle($handle, $socket));
     }
 }

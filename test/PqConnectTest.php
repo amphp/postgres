@@ -10,8 +10,10 @@ use Amp\Sql\ConnectionConfig;
 /**
  * @requires extension pq
  */
-class PqConnectTest extends AbstractConnectTest {
-    public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise {
+class PqConnectTest extends AbstractConnectTest
+{
+    public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
+    {
         return PqConnection::connect($connectionConfig, $token);
     }
 }

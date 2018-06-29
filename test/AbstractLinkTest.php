@@ -16,14 +16,16 @@ use Amp\Sql\QueryError;
 use Amp\Sql\Statement;
 use PHPUnit\Framework\TestCase;
 
-abstract class AbstractLinkTest extends TestCase {
+abstract class AbstractLinkTest extends TestCase
+{
     /** @var \Amp\Postgres\Connection */
     protected $connection;
 
     /**
      * @return array Start test data for database.
      */
-    public function getData() {
+    public function getData()
+    {
         return [
             ['amphp', 'org'],
             ['github', 'com'],
@@ -39,11 +41,13 @@ abstract class AbstractLinkTest extends TestCase {
      */
     abstract public function createLink(string $connectionString): Link;
 
-    public function setUp() {
+    public function setUp()
+    {
         $this->connection = $this->createLink('host=localhost user=postgres');
     }
 
-    public function testQueryWithTupleResult() {
+    public function testQueryWithTupleResult()
+    {
         Loop::run(function () {
             /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query("SELECT * FROM test");
@@ -62,7 +66,8 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    public function testQueryWithUnconsumedTupleResult() {
+    public function testQueryWithUnconsumedTupleResult()
+    {
         Loop::run(function () {
             /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query("SELECT * FROM test");
@@ -84,7 +89,8 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    public function testQueryWithCommandResult() {
+    public function testQueryWithCommandResult()
+    {
         Loop::run(function () {
             /** @var CommandResult $result */
             $result = yield $this->connection->query("INSERT INTO test VALUES ('canon', 'jp')");
@@ -95,16 +101,18 @@ abstract class AbstractLinkTest extends TestCase {
     }
 
     /**
-     * @expectedException QueryError
+     * @expectedException \QueryError
      */
-    public function testQueryWithEmptyQuery() {
+    public function testQueryWithEmptyQuery()
+    {
         Loop::run(function () {
             /** @var \Amp\Sql\CommandResult $result */
             $result = yield $this->connection->query('');
         });
     }
 
-    public function testQueryWithSyntaxError() {
+    public function testQueryWithSyntaxError()
+    {
         Loop::run(function () {
             /** @var \Amp\Sql\CommandResult $result */
             try {
@@ -117,7 +125,8 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    public function testPrepare() {
+    public function testPrepare()
+    {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE domain=\$1";
 
@@ -146,7 +155,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testPrepare
      */
-    public function testPrepareWithNamedParams() {
+    public function testPrepareWithNamedParams()
+    {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE domain=:domain AND tld=:tld";
 
@@ -175,7 +185,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testPrepare
      */
-    public function testPrepareWithUnnamedParams() {
+    public function testPrepareWithUnnamedParams()
+    {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE domain=? AND tld=?";
 
@@ -204,7 +215,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testPrepare
      */
-    public function testPrepareWithNamedParamsWithDataAppearingAsNamedParam() {
+    public function testPrepareWithNamedParamsWithDataAppearingAsNamedParam()
+    {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE domain=:domain OR domain=':domain'";
 
@@ -235,7 +247,8 @@ abstract class AbstractLinkTest extends TestCase {
      * @expectedException \Amp\Postgres\QueryExecutionError
      * @expectedExceptionMessage column "invalid" does not exist
      */
-    public function testPrepareInvalidQuery() {
+    public function testPrepareInvalidQuery()
+    {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE invalid=\$1";
 
@@ -247,7 +260,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testPrepare
      */
-    public function testPrepareSameQuery() {
+    public function testPrepareSameQuery()
+    {
         Loop::run(function () {
             $sql = "SELECT * FROM test WHERE domain=\$1";
 
@@ -282,7 +296,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testPrepareSameQuery
      */
-    public function testSimultaneousPrepareSameQuery() {
+    public function testSimultaneousPrepareSameQuery()
+    {
         Loop::run(function () {
             $sql = "SELECT * FROM test WHERE domain=\$1";
 
@@ -330,7 +345,8 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    public function testPrepareThenExecuteWithUnconsumedTupleResult() {
+    public function testPrepareThenExecuteWithUnconsumedTupleResult()
+    {
         Loop::run(function () {
             /** @var Statement $statement */
             $statement = yield $this->connection->prepare("SELECT * FROM test");
@@ -355,7 +371,8 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    public function testExecute() {
+    public function testExecute()
+    {
         Loop::run(function () {
             $data = $this->getData()[0];
 
@@ -377,7 +394,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testExecute
      */
-    public function testExecuteWithNamedParams() {
+    public function testExecuteWithNamedParams()
+    {
         Loop::run(function () {
             $data = $this->getData()[0];
 
@@ -403,7 +421,8 @@ abstract class AbstractLinkTest extends TestCase {
      * @expectedException \Error
      * @expectedExceptionMessage Value for unnamed parameter at position 0 missing
      */
-    public function testExecuteWithInvalidParams() {
+    public function testExecuteWithInvalidParams()
+    {
         Loop::run(function () {
             $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1");
         });
@@ -414,7 +433,8 @@ abstract class AbstractLinkTest extends TestCase {
      * @expectedException \Error
      * @expectedExceptionMessage Value for named parameter 'domain' missing
      */
-    public function testExecuteWithInvalidNamedParams() {
+    public function testExecuteWithInvalidNamedParams()
+    {
         Loop::run(function () {
             $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=:domain", ['tld' => 'com']);
         });
@@ -423,7 +443,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testQueryWithTupleResult
      */
-    public function testSimultaneousQuery() {
+    public function testSimultaneousQuery()
+    {
         $callback = \Amp\coroutine(function ($value) {
             /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query("SELECT {$value} as value");
@@ -446,7 +467,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testSimultaneousQuery
      */
-    public function testSimultaneousQueryWithOneFailing() {
+    public function testSimultaneousQueryWithOneFailing()
+    {
         $callback = \Amp\coroutine(function ($query) {
             /** @var \Amp\Postgres\ResultSet $result */
             $result = yield $this->connection->query($query);
@@ -478,7 +500,8 @@ abstract class AbstractLinkTest extends TestCase {
         $this->fail(\sprintf("Test did not throw an instance of %s", QueryError::class));
     }
 
-    public function testSimultaneousQueryAndPrepare() {
+    public function testSimultaneousQueryAndPrepare()
+    {
         $promises = [];
         $promises[] = new Coroutine((function () {
             /** @var \Amp\Postgres\ResultSet $result */
@@ -514,7 +537,8 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    public function testSimultaneousPrepareAndExecute() {
+    public function testSimultaneousPrepareAndExecute()
+    {
         $promises[] = new Coroutine((function () {
             /** @var Statement $statement */
             $statement = yield $this->connection->prepare("SELECT * FROM test");
@@ -549,7 +573,8 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    public function testTransaction() {
+    public function testTransaction()
+    {
         Loop::run(function () {
             $isolation = Transaction::COMMITTED;
 
@@ -584,7 +609,8 @@ abstract class AbstractLinkTest extends TestCase {
         });
     }
 
-    public function testListen() {
+    public function testListen()
+    {
         Loop::run(function () {
             $channel = "test";
             /** @var \Amp\Postgres\Listener $listener */
@@ -614,7 +640,8 @@ abstract class AbstractLinkTest extends TestCase {
     /**
      * @depends testListen
      */
-    public function testNotify() {
+    public function testNotify()
+    {
         Loop::run(function () {
             $channel = "test";
             /** @var \Amp\Postgres\Listener $listener */
@@ -640,10 +667,11 @@ abstract class AbstractLinkTest extends TestCase {
 
     /**
      * @depends testListen
-     * @expectedException QueryError
+     * @expectedException \QueryError
      * @expectedExceptionMessage Already listening on channel
      */
-    public function testListenOnSameChannel() {
+    public function testListenOnSameChannel()
+    {
         Loop::run(function () {
             $channel = "test";
             $listener = yield $this->connection->listen($channel);

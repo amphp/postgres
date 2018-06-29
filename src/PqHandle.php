@@ -15,7 +15,8 @@ use pq;
 use function Amp\call;
 use function Amp\coroutine;
 
-final class PqHandle implements Handle {
+final class PqHandle implements Handle
+{
     use CallableMaker;
 
     /** @var \pq\Connection PostgreSQL connection object. */
@@ -56,7 +57,8 @@ final class PqHandle implements Handle {
      *
      * @param \pq\Connection $handle
      */
-    public function __construct(pq\Connection $handle) {
+    public function __construct(pq\Connection $handle)
+    {
         $this->handle = $handle;
         $this->lastUsedAt = \time();
 
@@ -131,28 +133,32 @@ final class PqHandle implements Handle {
     /**
      * Frees Io watchers from loop.
      */
-    public function __destruct() {
+    public function __destruct()
+    {
         $this->free();
     }
 
     /**
      * {@inheritdoc}
      */
-    public function isAlive(): bool {
+    public function isAlive(): bool
+    {
         return $this->handle !== null;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function lastUsedAt(): int {
+    public function lastUsedAt(): int
+    {
         return $this->lastUsedAt;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function close() {
+    public function close()
+    {
         if ($this->deferred) {
             $deferred = $this->deferred;
             $this->deferred = null;
@@ -164,7 +170,8 @@ final class PqHandle implements Handle {
         $this->free();
     }
 
-    private function free() {
+    private function free()
+    {
         Loop::cancel($this->poll);
         Loop::cancel($this->await);
     }
@@ -179,7 +186,8 @@ final class PqHandle implements Handle {
      *
      * @throws FailureException
      */
-    private function send(callable $method, ...$args): \Generator {
+    private function send(callable $method, ...$args): \Generator
+    {
         while ($this->busy) {
             try {
                 yield $this->busy->promise();
@@ -245,7 +253,8 @@ final class PqHandle implements Handle {
         }
     }
 
-    private function fetch(): \Generator {
+    private function fetch(): \Generator
+    {
         if (!$this->handle->busy) { // Results buffered.
             $result = $this->handle->getResult();
         } else {
@@ -279,7 +288,8 @@ final class PqHandle implements Handle {
         }
     }
 
-    private function release() {
+    private function release()
+    {
         \assert(
             $this->busy instanceof Deferred && $this->busy !== $this->deferred,
             "Connection in invalid state when releasing"
@@ -299,7 +309,8 @@ final class PqHandle implements Handle {
      * @return Promise
      * @throws FailureException
      */
-    public function statementExecute(string $name, array $params): Promise {
+    public function statementExecute(string $name, array $params): Promise
+    {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
 
         $statement = $this->statements[$name]->statement;
@@ -314,7 +325,8 @@ final class PqHandle implements Handle {
      *
      * @throws FailureException
      */
-    public function statementDeallocate(string $name): Promise {
+    public function statementDeallocate(string $name): Promise
+    {
         if (!$this->handle) {
             return new Success; // Connection dead.
         }
@@ -335,7 +347,8 @@ final class PqHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): Promise {
+    public function query(string $sql): Promise
+    {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
         }
@@ -346,7 +359,8 @@ final class PqHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, array $params = []): Promise {
+    public function execute(string $sql, array $params = []): Promise
+    {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
         }
@@ -360,7 +374,8 @@ final class PqHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function prepare(string $sql): Promise {
+    public function prepare(string $sql): Promise
+    {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
         }
@@ -401,14 +416,16 @@ final class PqHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function notify(string $channel, string $payload = ""): Promise {
+    public function notify(string $channel, string $payload = ""): Promise
+    {
         return new Coroutine($this->send([$this->handle, "notifyAsync"], $channel, $payload));
     }
 
     /**
      * {@inheritdoc}
      */
-    public function listen(string $channel): Promise {
+    public function listen(string $channel): Promise
+    {
         return call(function () use ($channel) {
             if (isset($this->listeners[$channel])) {
                 throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
@@ -445,7 +462,8 @@ final class PqHandle implements Handle {
      *
      * @throws \Error
      */
-    private function unlisten(string $channel): Promise {
+    private function unlisten(string $channel): Promise
+    {
         \assert(isset($this->listeners[$channel]), "Not listening on that channel");
 
         $emitter = $this->listeners[$channel];
@@ -464,7 +482,8 @@ final class PqHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function quoteString(string $data): string {
+    public function quoteString(string $data): string
+    {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
         }
@@ -475,7 +494,8 @@ final class PqHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function quoteName(string $name): string {
+    public function quoteName(string $name): string
+    {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
         }

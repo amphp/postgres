@@ -9,7 +9,8 @@ use Amp\Sql\Operation;
 use Amp\Sql\Statement;
 use function Amp\call;
 
-final class PooledStatement implements Statement {
+final class PooledStatement implements Statement
+{
     /** @var Pool */
     private $pool;
 
@@ -33,7 +34,8 @@ final class PooledStatement implements Statement {
      * @param Statement $statement
      * @param callable $prepare
      */
-    public function __construct(Pool $pool, Statement $statement, callable $prepare) {
+    public function __construct(Pool $pool, Statement $statement, callable $prepare)
+    {
         $this->lastUsedAt = \time();
         $this->statements = $statements = new \SplQueue;
         $this->pool = $pool;
@@ -61,7 +63,8 @@ final class PooledStatement implements Statement {
         Loop::unreference($this->timeoutWatcher);
     }
 
-    public function __destruct() {
+    public function __destruct()
+    {
         Loop::cancel($this->timeoutWatcher);
     }
 
@@ -70,7 +73,8 @@ final class PooledStatement implements Statement {
      *
      * Unlike regular statements, as long as the pool is open this statement will not die.
      */
-    public function execute(array $params = []): Promise {
+    public function execute(array $params = []): Promise
+    {
         $this->lastUsedAt = \time();
 
         return call(function () use ($params) {
@@ -108,7 +112,8 @@ final class PooledStatement implements Statement {
      *
      * @param Statement $statement
      */
-    private function push(Statement $statement) {
+    private function push(Statement $statement)
+    {
         $maxConnections = $this->pool->getMaxConnections();
 
         if ($this->statements->count() > ($maxConnections / 10)) {
@@ -124,17 +129,20 @@ final class PooledStatement implements Statement {
 
 
     /** {@inheritdoc} */
-    public function isAlive(): bool {
+    public function isAlive(): bool
+    {
         return $this->pool->isAlive();
     }
 
     /** {@inheritdoc} */
-    public function getQuery(): string {
+    public function getQuery(): string
+    {
         return $this->sql;
     }
 
     /** {@inheritdoc} */
-    public function lastUsedAt(): int {
+    public function lastUsedAt(): int
+    {
         return $this->lastUsedAt;
     }
 }

@@ -12,14 +12,16 @@ use Amp\Sql\ConnectionConfig;
 use Amp\Sql\ConnectionException;
 use pq;
 
-final class PqConnection extends Connection {
+final class PqConnection extends Connection
+{
     /**
      * @param ConnectionConfig $connectionConfig
      * @param CancellationToken $token
      *
      * @return Promise<PqConnection>
      */
-    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise {
+    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
+    {
         $connectionString = \str_replace(";", " ", $connectionConfig->connectionString());
 
         try {
@@ -71,7 +73,8 @@ final class PqConnection extends Connection {
     /**
      * @param \pq\Connection $handle
      */
-    public function __construct(pq\Connection $handle) {
+    public function __construct(pq\Connection $handle)
+    {
         parent::__construct(new PqHandle($handle));
     }
 }

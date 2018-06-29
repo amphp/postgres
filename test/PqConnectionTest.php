@@ -8,11 +8,13 @@ use Amp\Postgres\PqConnection;
 /**
  * @requires extension pq
  */
-class PqConnectionTest extends AbstractConnectionTest {
+class PqConnectionTest extends AbstractConnectionTest
+{
     /** @var resource PostgreSQL connection resource. */
     protected $handle;
 
-    public function createLink(string $connectionString): Link {
+    public function createLink(string $connectionString): Link
+    {
         $this->handle = new \pq\Connection($connectionString);
         $this->handle->nonblocking = true;
         $this->handle->unbuffered = true;
@@ -36,7 +38,8 @@ class PqConnectionTest extends AbstractConnectionTest {
         return new PqConnection($this->handle);
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         $this->handle->exec("ROLLBACK");
         $this->handle->exec("DROP TABLE test");
     }

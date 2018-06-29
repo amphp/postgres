@@ -8,11 +8,13 @@ use Amp\Postgres\PgSqlConnection;
 /**
  * @requires extension pgsql
  */
-class PgSqlConnectionTest extends AbstractConnectionTest {
+class PgSqlConnectionTest extends AbstractConnectionTest
+{
     /** @var resource PostgreSQL connection resource. */
     protected $handle;
 
-    public function createLink(string $connectionString): Link {
+    public function createLink(string $connectionString): Link
+    {
         $this->handle = \pg_connect($connectionString);
         $socket = \pg_socket($this->handle);
 
@@ -35,7 +37,8 @@ class PgSqlConnectionTest extends AbstractConnectionTest {
         return new PgSqlConnection($this->handle, $socket);
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         \pg_get_result($this->handle); // Consume any leftover results from test.
         \pg_query($this->handle, "ROLLBACK");
         \pg_query($this->handle, "DROP TABLE test");

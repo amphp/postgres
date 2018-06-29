@@ -11,8 +11,10 @@ use Amp\Postgres\ResultSet;
 use Amp\Sql\Statement;
 use Amp\Success;
 
-class PooledStatementTest extends TestCase {
-    public function testActiveStatementsRemainAfterTimeout() {
+class PooledStatementTest extends TestCase
+{
+    public function testActiveStatementsRemainAfterTimeout()
+    {
         Loop::run(function () {
             $pool = new Pool('host=localhost user=postgres');
 
@@ -38,7 +40,8 @@ class PooledStatementTest extends TestCase {
         });
     }
 
-    public function testIdleStatementsRemovedAfterTimeout() {
+    public function testIdleStatementsRemovedAfterTimeout()
+    {
         Loop::run(function () {
             $pool = new Pool('host=localhost user=postgres');
 

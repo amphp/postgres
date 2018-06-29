@@ -35,7 +35,8 @@ abstract class Connection implements Link, Handle
     /**
      * @param Handle $handle
      */
-    public function __construct(Handle $handle) {
+    public function __construct(Handle $handle)
+    {
         $this->handle = $handle;
         $this->release = $this->callableFromInstanceMethod("release");
     }
@@ -43,7 +44,8 @@ abstract class Connection implements Link, Handle
     /**
      * {@inheritdoc}
      */
-    final public function isAlive(): bool {
+    final public function isAlive(): bool
+    {
         return $this->handle->isAlive();
     }
 
@@ -52,7 +54,8 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function lastUsedAt(): int {
+    final public function lastUsedAt(): int
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -63,7 +66,8 @@ abstract class Connection implements Link, Handle
     /**
      * {@inheritdoc}
      */
-    final public function close() {
+    final public function close()
+    {
         if ($this->handle) {
             $this->handle->close();
         }
@@ -77,7 +81,8 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    private function send(string $methodName, ...$args): Promise {
+    private function send(string $methodName, ...$args): Promise
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -98,7 +103,8 @@ abstract class Connection implements Link, Handle
     /**
      * Releases the transaction lock.
      */
-    private function release() {
+    private function release()
+    {
         \assert($this->busy !== null);
 
         $deferred = $this->busy;
@@ -109,7 +115,8 @@ abstract class Connection implements Link, Handle
     /**
      * {@inheritdoc}
      */
-    final public function query(string $sql): Promise {
+    final public function query(string $sql): Promise
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -120,7 +127,8 @@ abstract class Connection implements Link, Handle
     /**
      * {@inheritdoc}
      */
-    final public function execute(string $sql, array $params = []): Promise {
+    final public function execute(string $sql, array $params = []): Promise
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -133,7 +141,8 @@ abstract class Connection implements Link, Handle
      *
      * Statement instances returned by this method must also implement Operation.
      */
-    final public function prepare(string $sql): Promise {
+    final public function prepare(string $sql): Promise
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -145,7 +154,8 @@ abstract class Connection implements Link, Handle
     /**
      * {@inheritdoc}
      */
-    final public function notify(string $channel, string $payload = ""): Promise {
+    final public function notify(string $channel, string $payload = ""): Promise
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -158,7 +168,8 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function listen(string $channel): Promise {
+    final public function listen(string $channel): Promise
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -171,7 +182,8 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function transaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise {
+    final public function transaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -211,7 +223,8 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function quoteString(string $data): string {
+    final public function quoteString(string $data): string
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
@@ -224,7 +237,8 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function quoteName(string $name): string {
+    final public function quoteName(string $name): string
+    {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }

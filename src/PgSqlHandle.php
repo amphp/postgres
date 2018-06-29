@@ -13,7 +13,8 @@ use Amp\Sql\QueryError;
 use Amp\Success;
 use function Amp\call;
 
-final class PgSqlHandle implements Handle {
+final class PgSqlHandle implements Handle
+{
     use CallableMaker;
 
     const DIAGNOSTIC_CODES = [
@@ -61,7 +62,8 @@ final class PgSqlHandle implements Handle {
      * @param resource $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
      */
-    public function __construct($handle, $socket) {
+    public function __construct($handle, $socket)
+    {
         $this->handle = $handle;
 
         $this->lastUsedAt = \time();
@@ -151,14 +153,16 @@ final class PgSqlHandle implements Handle {
     /**
      * Frees Io watchers from loop.
      */
-    public function __destruct() {
+    public function __destruct()
+    {
         $this->free();
     }
 
     /**
      * {@inheritdoc}
      */
-    public function close() {
+    public function close()
+    {
         if ($this->deferred) {
             $deferred = $this->deferred;
             $this->deferred = null;
@@ -170,7 +174,8 @@ final class PgSqlHandle implements Handle {
         $this->handle = null;
     }
 
-    private function free() {
+    private function free()
+    {
         if (\is_resource($this->handle)) {
             \pg_close($this->handle);
         }
@@ -182,14 +187,16 @@ final class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function isAlive(): bool {
+    public function isAlive(): bool
+    {
         return $this->handle !== null;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function lastUsedAt(): int {
+    public function lastUsedAt(): int
+    {
         return $this->lastUsedAt;
     }
 
@@ -203,7 +210,8 @@ final class PgSqlHandle implements Handle {
      *
      * @throws FailureException
      */
-    private function send(callable $function, ...$args): \Generator {
+    private function send(callable $function, ...$args): \Generator
+    {
         while ($this->deferred) {
             try {
                 yield $this->deferred->promise();
@@ -246,7 +254,8 @@ final class PgSqlHandle implements Handle {
      * @throws FailureException
      * @throws QueryError
      */
-    private function createResult($result) {
+    private function createResult($result)
+    {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:
                 throw new QueryError("Empty query string");
@@ -281,7 +290,8 @@ final class PgSqlHandle implements Handle {
      *
      * @return Promise
      */
-    public function statementExecute(string $name, array $params): Promise {
+    public function statementExecute(string $name, array $params): Promise
+    {
         return call(function () use ($name, $params) {
             return $this->createResult(yield from $this->send("pg_send_execute", $name, $params));
         });
@@ -294,7 +304,8 @@ final class PgSqlHandle implements Handle {
      *
      * @throws \Error
      */
-    public function statementDeallocate(string $name): Promise {
+    public function statementDeallocate(string $name): Promise
+    {
         if (!\is_resource($this->handle)) {
             return new Success; // Connection closed, no need to deallocate.
         }
@@ -315,7 +326,8 @@ final class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): Promise {
+    public function query(string $sql): Promise
+    {
         if (!\is_resource($this->handle)) {
             throw new \Error("The connection to the database has been closed");
         }
@@ -328,7 +340,8 @@ final class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function execute(string $sql, array $params = []): Promise {
+    public function execute(string $sql, array $params = []): Promise
+    {
         if (!\is_resource($this->handle)) {
             throw new \Error("The connection to the database has been closed");
         }
@@ -344,7 +357,8 @@ final class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function prepare(string $sql): Promise {
+    public function prepare(string $sql): Promise
+    {
         if (!\is_resource($this->handle)) {
             throw new \Error("The connection to the database has been closed");
         }
@@ -405,7 +419,8 @@ final class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function notify(string $channel, string $payload = ""): Promise {
+    public function notify(string $channel, string $payload = ""): Promise
+    {
         if ($payload === "") {
             return $this->query(\sprintf("NOTIFY %s", $this->quoteName($channel)));
         }
@@ -416,7 +431,8 @@ final class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function listen(string $channel): Promise {
+    public function listen(string $channel): Promise
+    {
         return call(function () use ($channel) {
             if (isset($this->listeners[$channel])) {
                 throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
@@ -443,7 +459,8 @@ final class PgSqlHandle implements Handle {
      *
      * @throws \Error
      */
-    private function unlisten(string $channel): Promise {
+    private function unlisten(string $channel): Promise
+    {
         \assert(isset($this->listeners[$channel]), "Not listening on that channel");
 
         $emitter = $this->listeners[$channel];
@@ -462,7 +479,8 @@ final class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function quoteString(string $data): string {
+    public function quoteString(string $data): string
+    {
         if (!\is_resource($this->handle)) {
             throw new \Error("The connection to the database has been closed");
         }
@@ -473,7 +491,8 @@ final class PgSqlHandle implements Handle {
     /**
      * {@inheritdoc}
      */
-    public function quoteName(string $name): string {
+    public function quoteName(string $name): string
+    {
         if (!\is_resource($this->handle)) {
             throw new \Error("The connection to the database has been closed");
         }

@@ -4,7 +4,8 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-interface Executor {
+interface Executor
+{
     const STATEMENT_NAME_PREFIX = "amp_";
 
     /**

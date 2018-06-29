@@ -6,7 +6,8 @@ use Amp\Promise;
 use Amp\Success;
 use pq;
 
-final class PqBufferedResultSet implements ResultSet {
+final class PqBufferedResultSet implements ResultSet
+{
     /** @var \pq\Result */
     private $result;
 
@@ -22,7 +23,8 @@ final class PqBufferedResultSet implements ResultSet {
     /**
      * @param pq\Result $result PostgreSQL result object.
      */
-    public function __construct(pq\Result $result) {
+    public function __construct(pq\Result $result)
+    {
         $this->result = $result;
         $this->result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
     }
@@ -30,7 +32,8 @@ final class PqBufferedResultSet implements ResultSet {
     /**
      * {@inheritdoc}
      */
-    public function advance(int $type = self::FETCH_ASSOC): Promise {
+    public function advance(int $type = self::FETCH_ASSOC): Promise
+    {
         $this->currentRow = null;
         $this->type = $type;
 
@@ -44,7 +47,8 @@ final class PqBufferedResultSet implements ResultSet {
     /**
      * {@inheritdoc}
      */
-    public function getCurrent() {
+    public function getCurrent()
+    {
         if ($this->currentRow !== null) {
             return $this->currentRow;
         }
@@ -65,11 +69,13 @@ final class PqBufferedResultSet implements ResultSet {
         }
     }
 
-    public function numRows(): int {
+    public function numRows(): int
+    {
         return $this->result->numRows;
     }
 
-    public function numFields(): int {
+    public function numFields(): int
+    {
         return $this->result->numCols;
     }
 }

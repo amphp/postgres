@@ -6,7 +6,8 @@ use Amp\Promise;
 use Amp\Sql\Operation;
 use Amp\Sql\Statement;
 
-final class PgSqlStatement implements Statement, Operation {
+final class PgSqlStatement implements Statement, Operation
+{
     /** @var PgSqlHandle */
     private $handle;
 
@@ -31,7 +32,8 @@ final class PgSqlStatement implements Statement, Operation {
      * @param string $sql
      * @param string[] $params
      */
-    public function __construct(PgSqlHandle $handle, string $name, string $sql, array $params) {
+    public function __construct(PgSqlHandle $handle, string $name, string $sql, array $params)
+    {
         $this->handle = $handle;
         $this->name = $name;
         $this->sql = $sql;
@@ -40,33 +42,39 @@ final class PgSqlStatement implements Statement, Operation {
         $this->lastUsedAt = \time();
     }
 
-    public function __destruct() {
+    public function __destruct()
+    {
         $this->handle->statementDeallocate($this->name);
         $this->queue->unreference();
     }
 
     /** {@inheritdoc} */
-    public function isAlive(): bool {
+    public function isAlive(): bool
+    {
         return $this->handle->isAlive();
     }
 
     /** {@inheritdoc} */
-    public function getQuery(): string {
+    public function getQuery(): string
+    {
         return $this->sql;
     }
 
     /** {@inheritdoc} */
-    public function lastUsedAt(): int {
+    public function lastUsedAt(): int
+    {
         return $this->lastUsedAt;
     }
 
     /** {@inheritdoc} */
-    public function execute(array $params = []): Promise {
+    public function execute(array $params = []): Promise
+    {
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
     }
 
     /** {@inheritdoc} */
-    public function onDestruct(callable $onDestruct) {
+    public function onDestruct(callable $onDestruct)
+    {
         $this->queue->onDestruct($onDestruct);
     }
 }

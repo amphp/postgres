@@ -8,7 +8,8 @@ use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
 use Amp\TimeoutCancellationToken;
 
-final class TimeoutConnector implements Connector {
+final class TimeoutConnector implements Connector
+{
     const DEFAULT_TIMEOUT = 5000;
 
     /** @var int */
@@ -17,7 +18,8 @@ final class TimeoutConnector implements Connector {
     /**
      * @param int $timeout Milliseconds until connections attempts are cancelled.
      */
-    public function __construct(int $timeout = self::DEFAULT_TIMEOUT) {
+    public function __construct(int $timeout = self::DEFAULT_TIMEOUT)
+    {
         $this->timeout = $timeout;
     }
 
@@ -28,7 +30,8 @@ final class TimeoutConnector implements Connector {
      *
      * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
      */
-    public function connect(ConnectionConfig $connectionConfig): Promise {
+    public function connect(ConnectionConfig $connectionConfig): Promise
+    {
         $token = new TimeoutCancellationToken($this->timeout);
 
         if (\extension_loaded("pq")) {

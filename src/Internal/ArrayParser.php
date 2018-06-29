@@ -4,7 +4,8 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\ParseException;
 
-final class ArrayParser {
+final class ArrayParser
+{
     /**
      * @param string $data String representation of PostgreSQL array.
      * @param callable|null $cast Callback to cast parsed values.
@@ -14,7 +15,8 @@ final class ArrayParser {
      *
      * @throws ParseException
      */
-    public function parse(string $data, callable $cast = null, string $delimiter = ','): array {
+    public function parse(string $data, callable $cast = null, string $delimiter = ','): array
+    {
         $data = \trim($data);
 
         if ($data[0] !== '{' || \substr($data, -1) !== '}') {
@@ -42,7 +44,8 @@ final class ArrayParser {
      *
      * @throws ParseException
      */
-    private function parser(string $data, callable $cast = null, string $delimiter = ','): \Generator {
+    private function parser(string $data, callable $cast = null, string $delimiter = ','): \Generator
+    {
         $data = \ltrim(\substr($data, 1));
 
         do {
@@ -108,7 +111,8 @@ final class ArrayParser {
      *
      * @throws ParseException
      */
-    private function trim(string &$data, int $position, string $delimiter): string {
+    private function trim(string &$data, int $position, string $delimiter): string
+    {
         $data = \ltrim(\substr($data, $position));
 
         if ($data === '') {

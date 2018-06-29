@@ -11,7 +11,8 @@ use Amp\Sql\ConnectionConfig;
 use Amp\TimeoutCancellationToken;
 use PHPUnit\Framework\TestCase;
 
-abstract class AbstractConnectTest extends TestCase {
+abstract class AbstractConnectTest extends TestCase
+{
     /**
      * @param ConnectionConfig $connectionConfig
      * @param CancellationToken|null $token
@@ -20,7 +21,8 @@ abstract class AbstractConnectTest extends TestCase {
      */
     abstract public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise;
 
-    public function testConnect() {
+    public function testConnect()
+    {
         Loop::run(function () {
             $connection = yield $this->connect(
                 new \Amp\Postgres\ConnectionConfig(new \Amp\Postgres\ConnectionConfig('host=localhost user=postgres')),
@@ -34,7 +36,8 @@ abstract class AbstractConnectTest extends TestCase {
      * @depends testConnect
      * @expectedException \Amp\CancelledException
      */
-    public function testConnectCancellationBeforeConnect() {
+    public function testConnectCancellationBeforeConnect()
+    {
         Loop::run(function () {
             $source = new CancellationTokenSource;
             $token = $source->getToken();
@@ -46,7 +49,8 @@ abstract class AbstractConnectTest extends TestCase {
     /**
      * @depends testConnectCancellationBeforeConnect
      */
-    public function testConnectCancellationAfterConnect() {
+    public function testConnectCancellationAfterConnect()
+    {
         Loop::run(function () {
             $source = new CancellationTokenSource;
             $token = $source->getToken();
@@ -60,7 +64,8 @@ abstract class AbstractConnectTest extends TestCase {
      * @depends testConnectCancellationBeforeConnect
      * @expectedException \Amp\Sql\FailureException
      */
-    public function testConnectInvalidUser() {
+    public function testConnectInvalidUser()
+    {
         Loop::run(function () {
             $connection = yield $this->connect(new \Amp\Postgres\ConnectionConfig('host=localhost user=invalid'), new TimeoutCancellationToken(100));
         });
@@ -70,7 +75,8 @@ abstract class AbstractConnectTest extends TestCase {
      * @depends testConnectCancellationBeforeConnect
      * @expectedException \Amp\Sql\FailureException
      */
-    public function testConnectInvalidConnectionString() {
+    public function testConnectInvalidConnectionString()
+    {
         Loop::run(function () {
             $connection = yield $this->connect(new \Amp\Postgres\ConnectionConfig('invalid connection string'), new TimeoutCancellationToken(100));
         });
@@ -80,7 +86,8 @@ abstract class AbstractConnectTest extends TestCase {
      * @depends testConnectCancellationBeforeConnect
      * @expectedException \Amp\Sql\FailureException
      */
-    public function testConnectInvalidHost() {
+    public function testConnectInvalidHost()
+    {
         Loop::run(function () {
             $connection = yield $this->connect(new \Amp\Postgres\ConnectionConfig('hostaddr=invalid.host user=postgres'), new TimeoutCancellationToken(100));
         });
