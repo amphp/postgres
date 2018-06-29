@@ -7,7 +7,7 @@ use Amp\Sql\Operation;
 use Amp\Sql\Statement;
 
 final class PqStatement implements Statement, Operation {
-    /** @var \Amp\Postgres\PqHandle */
+    /** @var @return PromisePqHandle */
     private $handle;
 
     /** @var string */
@@ -16,7 +16,7 @@ final class PqStatement implements Statement, Operation {
     /** @var string */
     private $sql;
 
-    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    /** @var @return PromiseInternal\ReferenceQueue */
     private $queue;
 
     /** @var array */
@@ -26,7 +26,7 @@ final class PqStatement implements Statement, Operation {
     private $lastUsedAt;
 
     /**
-     * @param \Amp\Postgres\PqHandle $handle
+     * @param @return PromisePqHandle $handle
      * @param string $name Statement name.
      * @param string $sql Original prepared SQL query.
      * @param string[] $params Parameter indices to parameter names.

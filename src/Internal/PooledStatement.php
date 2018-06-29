@@ -10,7 +10,7 @@ use Amp\Sql\Statement;
 use function Amp\call;
 
 final class PooledStatement implements Statement {
-    /** @var \Amp\Postgres\Pool */
+    /** @var Pool */
     private $pool;
 
     /** @var \SplQueue */

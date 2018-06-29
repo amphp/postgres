@@ -7,7 +7,7 @@ use Amp\Sql\Operation;
 use Amp\Sql\Statement;
 
 final class PgSqlStatement implements Statement, Operation {
-    /** @var \Amp\Postgres\PgSqlHandle */
+    /** @var PgSqlHandle */
     private $handle;
 
     /** @var string */
@@ -16,7 +16,7 @@ final class PgSqlStatement implements Statement, Operation {
     /** @var string */
     private $sql;
 
-    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    /** @var Internal\ReferenceQueue */
     private $queue;
 
     /** @var string[] */
@@ -26,7 +26,7 @@ final class PgSqlStatement implements Statement, Operation {
     private $lastUsedAt;
 
     /**
-     * @param \Amp\Postgres\PgSqlHandle $handle
+     * @param PgSqlHandle $handle
      * @param string $name
      * @param string $sql
      * @param string[] $params

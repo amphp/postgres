@@ -7,17 +7,17 @@ use Amp\Sql\Operation;
 use Amp\Sql\Transaction as SqlTransaction;
 
 final class Transaction implements Handle, SqlTransaction {
-    /** @var \Amp\Postgres\Handle|null */
+    /** @var Handle|null */
     private $handle;
 
     /** @var int */
     private $isolation;
 
-    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    /** @var Internal\ReferenceQueue */
     private $queue;
 
     /**
-     * @param \Amp\Postgres\Handle $handle
+     * @param Handle $handle
      * @param int $isolation
      *
      * @throws \Error If the isolation level is invalid.
@@ -94,7 +94,7 @@ final class Transaction implements Handle, SqlTransaction {
     /**
      * {@inheritdoc}
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function query(string $sql): Promise {
         if ($this->handle === null) {
@@ -120,7 +120,7 @@ final class Transaction implements Handle, SqlTransaction {
     /**
      * {@inheritdoc}
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function prepare(string $sql): Promise {
         if ($this->handle === null) {
@@ -146,7 +146,7 @@ final class Transaction implements Handle, SqlTransaction {
     /**
      * {@inheritdoc}
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function execute(string $sql, array $params = []): Promise {
         if ($this->handle === null) {
@@ -173,7 +173,7 @@ final class Transaction implements Handle, SqlTransaction {
     /**
      * {@inheritdoc}
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function notify(string $channel, string $payload = ""): Promise {
         if ($this->handle === null) {
@@ -188,7 +188,7 @@ final class Transaction implements Handle, SqlTransaction {
      *
      * @return Promise<\Amp\Sql\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function commit(): Promise {
         if ($this->handle === null) {
@@ -207,7 +207,7 @@ final class Transaction implements Handle, SqlTransaction {
      *
      * @return Promise<\Amp\Sql\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function rollback(): Promise {
         if ($this->handle === null) {
@@ -228,7 +228,7 @@ final class Transaction implements Handle, SqlTransaction {
      *
      * @return Promise<\Amp\Sql\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function createSavepoint(string $identifier): Promise {
         return $this->query("SAVEPOINT " . $this->quoteName($identifier));
@@ -241,7 +241,7 @@ final class Transaction implements Handle, SqlTransaction {
      *
      * @return Promise<\Amp\Sql\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function rollbackTo(string $identifier): Promise {
         return $this->query("ROLLBACK TO " . $this->quoteName($identifier));

@@ -19,11 +19,11 @@ final class PqUnbufferedResultSet implements ResultSet {
     /** @var int Next row fetch type. */
     private $type = self::FETCH_ASSOC;
 
-    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    /** @var Internal\ReferenceQueue */
     private $queue;
 
     /**
-     * @param callable(): \Amp\Promise $fetch Function to fetch next result row.
+     * @param callable():  $fetch Function to fetch next result row.
      * @param \pq\Result $result PostgreSQL result object.
      */
     public function __construct(callable $fetch, pq\Result $result) {

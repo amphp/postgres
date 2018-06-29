@@ -7,21 +7,25 @@ use Amp\CancellationTokenSource;
 use Amp\Loop;
 use Amp\Postgres\Connection;
 use Amp\Promise;
+use Amp\Sql\ConnectionConfig;
 use Amp\TimeoutCancellationToken;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractConnectTest extends TestCase {
     /**
-     * @param string $connectionString
-     * @param \Amp\CancellationToken|null $token
+     * @param ConnectionConfig $connectionConfig
+     * @param CancellationToken|null $token
      *
-     * @return \Amp\Promise
+     * @return Promise
      */
-    abstract public function connect(string $connectionString, CancellationToken $token = null): Promise;
+    abstract public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise;
 
     public function testConnect() {
         Loop::run(function () {
-            $connection = yield $this->connect('host=localhost user=postgres', new TimeoutCancellationToken(100));
+            $connection = yield $this->connect(
+                new \Amp\Postgres\ConnectionConfig(new \Amp\Postgres\ConnectionConfig('host=localhost user=postgres')),
+                new TimeoutCancellationToken(100)
+            );
             $this->assertInstanceOf(Connection::class, $connection);
         });
     }
@@ -35,7 +39,7 @@ abstract class AbstractConnectTest extends TestCase {
             $source = new CancellationTokenSource;
             $token = $source->getToken();
             $source->cancel();
-            $connection = yield $this->connect('host=localhost user=postgres', $token);
+            $connection = yield $this->connect(new \Amp\Postgres\ConnectionConfig('host=localhost user=postgres'), $token);
         });
     }
 
@@ -46,7 +50,7 @@ abstract class AbstractConnectTest extends TestCase {
         Loop::run(function () {
             $source = new CancellationTokenSource;
             $token = $source->getToken();
-            $connection = yield $this->connect('host=localhost user=postgres', $token);
+            $connection = yield $this->connect(new \Amp\Postgres\ConnectionConfig('host=localhost user=postgres'), $token);
             $this->assertInstanceOf(Connection::class, $connection);
             $source->cancel();
         });
@@ -58,7 +62,7 @@ abstract class AbstractConnectTest extends TestCase {
      */
     public function testConnectInvalidUser() {
         Loop::run(function () {
-            $connection = yield $this->connect('host=localhost user=invalid', new TimeoutCancellationToken(100));
+            $connection = yield $this->connect(new \Amp\Postgres\ConnectionConfig('host=localhost user=invalid'), new TimeoutCancellationToken(100));
         });
     }
 
@@ -68,7 +72,7 @@ abstract class AbstractConnectTest extends TestCase {
      */
     public function testConnectInvalidConnectionString() {
         Loop::run(function () {
-            $connection = yield $this->connect('invalid connection string', new TimeoutCancellationToken(100));
+            $connection = yield $this->connect(new \Amp\Postgres\ConnectionConfig('invalid connection string'), new TimeoutCancellationToken(100));
         });
     }
 
@@ -78,7 +82,7 @@ abstract class AbstractConnectTest extends TestCase {
      */
     public function testConnectInvalidHost() {
         Loop::run(function () {
-            $connection = yield $this->connect('hostaddr=invalid.host user=postgres', new TimeoutCancellationToken(100));
+            $connection = yield $this->connect(new \Amp\Postgres\ConnectionConfig('hostaddr=invalid.host user=postgres'), new TimeoutCancellationToken(100));
         });
     }
 }

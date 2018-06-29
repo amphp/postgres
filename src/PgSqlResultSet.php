@@ -25,7 +25,7 @@ final class PgSqlResultSet implements ResultSet {
     /** @var string[] */
     private $fieldNames = [];
 
-    /** @var \Amp\Postgres\Internal\ArrayParser */
+    /** @var Internal\ArrayParser */
     private $parser;
 
     /**
@@ -121,7 +121,7 @@ final class PgSqlResultSet implements ResultSet {
      *
      * @return array|bool|float|int Cast value.
      *
-     * @throws \Amp\Postgres\ParseException
+     * @throws ParseException
      */
     private function cast(int $column, string $value) {
         switch ($this->fieldTypes[$column]) {

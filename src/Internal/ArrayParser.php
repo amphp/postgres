@@ -12,7 +12,7 @@ final class ArrayParser {
      *
      * @return array Parsed column data.
      *
-     * @throws \Amp\Postgres\ParseException
+     * @throws ParseException
      */
     public function parse(string $data, callable $cast = null, string $delimiter = ','): array {
         $data = \trim($data);
@@ -40,7 +40,7 @@ final class ArrayParser {
      *
      * @return \Generator
      *
-     * @throws \Amp\Postgres\ParseException
+     * @throws ParseException
      */
     private function parser(string $data, callable $cast = null, string $delimiter = ','): \Generator {
         $data = \ltrim(\substr($data, 1));
@@ -106,7 +106,7 @@ final class ArrayParser {
      *
      * @return string First non-whitespace character after given position.
      *
-     * @throws \Amp\Postgres\ParseException
+     * @throws ParseException
      */
     private function trim(string &$data, int $position, string $delimiter): string {
         $data = \ltrim(\substr($data, $position));

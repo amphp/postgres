@@ -9,7 +9,7 @@ interface Link extends SqlLink {
     /**
      * @param string $channel Channel name.
      *
-     * @return \Amp\Promise<\Amp\Postgres\Listener>
+     * @return Promise<Listener>
      *
      * @throws \Amp\Sql\FailureException If the operation fails due to unexpected condition.
      * @throws \Amp\Sql\ConnectionException If the connection to the database is lost.

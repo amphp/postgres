@@ -7,7 +7,7 @@ use Amp\Struct;
 class StatementStorage {
     use Struct;
 
-    /** @var \Amp\Promise|null */
+    /** @var |null */
     public $promise;
 
     /** @var int */

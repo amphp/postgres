@@ -28,7 +28,7 @@ function connector(Connector $connector = null): Connector {
  *
  * @param string $connectionString
  *
- * @return \Amp\Promise<\Amp\Postgres\Connection>
+ * @return Promise<Connection>
  *
  * @throws \Amp\Sql\FailureException If connecting fails.
  *
@@ -46,7 +46,7 @@ function connect(ConnectionConfig $config): Promise {
  * @param string $connectionString
  * @param int $maxConnections
  *
- * @return \Amp\Postgres\Pool
+ * @return Pool
  */
 function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS): Pool {
     return new Pool($connectionString, $maxConnections, connector());

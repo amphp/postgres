@@ -10,7 +10,7 @@ interface Executor {
     /**
      * @param string $sql
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Sql\FailureException If the operation fails due to unexpected condition.
      * @throws \Amp\Sql\ConnectionException If the connection to the database is lost.
@@ -22,7 +22,7 @@ interface Executor {
      * @param string $sql
      * @param mixed[] $params
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Sql\FailureException If the operation fails due to unexpected condition.
      * @throws \Amp\Sql\ConnectionException If the connection to the database is lost.
@@ -33,7 +33,7 @@ interface Executor {
     /**
      * @param string $sql
      *
-     * @return \Amp\Promise<\Amp\Postgres\Statement>
+     * @return Promise<@return PromiseStatement>
      *
      * @throws \Amp\Sql\FailureException If the operation fails due to unexpected condition.
      * @throws \Amp\Sql\ConnectionException If the connection to the database is lost.
@@ -45,7 +45,7 @@ interface Executor {
      * @param string $channel Channel name.
      * @param string $payload Notification payload.
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Sql\FailureException If the operation fails due to unexpected condition.
      * @throws \Amp\Sql\ConnectionException If the connection to the database is lost.

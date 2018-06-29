@@ -49,7 +49,7 @@ final class PgSqlHandle implements Handle {
     /** @var callable */
     private $unlisten;
 
-    /** @var \Amp\Postgres\Internal\StatementStorage[] */
+    /** @var Internal\StatementStorage[] */
     private $statements = [];
 
     /** @var int */
@@ -241,7 +241,7 @@ final class PgSqlHandle implements Handle {
     /**
      * @param resource $result PostgreSQL result resource.
      *
-     * @return \Amp\Sql\CommandResult|\Amp\Postgres\ResultSet
+     * @return \Amp\Sql\CommandResult|ResultSet
      *
      * @throws FailureException
      * @throws QueryError
@@ -279,7 +279,7 @@ final class PgSqlHandle implements Handle {
      * @param string $name
      * @param array $params
      *
-     * @return \Amp\Promise
+     * @return Promise
      */
     public function statementExecute(string $name, array $params): Promise {
         return call(function () use ($name, $params) {
@@ -290,7 +290,7 @@ final class PgSqlHandle implements Handle {
     /**
      * @param string $name
      *
-     * @return \Amp\Promise
+     * @return Promise
      *
      * @throws \Error
      */
@@ -439,7 +439,7 @@ final class PgSqlHandle implements Handle {
     /**
      * @param string $channel
      *
-     * @return \Amp\Promise
+     * @return Promise
      *
      * @throws \Error
      */

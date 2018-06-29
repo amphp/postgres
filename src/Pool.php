@@ -37,13 +37,13 @@ final class Pool implements SqlPool
     /** @var \SplObjectStorage */
     private $connections;
 
-    /** @var \Amp\Promise|null */
+    /** @var |null */
     private $promise;
 
     /** @var \Amp\Deferred|null */
     private $deferred;
 
-    /** @var \Amp\Postgres\Connection|\Amp\Promise|null Connection used for notification listening. */
+    /** @var Connection||null Connection used for notification listening. */
     private $listeningConnection;
 
     /** @var int Number of listeners on listening connection. */
@@ -90,7 +90,7 @@ final class Pool implements SqlPool
         $this->timeoutWatcher = Loop::repeat(1000, static function () use (&$idleTimeout, $connections, $idle) {
             $now = \time();
             while (!$idle->isEmpty()) {
-                /** @var \Amp\Postgres\Connection $connection */
+                /** @var Connection $connection */
                 $connection = $idle->bottom();
 
                 if ($connection->lastUsedAt() + $idleTimeout > $now) {
@@ -183,7 +183,7 @@ final class Pool implements SqlPool
     /**
      * @return \Generator
      *
-     * @resolve \Amp\Postgres\Connection
+     * @resolve Connection
      *
      * @throws FailureException If creating a new connection fails.
      * @throws \Error If the pool has been closed.
@@ -231,7 +231,7 @@ final class Pool implements SqlPool
                 }
             }
 
-            /** @var \Amp\Postgres\Connection $connection */
+            /** @var Connection $connection */
             $connection = $this->idle->shift();
 
             if ($connection->isAlive()) {
@@ -253,7 +253,7 @@ final class Pool implements SqlPool
     }
 
     /**
-     * @param \Amp\Postgres\Connection $connection
+     * @param Connection $connection
      *
      * @throws \Error If the connection is not part of this pool.
      */
@@ -276,7 +276,7 @@ final class Pool implements SqlPool
      */
     public function query(string $sql): Promise {
         return call(function () use ($sql) {
-            /** @var \Amp\Postgres\Connection $connection */
+            /** @var Connection $connection */
             $connection = yield from $this->pop();
 
             try {
@@ -303,7 +303,7 @@ final class Pool implements SqlPool
      */
     public function execute(string $sql, array $params = []): Promise {
         return call(function () use ($sql, $params) {
-            /** @var \Amp\Postgres\Connection $connection */
+            /** @var Connection $connection */
             $connection = yield from $this->pop();
 
             try {
@@ -338,7 +338,7 @@ final class Pool implements SqlPool
     }
 
     private function doPrepare(string $sql): \Generator {
-        /** @var \Amp\Postgres\Connection $connection */
+        /** @var Connection $connection */
         $connection = yield from $this->pop();
 
         try {
@@ -366,7 +366,7 @@ final class Pool implements SqlPool
      */
     public function notify(string $channel, string $payload = ""): Promise {
         return call(function () use ($channel, $payload) {
-            /** @var \Amp\Postgres\Connection $connection */
+            /** @var Connection $connection */
             $connection = yield from $this->pop();
 
             try {
@@ -395,7 +395,7 @@ final class Pool implements SqlPool
             }
 
             try {
-                /** @var \Amp\Postgres\Listener $listener */
+                /** @var Listener $listener */
                 $listener = yield $this->listeningConnection->listen($channel);
             } catch (\Throwable $exception) {
                 if (--$this->listenerCount === 0) {
@@ -423,11 +423,11 @@ final class Pool implements SqlPool
      */
     public function transaction(int $isolation = Transaction::COMMITTED): Promise {
         return call(function () use ($isolation) {
-            /** @var \Amp\Postgres\Connection $connection */
+            /** @var Connection $connection */
             $connection = yield from $this->pop();
 
             try {
-                /** @var \Amp\Postgres\Transaction $transaction */
+                /** @var Transaction $transaction */
                 $transaction = yield $connection->transaction($isolation);
             } catch (\Throwable $exception) {
                 $this->push($connection);

@@ -36,7 +36,7 @@ final class PqHandle implements Handle {
     /** @var \Amp\Emitter[] */
     private $listeners;
 
-    /** @var \Amp\Postgres\Internal\PqStatementStorage[] */
+    /** @var @return PromiseInternal\PqStatementStorage[] */
     private $statements = [];
 
     /** @var callable */

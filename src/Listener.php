@@ -16,13 +16,13 @@ final class Listener implements Iterator, Operation {
     /** @var callable|null */
     private $unlisten;
 
-    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    /** @var Internal\ReferenceQueue */
     private $queue;
 
     /**
      * @param \Amp\Iterator $iterator Iterator emitting notificatons on the channel.
      * @param string $channel Channel name.
-     * @param callable(string $channel): \Amp\Promise $unlisten Function invoked to unlisten from the channel.
+     * @param callable(string $channel):  $unlisten Function invoked to unlisten from the channel.
      */
     public function __construct(Iterator $iterator, string $channel, callable $unlisten) {
         $this->iterator = $iterator;
@@ -54,7 +54,7 @@ final class Listener implements Iterator, Operation {
     /**
      * {@inheritdoc}
      *
-     * @return \Amp\Postgres\Notification
+     * @return Notification
      */
     public function getCurrent(): Notification {
         return $this->iterator->getCurrent();
@@ -70,7 +70,7 @@ final class Listener implements Iterator, Operation {
     /**
      * Unlistens from the channel. No more values will be emitted from this listener.
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Error If this method was previously invoked.
      */
@@ -79,7 +79,7 @@ final class Listener implements Iterator, Operation {
             throw new \Error("Already unlistened on this channel");
         }
 
-        /** @var \Amp\Promise $promise */
+        /** @var  $promise */
         $promise = ($this->unlisten)($this->channel);
         $this->unlisten = null;
         $promise->onResolve([$this->queue, "unreference"]);
