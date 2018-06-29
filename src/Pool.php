@@ -67,6 +67,9 @@ final class Pool implements SqlPool
     /** @var bool */
     private $closed = false;
 
+    /** @var int */
+    private $lastUsedAt;
+
     public function __construct(
         string $connectionString,
         int $maxConnections = self::DEFAULT_MAX_CONNECTIONS,
@@ -105,6 +108,8 @@ final class Pool implements SqlPool
         });
 
         Loop::unreference($this->timeoutWatcher);
+
+        $this->lastUsedAt = \time();
     }
 
     public function __destruct() {
@@ -134,6 +139,11 @@ final class Pool implements SqlPool
         return !$this->closed;
     }
 
+    public function lastUsedAt(): int
+    {
+        return $this->lastUsedAt;
+    }
+
     /**
      * Close all connections in the pool. No further queries may be made after a pool is closed.
      */
@@ -155,6 +165,9 @@ final class Pool implements SqlPool
         return call(function () {
             $connection = yield from $this->pop();
             $this->connections->detach($connection);
+
+            $this->lastUsedAt = \time();
+
             return $connection;
         });
     }
@@ -217,6 +230,9 @@ final class Pool implements SqlPool
                     }
 
                     $this->connections->attach($connection);
+
+                    $this->lastUsedAt = \time();
+
                     return $connection;
                 }
 
@@ -239,6 +255,8 @@ final class Pool implements SqlPool
                     if ($this->resetConnections) {
                         yield $connection->query("RESET ALL");
                     }
+
+                    $this->lastUsedAt = \time();
 
                     return $connection;
                 } catch (FailureException $exception) {
@@ -269,6 +287,8 @@ final class Pool implements SqlPool
         if ($this->deferred instanceof Deferred) {
             $this->deferred->resolve($connection);
         }
+
+        $this->lastUsedAt = \time();
     }
 
     /**
@@ -293,6 +313,8 @@ final class Pool implements SqlPool
             } else {
                 $this->push($connection);
             }
+
+            $this->lastUsedAt = \time();
 
             return $result;
         });
@@ -321,6 +343,8 @@ final class Pool implements SqlPool
                 $this->push($connection);
             }
 
+            $this->lastUsedAt = \time();
+
             return $result;
         });
     }
@@ -333,6 +357,9 @@ final class Pool implements SqlPool
     public function prepare(string $sql): Promise {
         return call(function () use ($sql) {
             $statement = yield from $this->doPrepare($sql);
+
+            $this->lastUsedAt = \time();
+
             return new Internal\PooledStatement($this, $statement, $this->prepare);
         });
     }
@@ -358,6 +385,8 @@ final class Pool implements SqlPool
             $this->push($connection);
         });
 
+        $this->lastUsedAt = \time();
+
         return $statement;
     }
 
@@ -374,6 +403,8 @@ final class Pool implements SqlPool
             } finally {
                 $this->push($connection);
             }
+
+            $this->lastUsedAt = \time();
 
             return $result;
         });
@@ -414,6 +445,8 @@ final class Pool implements SqlPool
                 }
             });
 
+            $this->lastUsedAt = \time();
+
             return $listener;
         });
     }
@@ -437,6 +470,8 @@ final class Pool implements SqlPool
             $transaction->onDestruct(function () use ($connection) {
                 $this->push($connection);
             });
+
+            $this->lastUsedAt = \time();
 
             return $transaction;
         });
