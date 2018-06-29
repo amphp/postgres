@@ -4,6 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Iterator;
 use Amp\Promise;
+use Amp\Sql\Operation;
 
 final class Listener implements Iterator, Operation {
     /** @var \Amp\Iterator */

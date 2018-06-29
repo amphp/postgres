@@ -3,14 +3,10 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Operation;
 use Amp\Sql\Transaction as SqlTransaction;
 
 final class Transaction implements Handle, SqlTransaction {
-    const UNCOMMITTED  = 0;
-    const COMMITTED    = 1;
-    const REPEATABLE   = 2;
-    const SERIALIZABLE = 4;
-
     /** @var \Amp\Postgres\Handle|null */
     private $handle;
 
@@ -26,12 +22,12 @@ final class Transaction implements Handle, SqlTransaction {
      *
      * @throws \Error If the isolation level is invalid.
      */
-    public function __construct(Handle $handle, int $isolation = self::COMMITTED) {
+    public function __construct(Handle $handle, int $isolation = self::ISOLATION_COMMITTED) {
         switch ($isolation) {
-            case self::UNCOMMITTED:
-            case self::COMMITTED:
-            case self::REPEATABLE:
-            case self::SERIALIZABLE:
+            case self::ISOLATION_UNCOMMITTED:
+            case self::ISOLATION_COMMITTED:
+            case self::ISOLATION_REPEATABLE:
+            case self::ISOLATION_SERIALIZABLE:
                 $this->isolation = $isolation;
                 break;
 
@@ -78,7 +74,7 @@ final class Transaction implements Handle, SqlTransaction {
      * {@inheritdoc}
      */
     public function isAlive(): bool {
-        return $this->handle !== null && $this->handle->isAlive();
+        return $this->handle->isAlive();
     }
 
     /**
@@ -190,7 +186,7 @@ final class Transaction implements Handle, SqlTransaction {
     /**
      * Commits the transaction and makes it inactive.
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
@@ -209,7 +205,7 @@ final class Transaction implements Handle, SqlTransaction {
     /**
      * Rolls back the transaction and makes it inactive.
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
@@ -230,11 +226,11 @@ final class Transaction implements Handle, SqlTransaction {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
-    public function savepoint(string $identifier): Promise {
+    public function createSavepoint(string $identifier): Promise {
         return $this->query("SAVEPOINT " . $this->quoteName($identifier));
     }
 
@@ -243,7 +239,7 @@ final class Transaction implements Handle, SqlTransaction {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
      * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
      */
@@ -256,18 +252,18 @@ final class Transaction implements Handle, SqlTransaction {
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return \Amp\Promise<\Amp\Sql\CommandResult>
+     * @return Promise<\Amp\Sql\CommandResult>
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
-    public function release(string $identifier): Promise {
+    public function releaseSavepoint(string $identifier): Promise {
         return $this->query("RELEASE SAVEPOINT " . $this->quoteName($identifier));
     }
 
     /**
      * {@inheritdoc}
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function quoteString(string $data): string {
         if ($this->handle === null) {
@@ -280,7 +276,7 @@ final class Transaction implements Handle, SqlTransaction {
     /**
      * {@inheritdoc}
      *
-     * @throws \Amp\Postgres\TransactionError If the transaction has been committed or rolled back.
+     * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function quoteName(string $name): string {
         if ($this->handle === null) {

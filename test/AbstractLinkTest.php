@@ -9,11 +9,11 @@ use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryExecutionError;
 use Amp\Postgres\ResultSet;
-use Amp\Postgres\Statement;
 use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
 use Amp\Sql\CommandResult;
 use Amp\Sql\QueryError;
+use Amp\Sql\Statement;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractLinkTest extends TestCase {
@@ -121,7 +121,7 @@ abstract class AbstractLinkTest extends TestCase {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE domain=\$1";
 
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = yield $this->connection->prepare($query);
 
             $this->assertSame($query, $statement->getQuery());
@@ -150,7 +150,7 @@ abstract class AbstractLinkTest extends TestCase {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE domain=:domain AND tld=:tld";
 
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = yield $this->connection->prepare($query);
 
             $data = $this->getData()[0];
@@ -179,7 +179,7 @@ abstract class AbstractLinkTest extends TestCase {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE domain=? AND tld=?";
 
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = yield $this->connection->prepare($query);
 
             $data = $this->getData()[0];
@@ -208,7 +208,7 @@ abstract class AbstractLinkTest extends TestCase {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE domain=:domain OR domain=':domain'";
 
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = yield $this->connection->prepare($query);
 
             $data = $this->getData()[0];
@@ -239,7 +239,7 @@ abstract class AbstractLinkTest extends TestCase {
         Loop::run(function () {
             $query = "SELECT * FROM test WHERE invalid=\$1";
 
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = yield $this->connection->prepare($query);
         });
     }
@@ -251,10 +251,10 @@ abstract class AbstractLinkTest extends TestCase {
         Loop::run(function () {
             $sql = "SELECT * FROM test WHERE domain=\$1";
 
-            /** @var \Amp\Postgres\Statement $statement1 */
+            /** @var Statement $statement1 */
             $statement1 = yield $this->connection->prepare($sql);
 
-            /** @var \Amp\Postgres\Statement $statement2 */
+            /** @var Statement $statement2 */
             $statement2 = yield $this->connection->prepare($sql);
 
             $this->assertInstanceOf(Statement::class, $statement1);
@@ -290,8 +290,8 @@ abstract class AbstractLinkTest extends TestCase {
             $statement2 = $this->connection->prepare($sql);
 
             /**
-             * @var \Amp\Postgres\Statement $statement1
-             * @var \Amp\Postgres\Statement $statement2
+             * @var Statement $statement1
+             * @var Statement $statement2
              */
             list($statement1, $statement2) = yield [$statement1, $statement2];
 
@@ -332,7 +332,7 @@ abstract class AbstractLinkTest extends TestCase {
 
     public function testPrepareThenExecuteWithUnconsumedTupleResult() {
         Loop::run(function () {
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = yield $this->connection->prepare("SELECT * FROM test");
 
             /** @var \Amp\Postgres\ResultSet $result */
@@ -494,7 +494,7 @@ abstract class AbstractLinkTest extends TestCase {
         })());
 
         $promises[] = new Coroutine((function () {
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = (yield $this->connection->prepare("SELECT * FROM test"));
 
             /** @var \Amp\Postgres\ResultSet $result */
@@ -516,7 +516,7 @@ abstract class AbstractLinkTest extends TestCase {
 
     public function testSimultaneousPrepareAndExecute() {
         $promises[] = new Coroutine((function () {
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = yield $this->connection->prepare("SELECT * FROM test");
 
             /** @var \Amp\Postgres\ResultSet $result */

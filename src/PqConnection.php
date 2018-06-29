@@ -2,25 +2,25 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
+use Amp\CancellationToken;
 use Amp\Deferred;
 use Amp\Failure;
 use Amp\Loop;
+use Amp\NullCancellationToken;
 use Amp\Promise;
+use Amp\Sql\ConnectionConfig;
 use Amp\Sql\ConnectionException;
 use pq;
 
 final class PqConnection extends Connection {
-    use CallableMaker;
-
     /**
-     * @param string $connectionString
-     * @param \Amp\CancellationToken $token
+     * @param ConnectionConfig $connectionConfig
+     * @param CancellationToken $token
      *
-     * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
+     * @return Promise<PqConnection>
      */
-    public function connect(): Promise {
-        $connectionString = \str_replace(";", " ", $this->config->connectionString());
+    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise {
+        $connectionString = \str_replace(";", " ", $connectionConfig->connectionString());
 
         try {
             $connection = new pq\Connection($connectionString, pq\Connection::ASYNC);
@@ -46,8 +46,7 @@ final class PqConnection extends Connection {
                     return;
 
                 case pq\Connection::POLLING_OK:
-                    $this->handle = new PqHandle($connection);
-                    $deferred->resolve();
+                    $deferred->resolve(new self($connection));
                     return;
             }
         };
@@ -57,14 +56,22 @@ final class PqConnection extends Connection {
 
         $promise = $deferred->promise();
 
-        $id = $this->token->subscribe([$deferred, "fail"]);
+        $token = $token ?? new NullCancellationToken();
+        $id = $token->subscribe([$deferred, "fail"]);
 
-        $promise->onResolve(function () use ($poll, $await, $id) {
-            $this->token->unsubscribe($id);
+        $promise->onResolve(function () use ($poll, $await, $id, $token) {
+            $token->unsubscribe($id);
             Loop::cancel($poll);
             Loop::cancel($await);
         });
 
         return $promise;
+    }
+
+    /**
+     * @param \pq\Connection $handle
+     */
+    public function __construct(pq\Connection $handle) {
+        parent::__construct(new PqHandle($handle));
     }
 }

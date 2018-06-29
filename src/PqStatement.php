@@ -3,6 +3,8 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Operation;
+use Amp\Sql\Statement;
 
 final class PqStatement implements Statement, Operation {
     /** @var \Amp\Postgres\PqHandle */

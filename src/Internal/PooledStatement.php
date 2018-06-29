@@ -3,10 +3,10 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\Loop;
-use Amp\Postgres\Operation;
 use Amp\Postgres\Pool;
-use Amp\Postgres\Statement;
 use Amp\Promise;
+use Amp\Sql\Operation;
+use Amp\Sql\Statement;
 use function Amp\call;
 
 final class PooledStatement implements Statement {
@@ -29,8 +29,8 @@ final class PooledStatement implements Statement {
     private $prepare;
 
     /**
-     * @param \Amp\Postgres\Pool $pool Pool used to re-create the statement if the original closes.
-     * @param \Amp\Postgres\Statement $statement
+     * @param Pool $pool Pool used to re-create the statement if the original closes.
+     * @param Statement $statement
      * @param callable $prepare
      */
     public function __construct(Pool $pool, Statement $statement, callable $prepare) {
@@ -47,7 +47,7 @@ final class PooledStatement implements Statement {
             $idleTimeout = ((int) ($pool->getIdleTimeout() / 10)) ?: 1;
 
             while (!$statements->isEmpty()) {
-                /** @var \Amp\Postgres\Statement $statement */
+                /** @var Statement $statement */
                 $statement = $statements->bottom();
 
                 if ($statement->lastUsedAt() + $idleTimeout > $now) {
@@ -76,7 +76,7 @@ final class PooledStatement implements Statement {
         return call(function () use ($params) {
             if (!$this->statements->isEmpty()) {
                 do {
-                    /** @var \Amp\Postgres\Statement $statement */
+                    /** @var Statement $statement */
                     $statement = $this->statements->shift();
                 } while (!$statement->isAlive() && !$this->statements->isEmpty());
             } else {

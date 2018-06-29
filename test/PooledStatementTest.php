@@ -8,7 +8,7 @@ use Amp\PHPUnit\TestCase;
 use Amp\Postgres\Internal\PooledStatement;
 use Amp\Postgres\Pool;
 use Amp\Postgres\ResultSet;
-use Amp\Postgres\Statement;
+use Amp\Sql\Statement;
 use Amp\Success;
 
 class PooledStatementTest extends TestCase {

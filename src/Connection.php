@@ -2,46 +2,49 @@
 
 namespace Amp\Postgres;
 
+use Amp\CallableMaker;
 use Amp\CancellationToken;
 use Amp\Deferred;
-use Amp\NullCancellationToken;
 use Amp\Promise;
-use Amp\Sql\Connection as SqlConnection;
 use Amp\Sql\ConnectionConfig;
-use function Amp\call;
 use Amp\Sql\FailureException;
+use Amp\Sql\Link;
+use function Amp\call;
 
-abstract class Connection implements SqlConnection, Handle {
-    /** @var \Amp\Postgres\Handle */
-    protected $handle;
+abstract class Connection implements Link, Handle
+{
+    use CallableMaker;
 
-    /** @var \Amp\Deferred|null Used to only allow one transaction at a time. */
+    /** @var Handle */
+    private $handle;
+
+    /** @var Deferred|null Used to only allow one transaction at a time. */
     private $busy;
 
     /** @var callable */
     protected $release;
 
-    /** @var ConnectionConfig */
-    protected $config;
-
-    /** @var CancellationToken */
-    protected $token;
+    /**
+     * @param ConnectionConfig $connectionConfig
+     * @param CancellationToken $token
+     *
+     * @return Promise<Connection>
+     */
+    abstract public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise;
 
     /**
-     * @param \Amp\Postgres\Handle $handle
+     * @param Handle $handle
      */
-    public function __construct(ConnectionConfig $config, CancellationToken $token = null) {
-        $this->config = $config;
-        $this->token = $token ?? new NullCancellationToken();
+    public function __construct(Handle $handle) {
+        $this->handle = $handle;
+        $this->release = $this->callableFromInstanceMethod("release");
     }
-
-    abstract public function connect(): Promise;
 
     /**
      * {@inheritdoc}
      */
     final public function isAlive(): bool {
-        return $this->handle && $this->handle->isAlive();
+        return $this->handle->isAlive();
     }
 
     /**
@@ -70,9 +73,9 @@ abstract class Connection implements SqlConnection, Handle {
      * @param string $methodName Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
-     * @return \Amp\Promise
+     * @return Promise
      *
-     * @throws \Amp\Sql\FailureException
+     * @throws FailureException
      */
     private function send(string $methodName, ...$args): Promise {
         if (! $this->handle) {
@@ -168,26 +171,26 @@ abstract class Connection implements SqlConnection, Handle {
      *
      * @throws FailureException
      */
-    final public function transaction(int $isolation = Transaction::COMMITTED): Promise {
+    final public function transaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
 
         return call(function () use ($isolation) {
             switch ($isolation) {
-                case Transaction::UNCOMMITTED:
+                case Transaction::ISOLATION_UNCOMMITTED:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
                     break;
 
-                case Transaction::COMMITTED:
+                case Transaction::ISOLATION_COMMITTED:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
                     break;
 
-                case Transaction::REPEATABLE:
+                case Transaction::ISOLATION_REPEATABLE:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
                     break;
 
-                case Transaction::SERIALIZABLE:
+                case Transaction::ISOLATION_SERIALIZABLE:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
                     break;
 

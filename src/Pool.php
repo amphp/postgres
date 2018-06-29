@@ -9,9 +9,11 @@ use Amp\Loop;
 use Amp\Promise;
 use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
+use Amp\Sql\Operation;
 use Amp\Sql\Pool as SqlPool;
 use function Amp\call;
 use function Amp\coroutine;
+use Amp\Sql\Statement;
 
 final class Pool implements SqlPool
 {
@@ -340,7 +342,7 @@ final class Pool implements SqlPool
         $connection = yield from $this->pop();
 
         try {
-            /** @var \Amp\Postgres\Statement $statement */
+            /** @var Statement $statement */
             $statement = yield $connection->prepare($sql);
         } catch (\Throwable $exception) {
             $this->push($connection);

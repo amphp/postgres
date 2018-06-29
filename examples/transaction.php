@@ -15,7 +15,7 @@ Amp\Loop::run(function () {
 
     yield $transaction->query('CREATE TABLE test (domain VARCHAR(63), tld VARCHAR(63), PRIMARY KEY (domain, tld))');
 
-    /** @var \Amp\Postgres\Statement $statement */
+    /** @var \Amp\Sql\Statement $statement */
     $statement = yield $transaction->prepare('INSERT INTO test VALUES (?, ?)');
 
     yield $statement->execute(['amphp', 'org']);
