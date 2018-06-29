@@ -16,7 +16,7 @@ use Amp\Sql\Transaction;
 use function Amp\call;
 use function Amp\coroutine;
 
-final class Pool implements SqlPool
+final class DefaultPool implements SqlPool
 {
     use CallableMaker;
 
