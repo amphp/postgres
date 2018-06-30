@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Promise;
 use Amp\Sql\Link as SqlLink;
 
-interface Link extends SqlLink
+interface Link extends Executor, SqlLink
 {
     /**
      * @param string $channel Channel name.

@@ -53,7 +53,7 @@ function connect(SqlConnectionConfig $config): Promise
  */
 function pool(string $connectionString, int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS): Pool
 {
-    return new DefaultPool(new ConnectionConfig($connectionString), $maxConnections, connector());
+    return new Pool(new ConnectionConfig($connectionString), $maxConnections, connector());
 }
 
 /**
