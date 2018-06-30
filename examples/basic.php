@@ -7,7 +7,7 @@ use Amp\Postgres;
 
 Amp\Loop::run(function () {
     /** @var \Amp\Postgres\Connection $connection */
-    $connection = yield Postgres\connect('host=localhost user=postgres');
+    $connection = yield Postgres\connect(new Postgres\ConnectionConfig('host=localhost user=postgres'));
 
     /** @var \Amp\Postgres\ResultSet $result */
     $result = yield $connection->query('SHOW ALL');
