@@ -23,13 +23,13 @@ final class Transaction implements Handle, SqlTransaction
      *
      * @throws \Error If the isolation level is invalid.
      */
-    public function __construct(Handle $handle, int $isolation = self::ISOLATION_COMMITTED)
+    public function __construct(Handle $handle, int $isolation = SqlTransaction::ISOLATION_COMMITTED)
     {
         switch ($isolation) {
-            case self::ISOLATION_UNCOMMITTED:
-            case self::ISOLATION_COMMITTED:
-            case self::ISOLATION_REPEATABLE:
-            case self::ISOLATION_SERIALIZABLE:
+            case SqlTransaction::ISOLATION_UNCOMMITTED:
+            case SqlTransaction::ISOLATION_COMMITTED:
+            case SqlTransaction::ISOLATION_REPEATABLE:
+            case SqlTransaction::ISOLATION_SERIALIZABLE:
                 $this->isolation = $isolation;
                 break;
 
