@@ -28,7 +28,7 @@ function connector(Connector $connector = null): Connector
 /**
  * Create a connection using the global Connector instance.
  *
- * @param string $connectionString
+ * @param SqlConnectionConfig $config
  *
  * @return Promise<Connection>
  *
@@ -46,14 +46,14 @@ function connect(SqlConnectionConfig $config): Promise
 /**
  * Create a pool using the global Connector instance.
  *
- * @param string $connectionString
+ * @param SqlConnectionConfig $config
  * @param int $maxConnections
  *
  * @return Pool
  */
-function pool(string $connectionString, int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS): Pool
+function pool(SqlConnectionConfig $config, int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS): Pool
 {
-    return new Pool(new ConnectionConfig($connectionString), $maxConnections, connector());
+    return new Pool($config, $maxConnections, connector());
 }
 
 /**
