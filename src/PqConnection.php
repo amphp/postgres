@@ -12,7 +12,7 @@ use Amp\Sql\ConnectionConfig;
 use Amp\Sql\ConnectionException;
 use pq;
 
-final class PqConnection extends Connection
+final class PqConnection extends Connection implements Link
 {
     /**
      * @param ConnectionConfig $connectionConfig

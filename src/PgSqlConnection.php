@@ -12,7 +12,7 @@ use Amp\Promise;
 use Amp\Sql\ConnectionConfig;
 use Amp\Sql\ConnectionException;
 
-final class PgSqlConnection extends Connection
+final class PgSqlConnection extends Connection implements Link
 {
     use CallableMaker;
 

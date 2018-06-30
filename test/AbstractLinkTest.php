@@ -13,7 +13,9 @@ use Amp\Postgres\Transaction;
 use Amp\Postgres\TransactionError;
 use Amp\Sql\CommandResult;
 use Amp\Sql\QueryError;
+use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement;
+use Amp\Sql\Transaction as SqlTransaction;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractLinkTest extends TestCase
@@ -81,7 +83,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(ResultSet::FETCH_OBJECT); ++$i) {
+            for ($i = 0; yield $result->advance(SqlResultSet::FETCH_OBJECT); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row->domain);
                 $this->assertSame($data[$i][1], $row->tld);
@@ -101,7 +103,7 @@ abstract class AbstractLinkTest extends TestCase
     }
 
     /**
-     * @expectedException \QueryError
+     * @expectedException QueryError
      */
     public function testQueryWithEmptyQuery()
     {
@@ -144,7 +146,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertSame(2, $result->numFields());
 
-            while (yield $result->advance(ResultSet::FETCH_ARRAY)) {
+            while (yield $result->advance(SqlResultSet::FETCH_ARRAY)) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[0], $row[0]);
                 $this->assertSame($data[1], $row[1]);
@@ -174,7 +176,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertSame(2, $result->numFields());
 
-            while (yield $result->advance(ResultSet::FETCH_ARRAY)) {
+            while (yield $result->advance(SqlResultSet::FETCH_ARRAY)) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[0], $row[0]);
                 $this->assertSame($data[1], $row[1]);
@@ -204,7 +206,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertSame(2, $result->numFields());
 
-            while (yield $result->advance(ResultSet::FETCH_ARRAY)) {
+            while (yield $result->advance(SqlResultSet::FETCH_ARRAY)) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[0], $row[0]);
                 $this->assertSame($data[1], $row[1]);
@@ -234,7 +236,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertSame(2, $result->numFields());
 
-            while (yield $result->advance(ResultSet::FETCH_ARRAY)) {
+            while (yield $result->advance(SqlResultSet::FETCH_ARRAY)) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[0], $row[0]);
                 $this->assertSame($data[1], $row[1]);
@@ -363,7 +365,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(ResultSet::FETCH_OBJECT); ++$i) {
+            for ($i = 0; yield $result->advance(SqlResultSet::FETCH_OBJECT); ++$i) {
                 $row = $result->getCurrent();
                 $this->assertSame($data[$i][0], $row->domain);
                 $this->assertSame($data[$i][1], $row->tld);
@@ -576,7 +578,7 @@ abstract class AbstractLinkTest extends TestCase
     public function testTransaction()
     {
         Loop::run(function () {
-            $isolation = Transaction::COMMITTED;
+            $isolation = SqlTransaction::ISOLATION_COMMITTED;
 
             /** @var \Amp\Postgres\Transaction $transaction */
             $transaction = yield $this->connection->transaction($isolation);
@@ -589,7 +591,7 @@ abstract class AbstractLinkTest extends TestCase
             $this->assertTrue($transaction->isActive());
             $this->assertSame($isolation, $transaction->getIsolationLevel());
 
-            yield $transaction->savepoint('test');
+            yield $transaction->createSavepoint('test');
 
             $result = yield $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
 
@@ -667,7 +669,7 @@ abstract class AbstractLinkTest extends TestCase
 
     /**
      * @depends testListen
-     * @expectedException \QueryError
+     * @expectedException QueryError
      * @expectedExceptionMessage Already listening on channel
      */
     public function testListenOnSameChannel()
