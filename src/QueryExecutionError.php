@@ -2,16 +2,21 @@
 
 namespace Amp\Postgres;
 
-class QueryExecutionError extends QueryError {
+use Amp\Sql\QueryError;
+
+class QueryExecutionError extends QueryError
+{
     /** @var mixed[] */
     private $diagnostics;
 
-    public function __construct(string $message, array $diagnostics, \Throwable $previous = null) {
+    public function __construct(string $message, array $diagnostics, \Throwable $previous = null)
+    {
         parent::__construct($message, 0, $previous);
         $this->diagnostics = $diagnostics;
     }
 
-    public function getDiagnostics(): array {
+    public function getDiagnostics(): array
+    {
         return $this->diagnostics;
     }
 }

@@ -2,29 +2,36 @@
 
 namespace Amp\Postgres;
 
+use Amp\CallableMaker;
 use Amp\CancellationToken;
 use Amp\Deferred;
 use Amp\Failure;
 use Amp\Loop;
 use Amp\NullCancellationToken;
 use Amp\Promise;
+use Amp\Sql\ConnectionConfig;
+use Amp\Sql\ConnectionException;
 
-final class PgSqlConnection extends Connection {
+final class PgSqlConnection extends Connection implements Link
+{
+    use CallableMaker;
+
     /**
      * @param string $connectionString
-     * @param \Amp\CancellationToken $token
+     * @param CancellationToken $token
      *
-     * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
+     * @return Promise<PgSqlConnection>
      *
      * @throws \Error If pecl-ev is used as a loop extension.
      */
-    public static function connect(string $connectionString, CancellationToken $token = null): Promise {
+    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
+    {
         // @codeCoverageIgnoreStart
         if (Loop::get()->getHandle() instanceof \EvLoop) {
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
         } // @codeCoverageIgnoreEnd
 
-        $connectionString = \str_replace(";", " ", $connectionString);
+        $connectionString = \str_replace(";", " ", $connectionConfig->connectionString());
 
         if (!$connection = @\pg_connect($connectionString, \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
             return new Failure(new ConnectionException("Failed to create connection resource"));
@@ -63,7 +70,7 @@ final class PgSqlConnection extends Connection {
 
         $promise = $deferred->promise();
 
-        $token = $token ?? new NullCancellationToken;
+        $token = $token ?? new NullCancellationToken();
         $id = $token->subscribe([$deferred, "fail"]);
 
         $promise->onResolve(function ($exception) use ($connection, $poll, $await, $id, $token) {
@@ -83,7 +90,8 @@ final class PgSqlConnection extends Connection {
      * @param resource $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
      */
-    public function __construct($handle, $socket) {
+    public function __construct($handle, $socket)
+    {
         parent::__construct(new PgSqlHandle($handle, $socket));
     }
 }

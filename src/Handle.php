@@ -2,7 +2,8 @@
 
 namespace Amp\Postgres;
 
-interface Handle extends Executor {
+interface Handle extends Executor
+{
     /**
      * @return int Timestamp of last activity on the handle.
      */

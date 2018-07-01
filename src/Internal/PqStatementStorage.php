@@ -2,7 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
-class PqStatementStorage extends StatementStorage {
+class PqStatementStorage extends StatementStorage
+{
     /** @var \pq\Statement */
     public $statement;
 }

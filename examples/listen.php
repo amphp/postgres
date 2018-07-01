@@ -1,23 +1,23 @@
 #!/usr/bin/env php
 <?php
 
-require dirname(__DIR__) . '/vendor/autoload.php';
+require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Loop;
 use Amp\Postgres;
 
 Loop::run(function () {
-    $pool = Postgres\pool('host=localhost user=postgres');
+    $pool = Postgres\pool(new Postgres\ConnectionConfig('host=localhost user=postgres'));
 
     $channel = "test";
 
     /** @var \Amp\Postgres\Listener $listener */
     $listener = yield $pool->listen($channel);
 
-    printf("Listening on channel '%s'\n", $listener->getChannel());
+    \printf("Listening on channel '%s'\n", $listener->getChannel());
 
     Loop::delay(3000, function () use ($listener) { // Unlisten in 3 seconds.
-        printf("Unlistening from channel '%s'\n", $listener->getChannel());
+        \printf("Unlistening from channel '%s'\n", $listener->getChannel());
         return $listener->unlisten();
     });
 
@@ -31,7 +31,7 @@ Loop::run(function () {
 
     while (yield $listener->advance()) {
         $notification = $listener->getCurrent();
-        printf(
+        \printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",
             $notification->pid,
             $notification->channel,

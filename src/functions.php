@@ -4,10 +4,14 @@ namespace Amp\Postgres;
 
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
+use Amp\Sql\Connector;
+use Amp\Sql\Pool as SqlPool;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class;
 
-function connector(Connector $connector = null): Connector {
+function connector(Connector $connector = null): Connector
+{
     if ($connector === null) {
         $connector = Loop::getState(LOOP_CONNECTOR_IDENTIFIER);
         if ($connector) {
@@ -24,30 +28,32 @@ function connector(Connector $connector = null): Connector {
 /**
  * Create a connection using the global Connector instance.
  *
- * @param string $connectionString
+ * @param SqlConnectionConfig $config
  *
- * @return \Amp\Promise<\Amp\Postgres\Connection>
+ * @return Promise<Connection>
  *
- * @throws \Amp\Postgres\FailureException If connecting fails.
+ * @throws \Amp\Sql\FailureException If connecting fails.
  *
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
  *
  * @codeCoverageIgnore
  */
-function connect(string $connectionString): Promise {
-    return connector()->connect($connectionString);
+function connect(SqlConnectionConfig $config): Promise
+{
+    return connector()->connect($config);
 }
 
 /**
  * Create a pool using the global Connector instance.
  *
- * @param string $connectionString
+ * @param SqlConnectionConfig $config
  * @param int $maxConnections
  *
- * @return \Amp\Postgres\Pool
+ * @return Pool
  */
-function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS): Pool {
-    return new DefaultPool($connectionString, $maxConnections, connector());
+function pool(SqlConnectionConfig $config, int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS): Pool
+{
+    return new Pool($config, $maxConnections, connector());
 }
 
 /**
@@ -59,7 +65,8 @@ function pool(string $connectionString, int $maxConnections = Pool::DEFAULT_MAX_
  *
  * @throws \Error If $value is an object without a __toString() method, a resource, or an unknown type.
  */
-function cast($value) {
+function cast($value)
+{
     switch ($type = \gettype($value)) {
         case "NULL":
         case "integer":
@@ -94,7 +101,8 @@ function cast($value) {
  *
  * @throws \Error If $array contains an object without a __toString() method, a resource, or an unknown type.
  */
-function encode(array $array): string {
+function encode(array $array): string
+{
     $array = \array_map(function ($value) {
         switch (\gettype($value)) {
             case "NULL":

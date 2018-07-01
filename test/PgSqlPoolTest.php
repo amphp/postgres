@@ -2,23 +2,26 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\Connector;
+use Amp\Postgres\ConnectionConfig;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
-use Amp\Postgres\DefaultPool;
+use Amp\Postgres\Pool;
 use Amp\Promise;
+use Amp\Sql\Connector;
 use Amp\Success;
 
 /**
  * @requires extension pgsql
  */
-class PgSqlPoolTest extends AbstractLinkTest {
+class PgSqlPoolTest extends AbstractLinkTest
+{
     const POOL_SIZE = 3;
 
     /** @var resource[] PostgreSQL connection resources. */
     protected $handles = [];
 
-    public function createLink(string $connectionString): Link {
+    public function createLink(string $connectionString): Link
+    {
         for ($i = 0; $i < self::POOL_SIZE; ++$i) {
             $this->handles[] = \pg_connect($connectionString, \PGSQL_CONNECT_FORCE_NEW);
         }
@@ -35,7 +38,7 @@ class PgSqlPoolTest extends AbstractLinkTest {
                 return new Success(new PgSqlConnection($handle, \pg_socket($handle)));
             }));
 
-        $pool = new DefaultPool('connection string', \count($this->handles), $connector);
+        $pool = new Pool(new ConnectionConfig('connection string'), \count($this->handles), $connector);
 
         $handle = \reset($this->handles);
 
@@ -58,7 +61,8 @@ class PgSqlPoolTest extends AbstractLinkTest {
         return $pool;
     }
 
-    public function tearDown() {
+    public function tearDown()
+    {
         foreach ($this->handles as $handle) {
             \pg_get_result($handle); // Consume any leftover results from test.
         }
