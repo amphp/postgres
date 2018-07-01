@@ -81,7 +81,7 @@ final class Transaction implements Handle, SqlTransaction
      */
     public function isAlive(): bool
     {
-        return $this->handle->isAlive();
+        return $this->handle && $this->handle->isAlive();
     }
 
     /**

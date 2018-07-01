@@ -103,7 +103,7 @@ abstract class AbstractLinkTest extends TestCase
     }
 
     /**
-     * @expectedException QueryError
+     * @expectedException \Amp\Sql\QueryError
      */
     public function testQueryWithEmptyQuery()
     {
@@ -669,7 +669,7 @@ abstract class AbstractLinkTest extends TestCase
 
     /**
      * @depends testListen
-     * @expectedException QueryError
+     * @expectedException \Amp\Sql\QueryError
      * @expectedExceptionMessage Already listening on channel
      */
     public function testListenOnSameChannel()

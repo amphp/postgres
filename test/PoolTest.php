@@ -4,11 +4,11 @@ namespace Amp\Postgres\Test;
 
 use Amp\Delayed;
 use Amp\Loop;
-use Amp\Postgres\Pool;
 use Amp\Postgres\ConnectionConfig;
+use Amp\Postgres\Pool;
 use PHPUnit\Framework\TestCase;
 
-class DefaultPoolTest extends TestCase
+class PoolTest extends TestCase
 {
     /**
      * @expectedException \Error

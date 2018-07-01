@@ -10,6 +10,7 @@ use Amp\Loop;
 use Amp\Promise;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
+use Amp\Sql\QueryError;
 use Amp\Success;
 use pq;
 use function Amp\call;
