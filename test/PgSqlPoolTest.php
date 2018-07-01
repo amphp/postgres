@@ -4,6 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\ConnectionConfig;
 use Amp\Postgres\Link;
+use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\Pool;
 use Amp\Promise;
 use Amp\Sql\Connector;
@@ -32,8 +33,9 @@ class PgSqlPoolTest extends AbstractLinkTest
                 if (!isset($this->handles[$count])) {
                     $this->fail("createConnection called too many times");
                 }
+                $handle = $this->handles[$count];
                 ++$count;
-                return new Success();
+                return new Success(new PgSqlConnection($handle, \pg_socket($handle)));
             }));
 
         $pool = new Pool(new ConnectionConfig('connection string'), \count($this->handles), $connector);
