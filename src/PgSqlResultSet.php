@@ -3,9 +3,11 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\FailureException;
 use Amp\Success;
 
-final class PgSqlResultSet implements ResultSet {
+final class PgSqlResultSet implements ResultSet
+{
     /** @var resource PostgreSQL result resource. */
     private $handle;
 
@@ -24,13 +26,14 @@ final class PgSqlResultSet implements ResultSet {
     /** @var string[] */
     private $fieldNames = [];
 
-    /** @var \Amp\Postgres\Internal\ArrayParser */
+    /** @var Internal\ArrayParser */
     private $parser;
 
     /**
      * @param resource $handle PostgreSQL result resource.
      */
-    public function __construct($handle) {
+    public function __construct($handle)
+    {
         $this->handle = $handle;
 
         $numFields = \pg_num_fields($this->handle);
@@ -45,14 +48,16 @@ final class PgSqlResultSet implements ResultSet {
     /**
      * Frees the result resource.
      */
-    public function __destruct() {
+    public function __destruct()
+    {
         \pg_free_result($this->handle);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function advance(int $type = self::FETCH_ASSOC): Promise {
+    public function advance(int $type = self::FETCH_ASSOC): Promise
+    {
         $this->currentRow = null;
         $this->type = $type;
 
@@ -66,7 +71,8 @@ final class PgSqlResultSet implements ResultSet {
     /**
      * {@inheritdoc}
      */
-    public function getCurrent() {
+    public function getCurrent()
+    {
         if ($this->currentRow !== null) {
             return $this->currentRow;
         }
@@ -120,9 +126,10 @@ final class PgSqlResultSet implements ResultSet {
      *
      * @return array|bool|float|int Cast value.
      *
-     * @throws \Amp\Postgres\ParseException
+     * @throws ParseException
      */
-    private function cast(int $column, string $value) {
+    private function cast(int $column, string $value)
+    {
         switch ($this->fieldTypes[$column]) {
             case 16: // bool
                 return $value === 't';
@@ -228,14 +235,16 @@ final class PgSqlResultSet implements ResultSet {
     /**
      * @return int Number of rows in the result set.
      */
-    public function numRows(): int {
+    public function numRows(): int
+    {
         return \pg_num_rows($this->handle);
     }
 
     /**
      * @return int Number of fields in each row.
      */
-    public function numFields(): int {
+    public function numFields(): int
+    {
         return \pg_num_fields($this->handle);
     }
 
@@ -246,7 +255,8 @@ final class PgSqlResultSet implements ResultSet {
      *
      * @throws \Error If the field number does not exist in the result.
      */
-    public function fieldName(int $fieldNum): string {
+    public function fieldName(int $fieldNum): string
+    {
         if (0 > $fieldNum || $this->numFields() <= $fieldNum) {
             throw new \Error(\sprintf('No field with index %d in result', $fieldNum));
         }
@@ -261,7 +271,8 @@ final class PgSqlResultSet implements ResultSet {
      *
      * @throws \Error If the field name does not exist in the result.
      */
-    public function fieldNum(string $fieldName): int {
+    public function fieldNum(string $fieldName): int
+    {
         $result = \pg_field_num($this->handle, $fieldName);
 
         if (-1 === $result) {

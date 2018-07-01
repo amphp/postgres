@@ -6,7 +6,8 @@ use Amp\Producer;
 use Amp\Promise;
 use pq;
 
-final class PqUnbufferedResultSet implements ResultSet, Operation {
+final class PqUnbufferedResultSet implements ResultSet
+{
     /** @var int */
     private $numCols;
 
@@ -19,14 +20,15 @@ final class PqUnbufferedResultSet implements ResultSet, Operation {
     /** @var int Next row fetch type. */
     private $type = self::FETCH_ASSOC;
 
-    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    /** @var Internal\ReferenceQueue */
     private $queue;
 
     /**
-     * @param callable(): \Amp\Promise $fetch Function to fetch next result row.
+     * @param callable():  $fetch Function to fetch next result row.
      * @param \pq\Result $result PostgreSQL result object.
      */
-    public function __construct(callable $fetch, pq\Result $result) {
+    public function __construct(callable $fetch, pq\Result $result)
+    {
         $this->numCols = $result->numCols;
         $this->queue = $queue = new Internal\ReferenceQueue;
 
@@ -46,7 +48,8 @@ final class PqUnbufferedResultSet implements ResultSet, Operation {
     /**
      * {@inheritdoc}
      */
-    public function advance(int $type = self::FETCH_ASSOC): Promise {
+    public function advance(int $type = self::FETCH_ASSOC): Promise
+    {
         $this->currentRow = null;
         $this->type = $type;
 
@@ -56,7 +59,8 @@ final class PqUnbufferedResultSet implements ResultSet, Operation {
     /**
      * {@inheritdoc}
      */
-    public function getCurrent() {
+    public function getCurrent()
+    {
         if ($this->currentRow !== null) {
             return $this->currentRow;
         }
@@ -79,14 +83,16 @@ final class PqUnbufferedResultSet implements ResultSet, Operation {
     /**
      * @return int Number of fields (columns) in each result set.
      */
-    public function numFields(): int {
+    public function numFields(): int
+    {
         return $this->numCols;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function onDestruct(callable $onComplete) {
+    public function onDestruct(callable $onComplete)
+    {
         $this->queue->onDestruct($onComplete);
     }
 }

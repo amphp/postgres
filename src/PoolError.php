@@ -2,5 +2,6 @@
 
 namespace Amp\Postgres;
 
-final class PoolError extends \Error {
+final class PoolError extends \Error
+{
 }

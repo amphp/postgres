@@ -14,7 +14,8 @@ REGEX;
  *
  * @return string SQL statement with Postgres-style placeholders
  */
-function parseNamedParams(string $sql, array &$names = null): string {
+function parseNamedParams(string $sql, array &$names = null): string
+{
     $names = [];
     return \preg_replace_callback(STATEMENT_PARAM_REGEX, function (array $matches) use (&$names) {
         static $index = 0, $unnamed = 0, $numbered = 1;
@@ -44,7 +45,8 @@ function parseNamedParams(string $sql, array &$names = null): string {
  *
  * @throws \Error If the $param array does not contain a key corresponding to a named parameter.
  */
-function replaceNamedParams(array $params, array $names): array {
+function replaceNamedParams(array $params, array $names): array
+{
     $values = [];
     foreach ($names as $index => $name) {
         if (!\array_key_exists($name, $params)) {

@@ -8,17 +8,21 @@ use Amp\Failure;
 use Amp\Loop;
 use Amp\NullCancellationToken;
 use Amp\Promise;
+use Amp\Sql\ConnectionConfig;
+use Amp\Sql\ConnectionException;
 use pq;
 
-final class PqConnection extends Connection {
+final class PqConnection extends Connection implements Link
+{
     /**
-     * @param string $connectionString
-     * @param \Amp\CancellationToken $token
+     * @param ConnectionConfig $connectionConfig
+     * @param CancellationToken $token
      *
-     * @return \Amp\Promise<\Amp\Postgres\PgSqlConnection>
+     * @return Promise<PqConnection>
      */
-    public static function connect(string $connectionString, CancellationToken $token = null): Promise {
-        $connectionString = \str_replace(";", " ", $connectionString);
+    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
+    {
+        $connectionString = \str_replace(";", " ", $connectionConfig->connectionString());
 
         try {
             $connection = new pq\Connection($connectionString, pq\Connection::ASYNC);
@@ -54,7 +58,7 @@ final class PqConnection extends Connection {
 
         $promise = $deferred->promise();
 
-        $token = $token ?? new NullCancellationToken;
+        $token = $token ?? new NullCancellationToken();
         $id = $token->subscribe([$deferred, "fail"]);
 
         $promise->onResolve(function () use ($poll, $await, $id, $token) {
@@ -69,7 +73,8 @@ final class PqConnection extends Connection {
     /**
      * @param \pq\Connection $handle
      */
-    public function __construct(pq\Connection $handle) {
+    public function __construct(pq\Connection $handle)
+    {
         parent::__construct(new PqHandle($handle));
     }
 }

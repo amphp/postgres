@@ -3,9 +3,12 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Operation;
+use Amp\Sql\Statement;
 
-final class PqStatement implements Statement, Operation {
-    /** @var \Amp\Postgres\PqHandle */
+final class PqStatement implements Statement, Operation
+{
+    /** @var @return PromisePqHandle */
     private $handle;
 
     /** @var string */
@@ -14,7 +17,7 @@ final class PqStatement implements Statement, Operation {
     /** @var string */
     private $sql;
 
-    /** @var \Amp\Postgres\Internal\ReferenceQueue */
+    /** @var @return PromiseInternal\ReferenceQueue */
     private $queue;
 
     /** @var array */
@@ -24,12 +27,13 @@ final class PqStatement implements Statement, Operation {
     private $lastUsedAt;
 
     /**
-     * @param \Amp\Postgres\PqHandle $handle
+     * @param @return PromisePqHandle $handle
      * @param string $name Statement name.
      * @param string $sql Original prepared SQL query.
      * @param string[] $params Parameter indices to parameter names.
      */
-    public function __construct(PqHandle $handle, string $name, string $sql, array $params) {
+    public function __construct(PqHandle $handle, string $name, string $sql, array $params)
+    {
         $this->handle = $handle;
         $this->name = $name;
         $this->params = $params;
@@ -38,34 +42,40 @@ final class PqStatement implements Statement, Operation {
         $this->lastUsedAt = \time();
     }
 
-    public function __destruct() {
+    public function __destruct()
+    {
         $this->handle->statementDeallocate($this->name);
         $this->queue->unreference();
     }
 
     /** {@inheritdoc} */
-    public function isAlive(): bool {
+    public function isAlive(): bool
+    {
         return $this->handle->isAlive();
     }
 
     /** {@inheritdoc} */
-    public function getQuery(): string {
+    public function getQuery(): string
+    {
         return $this->sql;
     }
 
     /** {@inheritdoc} */
-    public function lastUsedAt(): int {
+    public function lastUsedAt(): int
+    {
         return $this->lastUsedAt;
     }
 
     /** {@inheritdoc} */
-    public function execute(array $params = []): Promise {
+    public function execute(array $params = []): Promise
+    {
         $this->lastUsedAt = \time();
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
     }
 
     /** {@inheritdoc} */
-    public function onDestruct(callable $onDestruct) {
+    public function onDestruct(callable $onDestruct)
+    {
         $this->queue->onDestruct($onDestruct);
     }
 }
