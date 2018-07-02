@@ -75,6 +75,14 @@ final class Listener implements Iterator, Operation
     }
 
     /**
+     * @return bool
+     */
+    public function isListening(): bool
+    {
+        return $this->unlisten !== null;
+    }
+
+    /**
      * Unlistens from the channel. No more values will be emitted from this listener.
      *
      * @return Promise<\Amp\Sql\CommandResult>
@@ -87,7 +95,7 @@ final class Listener implements Iterator, Operation
             throw new \Error("Already unlistened on this channel");
         }
 
-        /** @var  $promise */
+        /** @var Promise $promise */
         $promise = ($this->unlisten)($this->channel);
         $this->unlisten = null;
         $promise->onResolve([$this->queue, "unreference"]);

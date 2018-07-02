@@ -6,6 +6,7 @@ use Amp\Promise;
 use Amp\Sql\Operation;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
+use function Amp\call;
 
 final class Transaction implements Handle, SqlTransaction
 {
@@ -17,6 +18,9 @@ final class Transaction implements Handle, SqlTransaction
 
     /** @var Internal\ReferenceQueue */
     private $queue;
+
+    /** @var Listener[] */
+    private $listeners = [];
 
     /**
      * @param Handle $handle
@@ -40,6 +44,15 @@ final class Transaction implements Handle, SqlTransaction
 
         $this->handle = $handle;
         $this->queue = new Internal\ReferenceQueue;
+
+        $listeners =& $this->listeners;
+        $this->queue->onDestruct(static function () use (&$listeners) {
+            foreach ($listeners as $listener) {
+                if ($listener->isListening()) {
+                    $listener->unlisten();
+                }
+            }
+        });
     }
 
     public function __destruct()
@@ -277,6 +290,26 @@ final class Transaction implements Handle, SqlTransaction
     public function releaseSavepoint(string $identifier): Promise
     {
         return $this->query("RELEASE SAVEPOINT " . $this->quoteName($identifier));
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * Listeners automatically unlisten when the transaction is committed or rolled back.
+     *
+     * @throws TransactionError If the transaction has been committed or rolled back.
+     */
+    public function listen(string $channel): Promise
+    {
+        if ($this->handle === null) {
+            throw new TransactionError("The transaction has been committed or rolled back");
+        }
+
+        return call(function () use ($channel) {
+            $listener = yield $this->handle->listen($channel);
+            $this->listeners[] = $listener;
+            return $listener;
+        });
     }
 
     /**
