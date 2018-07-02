@@ -5,11 +5,6 @@ namespace Amp\Postgres;
 interface Handle extends Executor
 {
     /**
-     * @return int Timestamp of last activity on the handle.
-     */
-    public function lastUsedAt(): int;
-
-    /**
      * Quotes (escapes) the given string for use as a string literal or identifier in a query. This method wraps the
      * string in single quotes, so additional quotes should not be added in the query.
      *
