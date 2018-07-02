@@ -5,6 +5,7 @@ namespace Amp\Postgres;
 use Amp\Promise;
 use Amp\Sql\Operation;
 use Amp\Sql\Transaction as SqlTransaction;
+use Amp\Sql\TransactionError;
 
 final class Transaction implements Handle, SqlTransaction
 {

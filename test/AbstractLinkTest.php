@@ -10,12 +10,12 @@ use Amp\Postgres\Listener;
 use Amp\Postgres\QueryExecutionError;
 use Amp\Postgres\ResultSet;
 use Amp\Postgres\Transaction;
-use Amp\Postgres\TransactionError;
 use Amp\Sql\CommandResult;
 use Amp\Sql\QueryError;
 use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
+use Amp\Sql\TransactionError;
 use PHPUnit\Framework\TestCase;
 
 abstract class AbstractLinkTest extends TestCase
