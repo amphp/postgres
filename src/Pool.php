@@ -6,6 +6,11 @@ use Amp\Coroutine;
 use Amp\Promise;
 use Amp\Sql\AbstractPool;
 use Amp\Sql\Connector;
+use Amp\Sql\Pool as SqlPool;
+use Amp\Sql\ResultSet as SqlResultSet;
+use Amp\Sql\Statement as SqlStatement;
+use Amp\Sql\StatementPool as SqlStatementPool;
+use Amp\Sql\Transaction as SqlTransaction;
 use function Amp\call;
 
 final class Pool extends AbstractPool implements Link
@@ -25,6 +30,28 @@ final class Pool extends AbstractPool implements Link
     protected function createDefaultConnector(): Connector
     {
         return connector();
+    }
+
+    protected function createStatement(SqlStatement $statement, callable $release): SqlStatement
+    {
+        return new PooledStatement($statement, $release);
+    }
+
+    protected function createStatementPool(SqlPool $pool, SqlStatement $statement, callable $prepare): SqlStatementPool
+    {
+        return new StatementPool($pool, $statement, $prepare);
+    }
+
+    protected function createTransaction(SqlTransaction $transaction, callable $release): SqlTransaction
+    {
+        \assert($transaction instanceof Transaction);
+        return new PooledTransaction($transaction, $release);
+    }
+
+    protected function createResultSet(SqlResultSet $resultSet, callable $release): SqlResultSet
+    {
+        \assert($resultSet instanceof ResultSet);
+        return new PooledResultSet($resultSet, $release);
     }
 
     /**
@@ -94,15 +121,13 @@ final class Pool extends AbstractPool implements Link
                 throw $exception;
             }
 
-            $listener->onDestruct(function () {
+            return new PooledListener($listener, function () {
                 if (--$this->listenerCount === 0) {
                     $connection = $this->listeningConnection;
                     $this->listeningConnection = null;
                     $this->push($connection);
                 }
             });
-
-            return $listener;
         });
     }
 }

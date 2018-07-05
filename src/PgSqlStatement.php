@@ -3,10 +3,9 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
-use Amp\Sql\Operation;
 use Amp\Sql\Statement;
 
-final class PgSqlStatement implements Statement, Operation
+final class PgSqlStatement implements Statement
 {
     /** @var PgSqlHandle */
     private $handle;
@@ -38,14 +37,12 @@ final class PgSqlStatement implements Statement, Operation
         $this->name = $name;
         $this->sql = $sql;
         $this->params = $params;
-        $this->queue = new Internal\ReferenceQueue;
         $this->lastUsedAt = \time();
     }
 
     public function __destruct()
     {
         $this->handle->statementDeallocate($this->name);
-        $this->queue->unreference();
     }
 
     /** {@inheritdoc} */
@@ -70,11 +67,5 @@ final class PgSqlStatement implements Statement, Operation
     public function execute(array $params = []): Promise
     {
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
-    }
-
-    /** {@inheritdoc} */
-    public function onDestruct(callable $onDestruct)
-    {
-        $this->queue->onDestruct($onDestruct);
     }
 }

@@ -20,19 +20,15 @@ final class PqUnbufferedResultSet implements ResultSet
     /** @var int Next row fetch type. */
     private $type = self::FETCH_ASSOC;
 
-    /** @var Internal\ReferenceQueue */
-    private $queue;
-
     /**
      * @param callable():  $fetch Function to fetch next result row.
      * @param \pq\Result $result PostgreSQL result object.
      */
-    public function __construct(callable $fetch, pq\Result $result)
+    public function __construct(callable $fetch, pq\Result $result, callable $release)
     {
         $this->numCols = $result->numCols;
-        $this->queue = $queue = new Internal\ReferenceQueue;
 
-        $this->producer = new Producer(static function (callable $emit) use ($queue, $result, $fetch) {
+        $this->producer = new Producer(static function (callable $emit) use ($release, $result, $fetch) {
             try {
                 do {
                     $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
@@ -40,7 +36,7 @@ final class PqUnbufferedResultSet implements ResultSet
                     $result = yield $fetch();
                 } while ($result instanceof pq\Result);
             } finally {
-                $queue->unreference();
+                $release();
             }
         });
     }
@@ -86,13 +82,5 @@ final class PqUnbufferedResultSet implements ResultSet
     public function numFields(): int
     {
         return $this->numCols;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function onDestruct(callable $onComplete)
-    {
-        $this->queue->onDestruct($onComplete);
     }
 }

@@ -189,7 +189,7 @@ final class PgSqlHandle implements Handle
      */
     public function isAlive(): bool
     {
-        return $this->handle !== null;
+        return \is_resource($this->handle);
     }
 
     /**
@@ -448,7 +448,7 @@ final class PgSqlHandle implements Handle
             }
 
             Loop::enable($this->poll);
-            return new Listener($emitter->iterate(), $channel, $this->unlisten);
+            return new ConnectionListener($emitter->iterate(), $channel, $this->unlisten);
         });
     }
 

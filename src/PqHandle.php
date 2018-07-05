@@ -238,8 +238,7 @@ final class PqHandle implements Handle
 
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
-                $result = new PqUnbufferedResultSet($this->fetch, $result);
-                $result->onDestruct($this->release);
+                $result = new PqUnbufferedResultSet($this->fetch, $result, $this->release);
                 return $result;
 
             case pq\Result::NONFATAL_ERROR:
@@ -452,7 +451,7 @@ final class PqHandle implements Handle
             }
 
             Loop::enable($this->poll);
-            return new Listener($emitter->iterate(), $channel, $this->unlisten);
+            return new ConnectionListener($emitter->iterate(), $channel, $this->unlisten);
         });
     }
 

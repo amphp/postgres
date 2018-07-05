@@ -3,10 +3,9 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
-use Amp\Sql\Operation;
 use Amp\Sql\Statement;
 
-final class PqStatement implements Statement, Operation
+final class PqStatement implements Statement
 {
     /** @var @return PromisePqHandle */
     private $handle;
@@ -17,9 +16,6 @@ final class PqStatement implements Statement, Operation
     /** @var string */
     private $sql;
 
-    /** @var @return PromiseInternal\ReferenceQueue */
-    private $queue;
-
     /** @var array */
     private $params;
 
@@ -27,7 +23,7 @@ final class PqStatement implements Statement, Operation
     private $lastUsedAt;
 
     /**
-     * @param @return PromisePqHandle $handle
+     * @param PqHandle $handle
      * @param string $name Statement name.
      * @param string $sql Original prepared SQL query.
      * @param string[] $params Parameter indices to parameter names.
@@ -38,14 +34,12 @@ final class PqStatement implements Statement, Operation
         $this->name = $name;
         $this->params = $params;
         $this->sql = $sql;
-        $this->queue = new Internal\ReferenceQueue;
         $this->lastUsedAt = \time();
     }
 
     public function __destruct()
     {
         $this->handle->statementDeallocate($this->name);
-        $this->queue->unreference();
     }
 
     /** {@inheritdoc} */
@@ -71,11 +65,5 @@ final class PqStatement implements Statement, Operation
     {
         $this->lastUsedAt = \time();
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
-    }
-
-    /** {@inheritdoc} */
-    public function onDestruct(callable $onDestruct)
-    {
-        $this->queue->onDestruct($onDestruct);
     }
 }

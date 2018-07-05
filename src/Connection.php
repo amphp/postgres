@@ -182,7 +182,7 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function transaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise
+    final public function transaction(int $isolation = ConnectionTransaction::ISOLATION_COMMITTED): Promise
     {
         if (! $this->handle) {
             throw new FailureException('Not connected');
@@ -190,19 +190,19 @@ abstract class Connection implements Link, Handle
 
         return call(function () use ($isolation) {
             switch ($isolation) {
-                case Transaction::ISOLATION_UNCOMMITTED:
+                case ConnectionTransaction::ISOLATION_UNCOMMITTED:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
                     break;
 
-                case Transaction::ISOLATION_COMMITTED:
+                case ConnectionTransaction::ISOLATION_COMMITTED:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
                     break;
 
-                case Transaction::ISOLATION_REPEATABLE:
+                case ConnectionTransaction::ISOLATION_REPEATABLE:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
                     break;
 
-                case Transaction::ISOLATION_SERIALIZABLE:
+                case ConnectionTransaction::ISOLATION_SERIALIZABLE:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
                     break;
 
@@ -212,9 +212,7 @@ abstract class Connection implements Link, Handle
 
             $this->busy = new Deferred;
 
-            $transaction = new Transaction($this->handle, $isolation);
-            $transaction->onDestruct($this->release);
-            return $transaction;
+            return new ConnectionTransaction($this->handle, $isolation, $this->release);
         });
     }
 
