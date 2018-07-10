@@ -47,13 +47,19 @@ function connect(SqlConnectionConfig $config): Promise
  * Create a pool using the global Connector instance.
  *
  * @param SqlConnectionConfig $config
- * @param int $maxConnections
+ * @param int                 $maxConnections
+ * @param int                 $idleTimeout
+ * @param bool                $resetConnections
  *
  * @return Pool
  */
-function pool(SqlConnectionConfig $config, int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS): Pool
-{
-    return new Pool($config, $maxConnections, connector());
+function pool(
+    SqlConnectionConfig $config,
+    int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS,
+    int $idleTimeout = SqlPool::DEFAULT_IDLE_TIMEOUT,
+    bool $resetConnections = true
+): Pool {
+    return new Pool($config, $maxConnections, $idleTimeout, $resetConnections, connector());
 }
 
 /**
@@ -114,7 +120,7 @@ function encode(array $array): string
                 }
 
                 $value = (string) $value;
-                // no break
+            // no break
 
             case "string":
                 return '"' . \str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';

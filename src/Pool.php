@@ -5,6 +5,7 @@ namespace Amp\Postgres;
 use Amp\Coroutine;
 use Amp\Promise;
 use Amp\Sql\AbstractPool;
+use Amp\Sql\ConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\ResultSet as SqlResultSet;
@@ -23,6 +24,23 @@ final class Pool extends AbstractPool implements Link
 
     /** @var bool */
     private $resetConnections = true;
+
+    /**
+     * @param ConnectionConfig $config
+     * @param int              $maxConnections
+     * @param int              $idleTimeout
+     * @param bool             $resetConnections True to automatically execute RESET ALL on a connection before use.
+     * @param Connector|null   $connector
+     */
+    public function __construct(
+        ConnectionConfig $config,
+        int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS,
+        int $idleTimeout = SqlPool::DEFAULT_IDLE_TIMEOUT,
+        bool $resetConnections = true,
+        Connector $connector = null
+    ) {
+        parent::__construct($config, $maxConnections, $idleTimeout, $connector);
+    }
 
     /**
      * @return Connector The Connector instance defined by the connector() function.
@@ -52,14 +70,6 @@ final class Pool extends AbstractPool implements Link
     {
         \assert($resultSet instanceof ResultSet);
         return new PooledResultSet($resultSet, $release);
-    }
-
-    /**
-     * @param bool $reset True to automatically execute RESET ALL on a connection before it is used by the pool.
-     */
-    public function resetConnections(bool $reset)
-    {
-        $this->resetConnections = $reset;
     }
 
     protected function pop(): \Generator

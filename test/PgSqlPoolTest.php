@@ -38,7 +38,7 @@ class PgSqlPoolTest extends AbstractLinkTest
                 return new Success(new PgSqlConnection($handle, \pg_socket($handle)));
             }));
 
-        $pool = new Pool(new ConnectionConfig('connection string'), \count($this->handles), $connector);
+        $pool = new Pool(new ConnectionConfig('connection string'), \count($this->handles), Pool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
         $handle = \reset($this->handles);
 
