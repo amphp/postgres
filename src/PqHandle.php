@@ -382,7 +382,7 @@ final class PqHandle implements Handle
 
         $modifiedSql = Internal\parseNamedParams($sql, $names);
 
-        $name = self::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
+        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
         if (isset($this->statements[$name])) {
             $storage = $this->statements[$name];

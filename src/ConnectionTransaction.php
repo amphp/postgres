@@ -7,7 +7,7 @@ use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
 use function Amp\call;
 
-final class ConnectionTransaction implements Handle, Transaction
+final class ConnectionTransaction implements Transaction
 {
     /** @var Handle|null */
     private $handle;
@@ -15,11 +15,11 @@ final class ConnectionTransaction implements Handle, Transaction
     /** @var int */
     private $isolation;
 
-    /** @var Internal\ReferenceQueue */
-    private $queue;
+    /** @var callable */
+    private $release;
 
-    /** @var ConnectionListener[] */
-    private $listeners = [];
+    /** @var int */
+    private $refCount = 1;
 
     /**
      * @param Handle $handle
@@ -43,22 +43,19 @@ final class ConnectionTransaction implements Handle, Transaction
         }
 
         $this->handle = $handle;
-        $this->queue = new Internal\ReferenceQueue;
 
-        $listeners =& $this->listeners;
-        $this->queue->onDestruct(static function () use (&$listeners) {
-            foreach ($listeners as $listener) {
-                if ($listener->isListening()) {
-                    $listener->unlisten();
-                }
+        $refCount =& $this->refCount;
+        $this->release = static function () use (&$refCount, $release) {
+            if (--$refCount === 0) {
+                $release();
             }
-        });
+        };
     }
 
     public function __destruct()
     {
         if ($this->handle && $this->handle->isAlive()) {
-            $this->rollback(); // Invokes $this->queue->complete().
+            $this->rollback(); // Invokes $this->release callback.
         }
     }
 
@@ -78,7 +75,7 @@ final class ConnectionTransaction implements Handle, Transaction
     public function close()
     {
         if ($this->handle) {
-            $this->commit(); // Invokes $this->queue->unreference().
+            $this->commit(); // Invokes $this->release callback.
         }
     }
 
@@ -117,20 +114,16 @@ final class ConnectionTransaction implements Handle, Transaction
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        $this->queue->reference();
+        return call(function () use ($sql) {
+            $result = yield $this->handle->query($sql);
 
-        $promise = $this->handle->query($sql);
-
-        $promise->onResolve(function ($exception, $result) {
-            if ($result instanceof Operation) {
-                $result->onDestruct([$this->queue, "unreference"]);
-                return;
+            if ($result instanceof ResultSet) {
+                ++$this->refCount;
+                return new PooledResultSet($result, $this->release);
             }
 
-            $this->queue->unreference();
+            return $result;
         });
-
-        return $promise;
     }
 
     /**
@@ -144,20 +137,10 @@ final class ConnectionTransaction implements Handle, Transaction
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        $this->queue->reference();
-
-        $promise = $this->handle->prepare($sql);
-
-        $promise->onResolve(function ($exception, $statement) {
-            if ($statement instanceof Operation) {
-                $statement->onDestruct([$this->queue, "unreference"]);
-                return;
-            }
-
-            $this->queue->unreference();
+        return call(function () use ($sql) {
+            $statement = yield $this->handle->query($sql);
+            return new PooledStatement($statement, $this->release);
         });
-
-        return $promise;
     }
 
     /**
@@ -171,20 +154,16 @@ final class ConnectionTransaction implements Handle, Transaction
             throw new TransactionError("The transaction has been committed or rolled back");
         }
 
-        $this->queue->reference();
+        return call(function () use ($sql, $params) {
+            $result = yield $this->handle->execute($sql, $params);
 
-        $promise = $this->handle->execute($sql, $params);
-
-        $promise->onResolve(function ($exception, $result) {
-            if ($result instanceof Operation) {
-                $result->onDestruct([$this->queue, "unreference"]);
-                return;
+            if ($result instanceof ResultSet) {
+                ++$this->refCount;
+                return new PooledResultSet($result, $this->release);
             }
 
-            $this->queue->unreference();
+            return $result;
         });
-
-        return $promise;
     }
 
 
@@ -217,7 +196,7 @@ final class ConnectionTransaction implements Handle, Transaction
 
         $promise = $this->handle->query("COMMIT");
         $this->handle = null;
-        $promise->onResolve([$this->queue, "unreference"]);
+        $promise->onResolve($this->release);
 
         return $promise;
     }
@@ -237,7 +216,7 @@ final class ConnectionTransaction implements Handle, Transaction
 
         $promise = $this->handle->query("ROLLBACK");
         $this->handle = null;
-        $promise->onResolve([$this->queue, "unreference"]);
+        $promise->onResolve($this->release);
 
         return $promise;
     }
@@ -282,26 +261,6 @@ final class ConnectionTransaction implements Handle, Transaction
     public function releaseSavepoint(string $identifier): Promise
     {
         return $this->query("RELEASE SAVEPOINT " . $this->quoteName($identifier));
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * Listeners automatically unlisten when the transaction is committed or rolled back.
-     *
-     * @throws TransactionError If the transaction has been committed or rolled back.
-     */
-    public function listen(string $channel): Promise
-    {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
-
-        return call(function () use ($channel) {
-            $listener = yield $this->handle->listen($channel);
-            $this->listeners[] = $listener;
-            return $listener;
-        });
     }
 
     /**

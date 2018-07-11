@@ -9,6 +9,7 @@ use Amp\Promise;
 use Amp\Sql\ConnectionConfig;
 use Amp\Sql\FailureException;
 use Amp\Sql\Link;
+use Amp\Sql\Transaction;
 use function Amp\call;
 
 abstract class Connection implements Link, Handle
@@ -182,7 +183,7 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function transaction(int $isolation = ConnectionTransaction::ISOLATION_COMMITTED): Promise
+    final public function transaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise
     {
         if (! $this->handle) {
             throw new FailureException('Not connected');
@@ -190,19 +191,19 @@ abstract class Connection implements Link, Handle
 
         return call(function () use ($isolation) {
             switch ($isolation) {
-                case ConnectionTransaction::ISOLATION_UNCOMMITTED:
+                case Transaction::ISOLATION_UNCOMMITTED:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
                     break;
 
-                case ConnectionTransaction::ISOLATION_COMMITTED:
+                case Transaction::ISOLATION_COMMITTED:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
                     break;
 
-                case ConnectionTransaction::ISOLATION_REPEATABLE:
+                case Transaction::ISOLATION_REPEATABLE:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
                     break;
 
-                case ConnectionTransaction::ISOLATION_SERIALIZABLE:
+                case Transaction::ISOLATION_SERIALIZABLE:
                     yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
                     break;
 

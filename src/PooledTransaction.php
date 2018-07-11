@@ -74,15 +74,6 @@ final class PooledTransaction implements Transaction
         return $this->transaction->notify($channel, $payload);
     }
 
-    public function listen(string $channel): Promise
-    {
-        if (!$this->transaction) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
-
-        return $this->transaction->listen($channel);
-    }
-
     public function isAlive(): bool
     {
         return $this->transaction && $this->transaction->isAlive();
