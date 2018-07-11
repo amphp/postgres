@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-class PooledResultSet implements ResultSet
+final class PooledResultSet implements ResultSet
 {
     /** @var ResultSet */
     private $result;

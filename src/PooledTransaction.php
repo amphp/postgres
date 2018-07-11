@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Promise;
 use Amp\Sql\TransactionError;
 
-class PooledTransaction implements Transaction
+final class PooledTransaction implements Transaction
 {
     /** @var Transaction|null */
     private $transaction;

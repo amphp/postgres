@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Promise;
 
-class PooledListener implements Listener
+final class PooledListener implements Listener
 {
     /** @var Listener */
     private $listener;

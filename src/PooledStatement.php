@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Promise;
 use Amp\Sql\Statement;
 
-class PooledStatement implements Statement
+final class PooledStatement implements Statement
 {
     /** @var Statement */
     private $statement;
