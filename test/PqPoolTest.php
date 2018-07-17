@@ -40,7 +40,7 @@ class PqPoolTest extends AbstractLinkTest
                 return new Success(new PqConnection($handle));
             }));
 
-        $pool = new Pool(new ConnectionConfig('connection string'), \count($this->handles), Pool::DEFAULT_IDLE_TIMEOUT, true, $connector);
+        $pool = new Pool(new ConnectionConfig('localhost'), \count($this->handles), Pool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
         $handle = \reset($this->handles);
 

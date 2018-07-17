@@ -20,7 +20,7 @@ class FunctionsTest extends TestCase
     public function testConnect()
     {
         Loop::run(function () {
-            $connection = yield connect(new ConnectionConfig('host=localhost user=postgres'));
+            $connection = yield connect(ConnectionConfig::fromString('host=localhost user=postgres'));
             $this->assertInstanceOf(Connection::class, $connection);
         });
     }
@@ -31,27 +31,7 @@ class FunctionsTest extends TestCase
     public function testConnectInvalidUser()
     {
         Loop::run(function () {
-            $connection = yield connect(new ConnectionConfig('host=localhost user=invalid'));
-        });
-    }
-
-    /**
-     * @expectedException \Amp\Sql\FailureException
-     */
-    public function testConnectInvalidConnectionString()
-    {
-        Loop::run(function () {
-            $connection = yield connect(new ConnectionConfig('invalid connection string'));
-        });
-    }
-
-    /**
-     * @expectedException \Amp\Sql\FailureException
-     */
-    public function testConnectInvalidHost()
-    {
-        Loop::run(function () {
-            $connection = yield connect(new ConnectionConfig('hostaddr=invalid.host user=postgres'));
+            $connection = yield connect(ConnectionConfig::fromString('host=localhost user=invalid'));
         });
     }
 }

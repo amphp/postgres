@@ -2,35 +2,21 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
+use Amp\Sql\PooledResultSet as SqlPooledResultSet;
 
-final class PooledResultSet implements ResultSet
+final class PooledResultSet extends SqlPooledResultSet implements ResultSet
 {
     /** @var ResultSet */
     private $result;
 
-    /** @var callable|null */
-    private $release;
-
+    /**
+     * @param ResultSet $result
+     * @param callable  $release
+     */
     public function __construct(ResultSet $result, callable $release)
     {
+        parent::__construct($result, $release);
         $this->result = $result;
-        $this->release = $release;
-    }
-
-    public function __destruct()
-    {
-        ($this->release)();
-    }
-
-    public function advance(int $type = self::FETCH_ASSOC): Promise
-    {
-        return $this->result->advance($type);
-    }
-
-    public function getCurrent()
-    {
-        return $this->result->getCurrent();
     }
 
     public function numFields(): int

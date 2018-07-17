@@ -22,7 +22,7 @@ final class PqConnection extends Connection implements Link
      */
     public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
     {
-        $connectionString = \str_replace(";", " ", $connectionConfig->connectionString());
+        $connectionString = \str_replace(";", " ", $connectionConfig->getConnectionString());
 
         try {
             $connection = new pq\Connection($connectionString, pq\Connection::ASYNC);

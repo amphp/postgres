@@ -17,7 +17,7 @@ final class PgSqlConnection extends Connection implements Link
     use CallableMaker;
 
     /**
-     * @param string $connectionString
+     * @param ConnectionConfig $connectionConfig
      * @param CancellationToken $token
      *
      * @return Promise<PgSqlConnection>
@@ -31,7 +31,7 @@ final class PgSqlConnection extends Connection implements Link
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
         } // @codeCoverageIgnoreEnd
 
-        $connectionString = \str_replace(";", " ", $connectionConfig->connectionString());
+        $connectionString = \str_replace(";", " ", $connectionConfig->getConnectionString());
 
         if (!$connection = @\pg_connect($connectionString, \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
             return new Failure(new ConnectionException("Failed to create connection resource"));
