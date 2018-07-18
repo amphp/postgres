@@ -8,7 +8,6 @@ use Amp\Failure;
 use Amp\Loop;
 use Amp\NullCancellationToken;
 use Amp\Promise;
-use Amp\Sql\ConnectionConfig;
 use Amp\Sql\ConnectionException;
 use pq;
 

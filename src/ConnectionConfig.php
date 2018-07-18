@@ -8,6 +8,9 @@ final class ConnectionConfig extends SqlConnectionConfig
 {
     const DEFAULT_PORT = 5432;
 
+    /** @var string|null */
+    private $string;
+
     public static function fromString(string $connectionString): self
     {
         $parts = self::parseConnectionString($connectionString);
@@ -33,5 +36,42 @@ final class ConnectionConfig extends SqlConnectionConfig
         string $database = null
     ) {
         parent::__construct($host, $port, $user, $password, $database);
+    }
+
+    public function __clone()
+    {
+        $this->string = null;
+    }
+
+    /**
+     * @return string Connection string used with ext-pgsql and pecl-pq.
+     */
+    public function getConnectionString(): string
+    {
+        if ($this->string !== null) {
+            return $this->string;
+        }
+
+        $chunks = [
+            "host=" . $this->getHost(),
+            "port=" . $this->getPort(),
+        ];
+
+        $user = $this->getUser();
+        if ($user !== null) {
+            $chunks[] = "user=" . $user;
+        }
+
+        $password = $this->getPassword();
+        if ($password !== null) {
+            $chunks[] = "password=" . $password;
+        }
+
+        $database = $this->getDatabase();
+        if ($database !== null) {
+            $chunks[] = "dbname=" . $database;
+        }
+
+        return $this->string = \implode(" ", $chunks);
     }
 }

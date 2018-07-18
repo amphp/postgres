@@ -6,7 +6,6 @@ use Amp\CallableMaker;
 use Amp\CancellationToken;
 use Amp\Deferred;
 use Amp\Promise;
-use Amp\Sql\ConnectionConfig;
 use Amp\Sql\FailureException;
 use Amp\Sql\Link;
 use Amp\Sql\Transaction;
@@ -41,6 +40,7 @@ abstract class Connection implements Link, Handle
         $this->handle = $handle;
         $this->release = $this->callableFromInstanceMethod("release");
     }
+
 
     /**
      * {@inheritdoc}
