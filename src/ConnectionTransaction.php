@@ -138,7 +138,7 @@ final class ConnectionTransaction implements Transaction
         }
 
         return call(function () use ($sql) {
-            $statement = yield $this->handle->query($sql);
+            $statement = yield $this->handle->prepare($sql);
             return new PooledStatement($statement, $this->release);
         });
     }

@@ -593,7 +593,14 @@ abstract class AbstractLinkTest extends TestCase
 
             yield $transaction->createSavepoint('test');
 
+            $statement = yield $transaction->prepare("SELECT * FROM test WHERE domain=:domain");
+            $result = yield $statement->execute(['domain' => $data[0]]);
+
+            $this->assertInstanceOf(ResultSet::class, $result);
+
             $result = yield $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
+
+            $this->assertInstanceOf(ResultSet::class, $result);
 
             yield $transaction->rollbackTo('test');
 
