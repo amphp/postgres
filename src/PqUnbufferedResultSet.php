@@ -75,7 +75,7 @@ final class PqUnbufferedResultSet implements ResultSet
     /**
      * @return int Number of fields (columns) in each result set.
      */
-    public function getNumFields(): int
+    public function getFieldCount(): int
     {
         return $this->numCols;
     }

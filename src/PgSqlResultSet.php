@@ -239,7 +239,7 @@ final class PgSqlResultSet implements ResultSet
     /**
      * @return int Number of fields in each row.
      */
-    public function getNumFields(): int
+    public function getFieldCount(): int
     {
         return \pg_num_fields($this->handle);
     }
@@ -251,9 +251,9 @@ final class PgSqlResultSet implements ResultSet
      *
      * @throws \Error If the field number does not exist in the result.
      */
-    public function fieldName(int $fieldNum): string
+    public function getFieldName(int $fieldNum): string
     {
-        if (0 > $fieldNum || $this->getNumFields() <= $fieldNum) {
+        if (0 > $fieldNum || $this->getFieldCount() <= $fieldNum) {
             throw new \Error(\sprintf('No field with index %d in result', $fieldNum));
         }
 
@@ -267,7 +267,7 @@ final class PgSqlResultSet implements ResultSet
      *
      * @throws \Error If the field name does not exist in the result.
      */
-    public function fieldNum(string $fieldName): int
+    public function getFieldIndex(string $fieldName): int
     {
         $result = \pg_field_num($this->handle, $fieldName);
 

@@ -19,8 +19,8 @@ final class PooledResultSet extends SqlPooledResultSet implements ResultSet
         $this->result = $result;
     }
 
-    public function getNumFields(): int
+    public function getFieldCount(): int
     {
-        return $this->result->getNumFields();
+        return $this->result->getFieldCount();
     }
 }
