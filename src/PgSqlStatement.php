@@ -16,9 +16,6 @@ final class PgSqlStatement implements Statement
     /** @var string */
     private $sql;
 
-    /** @var Internal\ReferenceQueue */
-    private $queue;
-
     /** @var string[] */
     private $params;
 
