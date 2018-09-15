@@ -70,7 +70,7 @@ final class PqBufferedResultSet implements ResultSet
         return $this->result->numRows;
     }
 
-    public function getNumFields(): int
+    public function getFieldCount(): int
     {
         return $this->result->numCols;
     }

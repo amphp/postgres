@@ -56,7 +56,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             $data = $this->getData();
 
@@ -144,7 +144,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent(SqlResultSet::FETCH_ARRAY);
@@ -174,7 +174,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent(SqlResultSet::FETCH_ARRAY);
@@ -204,7 +204,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent(SqlResultSet::FETCH_ARRAY);
@@ -234,7 +234,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent(SqlResultSet::FETCH_ARRAY);
@@ -285,7 +285,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent();
@@ -322,7 +322,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent();
@@ -337,7 +337,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent();
@@ -383,7 +383,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent();
@@ -409,7 +409,7 @@ abstract class AbstractLinkTest extends TestCase
 
             $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getNumFields());
+            $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
                 $row = $result->getCurrent();

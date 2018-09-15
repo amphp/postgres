@@ -11,5 +11,5 @@ interface ResultSet extends SqlResultSet
      *
      * @return int
      */
-    public function getNumFields(): int;
+    public function getFieldCount(): int;
 }
