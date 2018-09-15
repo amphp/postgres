@@ -83,8 +83,8 @@ abstract class AbstractLinkTest extends TestCase
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(SqlResultSet::FETCH_OBJECT); ++$i) {
-                $row = $result->getCurrent();
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent(SqlResultSet::FETCH_OBJECT);
                 $this->assertSame($data[$i][0], $row->domain);
                 $this->assertSame($data[$i][1], $row->tld);
             }
