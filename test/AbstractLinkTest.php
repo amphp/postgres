@@ -581,7 +581,7 @@ abstract class AbstractLinkTest extends TestCase
             $isolation = SqlTransaction::ISOLATION_COMMITTED;
 
             /** @var \Amp\Postgres\Transaction $transaction */
-            $transaction = yield $this->connection->transaction($isolation);
+            $transaction = yield $this->connection->beginTransaction($isolation);
 
             $this->assertInstanceOf(Transaction::class, $transaction);
 
