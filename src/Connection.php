@@ -213,7 +213,7 @@ abstract class Connection implements Link, Handle
 
             $this->busy = new Deferred;
 
-            return new ConnectionTransaction($this->handle, $isolation, $this->release);
+            return new ConnectionTransaction($this->handle, $this->release, $isolation);
         });
     }
 

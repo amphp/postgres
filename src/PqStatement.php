@@ -55,7 +55,7 @@ final class PqStatement implements Statement
     }
 
     /** {@inheritdoc} */
-    public function lastUsedAt(): int
+    public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }

@@ -28,7 +28,7 @@ final class PgSqlCommandResult implements CommandResult
     /**
      * @return int Number of rows affected by the INSERT, UPDATE, or DELETE query.
      */
-    public function affectedRows(): int
+    public function getAffectedRowCount(): int
     {
         return \pg_affected_rows($this->handle);
     }
@@ -36,7 +36,7 @@ final class PgSqlCommandResult implements CommandResult
     /**
      * @return string
      */
-    public function lastOid(): string
+    public function getLastOid(): string
     {
         return (string) \pg_last_oid($this->handle);
     }

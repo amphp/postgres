@@ -17,9 +17,6 @@ final class PqBufferedResultSet implements ResultSet
     /** @var mixed Last row emitted. */
     private $currentRow;
 
-    /** @var int Next row fetch type. */
-    private $type = self::FETCH_ASSOC;
-
     /**
      * @param pq\Result $result PostgreSQL result object.
      */
@@ -32,10 +29,9 @@ final class PqBufferedResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function advance(int $type = self::FETCH_ASSOC): Promise
+    public function advance(): Promise
     {
         $this->currentRow = null;
-        $this->type = $type;
 
         if (++$this->position > $this->result->numRows) {
             return new Success(false);
@@ -47,7 +43,7 @@ final class PqBufferedResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function getCurrent()
+    public function getCurrent(int $type = self::FETCH_ASSOC)
     {
         if ($this->currentRow !== null) {
             return $this->currentRow;
@@ -57,7 +53,7 @@ final class PqBufferedResultSet implements ResultSet
             throw new \Error("No more rows remain in the result set");
         }
 
-        switch ($this->type) {
+        switch ($type) {
             case self::FETCH_ASSOC:
                 return $this->currentRow = $this->result->fetchRow(pq\Result::FETCH_ASSOC);
             case self::FETCH_ARRAY:
@@ -69,12 +65,12 @@ final class PqBufferedResultSet implements ResultSet
         }
     }
 
-    public function numRows(): int
+    public function getNumRows(): int
     {
         return $this->result->numRows;
     }
 
-    public function numFields(): int
+    public function getNumFields(): int
     {
         return $this->result->numCols;
     }

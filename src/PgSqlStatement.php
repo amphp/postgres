@@ -16,9 +16,6 @@ final class PgSqlStatement implements Statement
     /** @var string */
     private $sql;
 
-    /** @var Internal\ReferenceQueue */
-    private $queue;
-
     /** @var string[] */
     private $params;
 
@@ -58,7 +55,7 @@ final class PgSqlStatement implements Statement
     }
 
     /** {@inheritdoc} */
-    public function lastUsedAt(): int
+    public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }

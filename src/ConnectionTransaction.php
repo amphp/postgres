@@ -23,12 +23,12 @@ final class ConnectionTransaction implements Transaction
 
     /**
      * @param Handle $handle
-     * @param int $isolation
      * @param callable $release
+     * @param int $isolation
      *
      * @throws \Error If the isolation level is invalid.
      */
-    public function __construct(Handle $handle, int $isolation = SqlTransaction::ISOLATION_COMMITTED, callable $release)
+    public function __construct(Handle $handle, callable $release, int $isolation = SqlTransaction::ISOLATION_COMMITTED)
     {
         switch ($isolation) {
             case SqlTransaction::ISOLATION_UNCOMMITTED:
@@ -62,9 +62,9 @@ final class ConnectionTransaction implements Transaction
     /**
      * {@inheritdoc}
      */
-    public function lastUsedAt(): int
+    public function getLastUsedAt(): int
     {
-        return $this->handle->lastUsedAt();
+        return $this->handle->getLastUsedAt();
     }
 
     /**
