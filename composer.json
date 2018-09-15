@@ -19,6 +19,7 @@
         }
     ],
     "require": {
+        "php": "^7.0",
         "amphp/amp": "^2",
         "amphp/sql": "dev-master"
     },
