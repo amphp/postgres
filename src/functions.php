@@ -6,7 +6,6 @@ use Amp\Loop;
 use Amp\Promise;
 use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
 use Amp\Sql\Connector;
-use Amp\Sql\Pool as SqlPool;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class;
 
@@ -55,8 +54,8 @@ function connect(SqlConnectionConfig $config): Promise
  */
 function pool(
     SqlConnectionConfig $config,
-    int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS,
-    int $idleTimeout = SqlPool::DEFAULT_IDLE_TIMEOUT,
+    int $maxConnections = Pool::DEFAULT_MAX_CONNECTIONS,
+    int $idleTimeout = Pool::DEFAULT_IDLE_TIMEOUT,
     bool $resetConnections = true
 ): Pool {
     return new Pool($config, $maxConnections, $idleTimeout, $resetConnections, connector());
