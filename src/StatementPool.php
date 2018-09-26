@@ -2,8 +2,11 @@
 
 namespace Amp\Postgres;
 
+use Amp\Promise;
 use Amp\Sql\ResultSet as SqlResultSet;
+use Amp\Sql\Statement;
 use Amp\Sql\StatementPool as SqlStatementPool;
+use Amp\Success;
 
 final class StatementPool extends SqlStatementPool
 {
@@ -11,5 +14,10 @@ final class StatementPool extends SqlStatementPool
     {
         \assert($resultSet instanceof ResultSet);
         return new PooledResultSet($resultSet, $release);
+    }
+
+    protected function prepare(Statement $statement): Promise
+    {
+        return new Success($statement); // Nothing to be done.
     }
 }
