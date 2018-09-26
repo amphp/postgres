@@ -55,13 +55,13 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function lastUsedAt(): int
+    final public function getLastUsedAt(): int
     {
         if (! $this->handle) {
             throw new FailureException('Not connected');
         }
 
-        return $this->handle->lastUsedAt();
+        return $this->handle->getLastUsedAt();
     }
 
     /**
@@ -183,7 +183,7 @@ abstract class Connection implements Link, Handle
      *
      * @throws FailureException
      */
-    final public function transaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise
+    final public function beginTransaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise
     {
         if (! $this->handle) {
             throw new FailureException('Not connected');

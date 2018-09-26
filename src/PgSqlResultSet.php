@@ -17,9 +17,6 @@ final class PgSqlResultSet implements ResultSet
     /** @var mixed Last row emitted. */
     private $currentRow;
 
-    /** @var int Next row fetch type. */
-    private $type = self::FETCH_ASSOC;
-
     /** @var int[] */
     private $fieldTypes = [];
 
@@ -56,10 +53,9 @@ final class PgSqlResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function advance(int $type = self::FETCH_ASSOC): Promise
+    public function advance(): Promise
     {
         $this->currentRow = null;
-        $this->type = $type;
 
         if (++$this->position > \pg_num_rows($this->handle)) {
             return new Success(false);
@@ -71,7 +67,7 @@ final class PgSqlResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function getCurrent()
+    public function getCurrent(int $type = self::FETCH_ASSOC)
     {
         if ($this->currentRow !== null) {
             return $this->currentRow;
@@ -98,7 +94,7 @@ final class PgSqlResultSet implements ResultSet
             $result[$column] = $this->cast($column, $result[$column]);
         }
 
-        if ($this->type === self::FETCH_ARRAY) {
+        if ($type === self::FETCH_ARRAY) {
             return $this->currentRow = $result;
         }
 
@@ -107,11 +103,11 @@ final class PgSqlResultSet implements ResultSet
             $assoc[$name] = $result[$index];
         }
 
-        if ($this->type === self::FETCH_ASSOC) {
+        if ($type === self::FETCH_ASSOC) {
             return $this->currentRow = $assoc;
         }
 
-        if ($this->type === self::FETCH_OBJECT) {
+        if ($type === self::FETCH_OBJECT) {
             return $this->currentRow = (object) $assoc;
         }
 

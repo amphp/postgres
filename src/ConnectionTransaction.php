@@ -62,9 +62,9 @@ final class ConnectionTransaction implements Transaction
     /**
      * {@inheritdoc}
      */
-    public function lastUsedAt(): int
+    public function getLastUsedAt(): int
     {
-        return $this->handle->lastUsedAt();
+        return $this->handle->getLastUsedAt();
     }
 
     /**

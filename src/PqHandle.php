@@ -150,7 +150,7 @@ final class PqHandle implements Handle
     /**
      * {@inheritdoc}
      */
-    public function lastUsedAt(): int
+    public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }

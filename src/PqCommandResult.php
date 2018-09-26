@@ -21,7 +21,7 @@ final class PqCommandResult implements CommandResult
     /**
      * @return int Number of rows affected by the INSERT, UPDATE, or DELETE query.
      */
-    public function affectedRows(): int
+    public function getAffectedRowCount(): int
     {
         return $this->result->affectedRows;
     }

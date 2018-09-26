@@ -17,9 +17,6 @@ final class PqUnbufferedResultSet implements ResultSet
     /** @var array|object Last row emitted. */
     private $currentRow;
 
-    /** @var int Next row fetch type. */
-    private $type = self::FETCH_ASSOC;
-
     /**
      * @param callable():  $fetch Function to fetch next result row.
      * @param \pq\Result $result PostgreSQL result object.
@@ -44,10 +41,9 @@ final class PqUnbufferedResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function advance(int $type = self::FETCH_ASSOC): Promise
+    public function advance(): Promise
     {
         $this->currentRow = null;
-        $this->type = $type;
 
         return $this->producer->advance();
     }
@@ -55,7 +51,7 @@ final class PqUnbufferedResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function getCurrent()
+    public function getCurrent(int $type = self::FETCH_ASSOC)
     {
         if ($this->currentRow !== null) {
             return $this->currentRow;
@@ -64,7 +60,7 @@ final class PqUnbufferedResultSet implements ResultSet
         /** @var \pq\Result $result */
         $result = $this->producer->getCurrent();
 
-        switch ($this->type) {
+        switch ($type) {
             case self::FETCH_ASSOC:
                 return $this->currentRow = $result->fetchRow(pq\Result::FETCH_ASSOC);
             case self::FETCH_ARRAY:
