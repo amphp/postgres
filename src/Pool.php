@@ -34,8 +34,8 @@ final class Pool extends AbstractPool implements Link
      */
     public function __construct(
         ConnectionConfig $config,
-        int $maxConnections = SqlPool::DEFAULT_MAX_CONNECTIONS,
-        int $idleTimeout = SqlPool::DEFAULT_IDLE_TIMEOUT,
+        int $maxConnections = self::DEFAULT_MAX_CONNECTIONS,
+        int $idleTimeout = self::DEFAULT_IDLE_TIMEOUT,
         bool $resetConnections = true,
         Connector $connector = null
     ) {
