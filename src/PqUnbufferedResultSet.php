@@ -51,25 +51,16 @@ final class PqUnbufferedResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function getCurrent(int $type = self::FETCH_ASSOC)
+    public function getCurrent(): array
     {
         if ($this->currentRow !== null) {
             return $this->currentRow;
         }
 
-        /** @var \pq\Result $result */
         $result = $this->producer->getCurrent();
+        \assert($result instanceof \pq\Result);
 
-        switch ($type) {
-            case self::FETCH_ASSOC:
-                return $this->currentRow = $result->fetchRow(pq\Result::FETCH_ASSOC);
-            case self::FETCH_ARRAY:
-                return $this->currentRow = $result->fetchRow(pq\Result::FETCH_ARRAY);
-            case self::FETCH_OBJECT:
-                return $this->currentRow = $result->fetchRow(pq\Result::FETCH_OBJECT);
-            default:
-                throw new \Error("Invalid result fetch type");
-        }
+        return $this->currentRow = $result->fetchRow(pq\Result::FETCH_ASSOC);
     }
 
     /**

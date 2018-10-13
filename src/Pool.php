@@ -4,17 +4,17 @@ namespace Amp\Postgres;
 
 use Amp\Coroutine;
 use Amp\Promise;
-use Amp\Sql\AbstractPool;
+use Amp\Sql\Common\ConnectionPool;
+use Amp\Sql\Common\StatementPool as SqlStatementPool;
 use Amp\Sql\ConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement as SqlStatement;
-use Amp\Sql\StatementPool as SqlStatementPool;
 use Amp\Sql\Transaction as SqlTransaction;
 use function Amp\call;
 
-final class Pool extends AbstractPool implements Link
+final class Pool extends ConnectionPool implements Link
 {
     /** @var Connection|Promise|null Connection used for notification listening. */
     private $listeningConnection;

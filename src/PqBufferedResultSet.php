@@ -43,7 +43,7 @@ final class PqBufferedResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function getCurrent(int $type = self::FETCH_ASSOC)
+    public function getCurrent(): array
     {
         if ($this->currentRow !== null) {
             return $this->currentRow;
@@ -53,16 +53,7 @@ final class PqBufferedResultSet implements ResultSet
             throw new \Error("No more rows remain in the result set");
         }
 
-        switch ($type) {
-            case self::FETCH_ASSOC:
-                return $this->currentRow = $this->result->fetchRow(pq\Result::FETCH_ASSOC);
-            case self::FETCH_ARRAY:
-                return $this->currentRow = $this->result->fetchRow(pq\Result::FETCH_ARRAY);
-            case self::FETCH_OBJECT:
-                return $this->currentRow = $this->result->fetchRow(pq\Result::FETCH_OBJECT);
-            default:
-                throw new \Error("Invalid result fetch type");
-        }
+        return $this->currentRow = $this->result->fetchRow(pq\Result::FETCH_ASSOC);
     }
 
     public function getNumRows(): int

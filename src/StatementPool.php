@@ -3,9 +3,9 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Common\StatementPool as SqlStatementPool;
 use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement;
-use Amp\Sql\StatementPool as SqlStatementPool;
 use Amp\Success;
 
 final class StatementPool extends SqlStatementPool

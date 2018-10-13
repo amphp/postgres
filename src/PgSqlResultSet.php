@@ -67,7 +67,7 @@ final class PgSqlResultSet implements ResultSet
     /**
      * {@inheritdoc}
      */
-    public function getCurrent(int $type = self::FETCH_ASSOC)
+    public function getCurrent(): array
     {
         if ($this->currentRow !== null) {
             return $this->currentRow;
@@ -94,24 +94,12 @@ final class PgSqlResultSet implements ResultSet
             $result[$column] = $this->cast($column, $result[$column]);
         }
 
-        if ($type === self::FETCH_ARRAY) {
-            return $this->currentRow = $result;
-        }
-
         $assoc = [];
         foreach ($this->fieldNames as $index => $name) {
             $assoc[$name] = $result[$index];
         }
 
-        if ($type === self::FETCH_ASSOC) {
-            return $this->currentRow = $assoc;
-        }
-
-        if ($type === self::FETCH_OBJECT) {
-            return $this->currentRow = (object) $assoc;
-        }
-
-        throw new \Error("Invalid result fetch type");
+        return $this->currentRow = $assoc;
     }
 
     /**
@@ -223,9 +211,10 @@ final class PgSqlResultSet implements ResultSet
             case 4090: // regnamespace[]
             case 4097: // regrole[]
                 return $this->parser->parse($value);
-        }
 
-        return $value;
+            default:
+                return $value;
+        }
     }
 
     /**

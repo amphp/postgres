@@ -12,7 +12,6 @@ use Amp\Postgres\ResultSet;
 use Amp\Postgres\Transaction;
 use Amp\Sql\CommandResult;
 use Amp\Sql\QueryError;
-use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
@@ -84,9 +83,9 @@ abstract class AbstractLinkTest extends TestCase
             $data = $this->getData();
 
             for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent(SqlResultSet::FETCH_OBJECT);
-                $this->assertSame($data[$i][0], $row->domain);
-                $this->assertSame($data[$i][1], $row->tld);
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
             }
         });
     }
@@ -147,9 +146,9 @@ abstract class AbstractLinkTest extends TestCase
             $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
-                $row = $result->getCurrent(SqlResultSet::FETCH_ARRAY);
-                $this->assertSame($data[0], $row[0]);
-                $this->assertSame($data[1], $row[1]);
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row['domain']);
+                $this->assertSame($data[1], $row['tld']);
             }
         });
     }
@@ -177,9 +176,9 @@ abstract class AbstractLinkTest extends TestCase
             $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
-                $row = $result->getCurrent(SqlResultSet::FETCH_ARRAY);
-                $this->assertSame($data[0], $row[0]);
-                $this->assertSame($data[1], $row[1]);
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row['domain']);
+                $this->assertSame($data[1], $row['tld']);
             }
         });
     }
@@ -207,9 +206,9 @@ abstract class AbstractLinkTest extends TestCase
             $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
-                $row = $result->getCurrent(SqlResultSet::FETCH_ARRAY);
-                $this->assertSame($data[0], $row[0]);
-                $this->assertSame($data[1], $row[1]);
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row['domain']);
+                $this->assertSame($data[1], $row['tld']);
             }
         });
     }
@@ -237,9 +236,9 @@ abstract class AbstractLinkTest extends TestCase
             $this->assertSame(2, $result->getFieldCount());
 
             while (yield $result->advance()) {
-                $row = $result->getCurrent(SqlResultSet::FETCH_ARRAY);
-                $this->assertSame($data[0], $row[0]);
-                $this->assertSame($data[1], $row[1]);
+                $row = $result->getCurrent();
+                $this->assertSame($data[0], $row['domain']);
+                $this->assertSame($data[1], $row['tld']);
             }
         });
     }
@@ -366,9 +365,9 @@ abstract class AbstractLinkTest extends TestCase
             $data = $this->getData();
 
             for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent(SqlResultSet::FETCH_OBJECT);
-                $this->assertSame($data[$i][0], $row->domain);
-                $this->assertSame($data[$i][1], $row->tld);
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
             }
         });
     }

@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\PooledStatement as SqlPooledStatement;
+use Amp\Sql\Common\PooledStatement as SqlPooledStatement;
 use Amp\Sql\ResultSet as SqlResultSet;
 
 final class PooledStatement extends SqlPooledStatement
