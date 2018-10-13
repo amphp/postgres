@@ -94,12 +94,7 @@ final class PgSqlResultSet implements ResultSet
             $result[$column] = $this->cast($column, $result[$column]);
         }
 
-        $assoc = [];
-        foreach ($this->fieldNames as $index => $name) {
-            $assoc[$name] = $result[$index];
-        }
-
-        return $this->currentRow = $assoc;
+        return $this->currentRow = \array_combine($this->fieldNames, $result);
     }
 
     /**
