@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Loop;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 
@@ -15,6 +16,10 @@ class PgSqlConnectionTest extends AbstractConnectionTest
 
     public function createLink(string $connectionString): Link
     {
+        if (Loop::get()->getHandle() instanceof \EvLoop) {
+            $this->markTestSkipped("ext-pgsql is not compatible with pecl-ev");
+        }
+
         $this->handle = \pg_connect($connectionString);
         $socket = \pg_socket($this->handle);
 
