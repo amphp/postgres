@@ -3,6 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Coroutine;
+use Amp\Loop;
 use Amp\Promise;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Common\StatementPool as SqlStatementPool;
@@ -12,6 +13,8 @@ use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement as SqlStatement;
 use Amp\Sql\Transaction as SqlTransaction;
+use Amp\Success;
+use cash\LRUCache;
 use function Amp\call;
 
 final class Pool extends ConnectionPool implements Link
@@ -23,7 +26,13 @@ final class Pool extends ConnectionPool implements Link
     private $listenerCount = 0;
 
     /** @var bool */
-    private $resetConnections = true;
+    private $resetConnections;
+
+    /** @var string */
+    private $statementWatcher;
+
+    /** @var LRUCache|\IteratorAggregate Least-recently-used cache of StatementPool objects. */
+    private $statements;
 
     /**
      * @param ConnectionConfig $config
@@ -40,6 +49,45 @@ final class Pool extends ConnectionPool implements Link
         Connector $connector = null
     ) {
         parent::__construct($config, $maxConnections, $idleTimeout, $connector);
+
+        $this->resetConnections = $resetConnections;
+
+        $this->statements = $statements = new class($maxConnections) extends LRUCache implements \IteratorAggregate {
+            public function getIterator(): \Iterator
+            {
+                foreach ($this->data as $key => $data) {
+                    yield $key => $data;
+                }
+            }
+        };
+
+        $this->statementWatcher = Loop::repeat(1000, static function () use (&$idleTimeout, $statements) {
+            $now = \time();
+
+            foreach ($statements as $hash => $statement) {
+                \assert($statement instanceof StatementPool);
+
+                if ($statement->getLastUsedAt() + $idleTimeout > $now) {
+                    return;
+                }
+
+                $statements->remove($hash);
+            }
+        });
+
+        Loop::unreference($this->statementWatcher);
+    }
+
+    public function __destruct()
+    {
+        parent::__destruct();
+        Loop::cancel($this->statementWatcher);
+    }
+
+    public function close()
+    {
+        parent::close();
+        $this->statements->clear();
     }
 
     /**
@@ -82,6 +130,45 @@ final class Pool extends ConnectionPool implements Link
         }
 
         return $connection;
+    }
+
+    /**
+     * {@inheritdoc}
+     *
+     * Caches prepared statements for reuse.
+     */
+    public function prepare(string $sql): Promise
+    {
+        if (!$this->isAlive()) {
+            throw new \Error("The pool has been closed");
+        }
+
+        if ($this->statements->containsKey($sql)) {
+            $statement = $this->statements->get($sql);
+            \assert($statement instanceof SqlStatement);
+            if ($statement->isAlive()) {
+                return new Success($statement);
+            }
+        }
+
+        return call(function () use ($sql) {
+            $statement = yield parent::prepare($sql);
+            \assert($statement instanceof SqlStatement);
+            $this->statements->put($sql, $statement);
+            return $statement;
+        });
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function execute(string $sql, array $params = []): Promise
+    {
+        return call(function () use ($sql, $params) {
+            $statement = yield $this->prepare($sql);
+            \assert($statement instanceof SqlStatement);
+            return yield $statement->execute($params);
+        });
     }
 
     /**

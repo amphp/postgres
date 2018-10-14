@@ -22,7 +22,8 @@
         "php": "^7.0",
         "amphp/amp": "^2",
         "amphp/sql": "^1",
-        "amphp/sql-common": "^1"
+        "amphp/sql-common": "^1",
+        "cash/lrucache": "^1"
     },
     "require-dev": {
         "amphp/phpunit-util": "^1",
