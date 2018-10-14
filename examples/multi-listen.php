@@ -8,7 +8,11 @@ use Amp\Loop;
 use Amp\Postgres;
 
 Loop::run(function () {
-    $pool = Postgres\pool(new Postgres\ConnectionConfig('host=localhost user=postgres'));
+    $host = 'localhost';
+    $port = Postgres\ConnectionConfig::DEFAULT_PORT;
+    $user = 'postgres';
+
+    $pool = Postgres\pool(new Postgres\ConnectionConfig($host, $port, $user));
 
     $channel1 = "test1";
     $channel2 = "test2";

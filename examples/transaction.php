@@ -6,12 +6,16 @@ require \dirname(__DIR__) . '/vendor/autoload.php';
 use Amp\Postgres;
 
 Amp\Loop::run(function () {
-    $pool = Postgres\pool(new Postgres\ConnectionConfig('host=localhost user=postgres'));
+    $host = 'localhost';
+    $port = Postgres\ConnectionConfig::DEFAULT_PORT;
+    $user = 'postgres';
+
+    $pool = Postgres\pool(new Postgres\ConnectionConfig($host, $port, $user));
 
     yield $pool->query('DROP TABLE IF EXISTS test');
 
     /** @var \Amp\Postgres\Transaction $transaction */
-    $transaction = yield $pool->transaction();
+    $transaction = yield $pool->beginTransaction();
 
     yield $transaction->query('CREATE TABLE test (domain VARCHAR(63), tld VARCHAR(63), PRIMARY KEY (domain, tld))');
 
