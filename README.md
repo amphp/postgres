@@ -33,14 +33,19 @@ Prepared statements and parameterized queries support named placeholders, as wel
 More examples can be found in the [`examples`](examples) directory.
 
 ```php
-Amp\Loop::run(function () {
-    /** @var \Amp\Postgres\Pool $pool */
-    $pool = Amp\Postgres\pool("host=localhost user=postgres dbname=test");
+use Amp\Postgres;
+use Amp\Postgres\ConnectionConfig;
 
-    /** @var \Amp\Postgres\Statement $statement */
+Amp\Loop::run(function () {
+    $config = ConnectionConfig::fromString("host=localhost user=postgres dbname=test");
+
+    /** @var Postgres\Pool $pool */
+    $pool = Postgres\pool($config);
+
+    /** @var Postgres\Statement $statement */
     $statement = yield $pool->prepare("SELECT * FROM test WHERE id = :id");
 
-    /** @var \Amp\Postgres\ResultSet $result */
+    /** @var Postgres\ResultSet $result */
     $result = yield $statement->execute(['id' => 1337]);
     while (yield $result->advance()) {
         $row = $result->getCurrent();

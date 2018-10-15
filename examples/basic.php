@@ -6,12 +6,10 @@ require \dirname(__DIR__) . '/vendor/autoload.php';
 use Amp\Postgres;
 
 Amp\Loop::run(function () {
-    $host = 'localhost';
-    $port = Postgres\ConnectionConfig::DEFAULT_PORT;
-    $user = 'postgres';
+    $config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
 
     /** @var \Amp\Postgres\Connection $connection */
-    $connection = yield Postgres\connect(new Postgres\ConnectionConfig($host, $port, $user));
+    $connection = yield Postgres\connect($config);
 
     /** @var \Amp\Postgres\ResultSet $result */
     $result = yield $connection->query('SHOW ALL');
