@@ -13,7 +13,6 @@ use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement as SqlStatement;
 use Amp\Sql\Transaction as SqlTransaction;
-use Amp\Success;
 use cash\LRUCache;
 use function Amp\call;
 
@@ -64,14 +63,18 @@ final class Pool extends ConnectionPool implements Link
         $this->statementWatcher = Loop::repeat(1000, static function () use (&$idleTimeout, $statements) {
             $now = \time();
 
-            foreach ($statements as $hash => $statement) {
+            foreach ($statements as $sql => $statement) {
+                if ($statement instanceof Promise) {
+                    continue;
+                }
+
                 \assert($statement instanceof StatementPool);
 
                 if ($statement->getLastUsedAt() + $idleTimeout > $now) {
                     return;
                 }
 
-                $statements->remove($hash);
+                $statements->remove($sql);
             }
         });
 
@@ -143,18 +146,34 @@ final class Pool extends ConnectionPool implements Link
             throw new \Error("The pool has been closed");
         }
 
-        if ($this->statements->containsKey($sql)) {
-            $statement = $this->statements->get($sql);
-            \assert($statement instanceof SqlStatement);
-            if ($statement->isAlive()) {
-                return new Success($statement);
-            }
-        }
-
         return call(function () use ($sql) {
-            $statement = yield parent::prepare($sql);
-            \assert($statement instanceof SqlStatement);
-            $this->statements->put($sql, $statement);
+            if ($this->statements->containsKey($sql)) {
+                $statement = $this->statements->get($sql);
+
+                if ($statement instanceof Promise) {
+                    $statement = yield $statement; // Wait for prior request to resolve.
+                }
+
+                \assert($statement instanceof StatementPool);
+
+                if ($statement->isAlive()) {
+                    return $statement;
+                }
+            }
+
+            $promise = parent::prepare($sql);
+            $this->statements->put($sql, $promise); // Insert promise into queue so subsequent requests get promise.
+
+            try {
+                $statement = yield $promise;
+                \assert($statement instanceof StatementPool);
+            } catch (\Throwable $exception) {
+                $this->statements->remove($sql);
+                throw $exception;
+            }
+
+            $this->statements->put($sql, $statement); // Replace promise in queue with statement object.
+
             return $statement;
         });
     }
