@@ -24,5 +24,4 @@ abstract class AbstractPoolTest extends AbstractLinkTest
             $this->assertSame($statement1, $statement2);
         });
     }
-
 }
