@@ -14,7 +14,7 @@ use Amp\Success;
 /**
  * @requires extension pgsql
  */
-class PgSqlPoolTest extends AbstractLinkTest
+class PgSqlPoolTest extends AbstractPoolTest
 {
     const POOL_SIZE = 3;
 
