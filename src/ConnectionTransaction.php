@@ -116,13 +116,17 @@ final class ConnectionTransaction implements Transaction
 
         return call(function () use ($sql) {
             ++$this->refCount;
-            $result = yield $this->handle->query($sql);
+            try {
+                $result = yield $this->handle->query($sql);
+            } finally {
+                ($this->release)();
+            }
 
             if ($result instanceof ResultSet) {
+                ++$this->refCount;
                 return new PooledResultSet($result, $this->release);
             }
 
-            ($this->release)();
             return $result;
         });
     }
@@ -140,7 +144,13 @@ final class ConnectionTransaction implements Transaction
 
         return call(function () use ($sql) {
             ++$this->refCount;
-            $statement = yield $this->handle->prepare($sql);
+            try {
+                $statement = yield $this->handle->prepare($sql);
+            } catch (\Throwable $exception) {
+                ($this->release)();
+                throw $exception;
+            }
+
             return new PooledStatement($statement, $this->release);
         });
     }
@@ -158,13 +168,17 @@ final class ConnectionTransaction implements Transaction
 
         return call(function () use ($sql, $params) {
             ++$this->refCount;
-            $result = yield $this->handle->execute($sql, $params);
+            try {
+                $result = yield $this->handle->execute($sql, $params);
+            } finally {
+                ($this->release)();
+            }
 
             if ($result instanceof ResultSet) {
+                ++$this->refCount;
                 return new PooledResultSet($result, $this->release);
             }
 
-            ($this->release)();
             return $result;
         });
     }
