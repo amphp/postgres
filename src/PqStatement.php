@@ -7,7 +7,7 @@ use Amp\Sql\Statement;
 
 final class PqStatement implements Statement
 {
-    /** @var @return PromisePqHandle */
+    /** @var PqHandle */
     private $handle;
 
     /** @var string */

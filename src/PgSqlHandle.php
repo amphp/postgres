@@ -50,7 +50,7 @@ final class PgSqlHandle implements Handle
     /** @var callable */
     private $unlisten;
 
-    /** @var Internal\StatementStorage[] */
+    /** @var Promise[] */
     private $statements = [];
 
     /** @var int */
@@ -312,12 +312,6 @@ final class PgSqlHandle implements Handle
 
         \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
 
-        $storage = $this->statements[$name];
-
-        if (--$storage->count) {
-            return new Success;
-        }
-
         unset($this->statements[$name]);
 
         return $this->query(\sprintf("DEALLOCATE %s", $name));
@@ -368,21 +362,17 @@ final class PgSqlHandle implements Handle
         $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
         if (isset($this->statements[$name])) {
-            $storage = $this->statements[$name];
-            ++$storage->count;
-
-            if ($storage->promise) {
-                return $storage->promise;
-            }
-
-            return new Success(new PgSqlStatement($this, $name, $sql, $names));
+            return $this->statements[$name];
         }
 
-        $this->statements[$name] = $storage = new Internal\StatementStorage;
-
-        $promise = $storage->promise = call(function () use ($name, $names, $sql, $modifiedSql) {
-            /** @var resource $result PostgreSQL result resource. */
-            $result = yield from $this->send("pg_send_prepare", $name, $modifiedSql);
+        return $this->statements[$name] = call(function () use ($name, $names, $sql, $modifiedSql) {
+            try {
+                /** @var resource $result PostgreSQL result resource. */
+                $result = yield from $this->send("pg_send_prepare", $name, $modifiedSql);
+            } catch (\Throwable $exception) {
+                unset($this->statements[$name]);
+                throw $exception;
+            }
 
             switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
                 case \PGSQL_COMMAND_OK:
@@ -391,8 +381,8 @@ final class PgSqlHandle implements Handle
                 case \PGSQL_NONFATAL_ERROR:
                 case \PGSQL_FATAL_ERROR:
                     $diagnostics = [];
-                    foreach (self::DIAGNOSTIC_CODES as $fieldCode => $desciption) {
-                        $diagnostics[$desciption] = \pg_result_error_field($result, $fieldCode);
+                    foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
+                        $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                     }
                     throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
 
@@ -405,15 +395,6 @@ final class PgSqlHandle implements Handle
                     // @codeCoverageIgnoreEnd
             }
         });
-        $promise->onResolve(function ($exception) use ($storage, $name) {
-            if ($exception) {
-                unset($this->statements[$name]);
-                return;
-            }
-
-            $storage->promise = null;
-        });
-        return $promise;
     }
 
     /**
