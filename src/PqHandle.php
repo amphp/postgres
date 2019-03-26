@@ -11,6 +11,7 @@ use Amp\Promise;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
+use Amp\Struct;
 use Amp\Success;
 use pq;
 use function Amp\call;
@@ -38,11 +39,8 @@ final class PqHandle implements Handle
     /** @var \Amp\Emitter[] */
     private $listeners;
 
-    /** @var Promise[] */
-    private $statementPromises = [];
-
-    /** @var \pq\Statement[] */
-    private $statementHandles = [];
+    /** @var Struct[] */
+    private $statements = [];
 
     /** @var callable */
     private $fetch;
@@ -314,9 +312,13 @@ final class PqHandle implements Handle
      */
     public function statementExecute(string $name, array $params): Promise
     {
-        \assert(isset($this->statementHandles[$name]), "Named statement not found when executing");
+        \assert(isset($this->statements[$name]), "Named statement not found when executing");
 
-        return new Coroutine($this->send([$this->statementHandles[$name], "execAsync"], $params));
+        $storage = $this->statements[$name];
+
+        \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
+
+        return new Coroutine($this->send([$storage->statement, "execAsync"], $params));
     }
 
     /**
@@ -332,15 +334,19 @@ final class PqHandle implements Handle
             return new Success; // Connection dead.
         }
 
-        \assert(
-            isset($this->statementPromises[$name], $this->statementHandles[$name]),
-            "Named statement not found when deallocating"
-        );
+        \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
 
-        $statement = $this->statementHandles[$name];
-        unset($this->statementPromises[$name], $this->statementHandles[$name]);
+        $storage = $this->statements[$name];
 
-        return new Coroutine($this->send([$statement, "deallocateAsync"]));
+        if (--$storage->refCount) {
+            return new Success;
+        }
+
+        unset($this->statements[$name]);
+
+        \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
+
+        return new Coroutine($this->send([$storage->statement, "deallocateAsync"]));
     }
 
     /**
@@ -383,19 +389,36 @@ final class PqHandle implements Handle
 
         $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
-        if (isset($this->statementPromises[$name])) {
-            return $this->statementPromises[$name];
-        }
+        if (isset($this->statements[$name])) {
+            $storage = $this->statements[$name];
 
-        return $this->statementPromises[$name] = call(function () use ($names, $name, $sql, $modifiedSql) {
-            try {
-                $statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $modifiedSql);
-            } catch (\Throwable $exception) {
-                unset($this->statementPromises[$name]);
-                throw $exception;
+            if ($storage->promise instanceof Promise) {
+                return $storage->promise;
             }
 
-            $this->statementHandles[$name] = $statement;
+            ++$storage->refCount; // Only increase refCount when returning a new object.
+
+            return new Success(new PqStatement($this, $name, $sql, $names));
+        }
+
+        $storage = new class {
+            use Struct;
+            public $refCount = 1;
+            public $promise;
+            public $statement;
+        };
+
+        $this->statements[$name] = $storage;
+
+        return $storage->promise = call(function () use ($storage, $names, $name, $sql, $modifiedSql) {
+            try {
+                $storage->statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $modifiedSql);
+            } catch (\Throwable $exception) {
+                unset($this->statements[$name]);
+                throw $exception;
+            } finally {
+                $storage->promise = null;
+            }
 
             return new PqStatement($this, $name, $sql, $names);
         });

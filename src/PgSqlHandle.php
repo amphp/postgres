@@ -10,6 +10,7 @@ use Amp\Promise;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
+use Amp\Struct;
 use Amp\Success;
 use function Amp\call;
 
@@ -50,7 +51,7 @@ final class PgSqlHandle implements Handle
     /** @var callable */
     private $unlisten;
 
-    /** @var Promise[] */
+    /** @var Struct[] */
     private $statements = [];
 
     /** @var int */
@@ -312,6 +313,12 @@ final class PgSqlHandle implements Handle
 
         \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
 
+        $storage = $this->statements[$name];
+
+        if (--$storage->refCount) {
+            return new Success;
+        }
+
         unset($this->statements[$name]);
 
         return $this->query(\sprintf("DEALLOCATE %s", $name));
@@ -362,16 +369,34 @@ final class PgSqlHandle implements Handle
         $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
         if (isset($this->statements[$name])) {
-            return $this->statements[$name];
+            $storage = $this->statements[$name];
+
+            if ($storage->promise instanceof Promise) {
+                return $storage->promise;
+            }
+
+            ++$storage->refCount; // Only increase refCount when returning a new object.
+
+            return new Success(new PgSqlStatement($this, $name, $sql, $names));
         }
 
-        return $this->statements[$name] = call(function () use ($name, $names, $sql, $modifiedSql) {
+        $storage = new class {
+            use Struct;
+            public $refCount = 1;
+            public $promise;
+        };
+
+        $this->statements[$name] = $storage;
+
+        return $storage->promise = call(function () use ($storage, $name, $names, $sql, $modifiedSql) {
             try {
                 /** @var resource $result PostgreSQL result resource. */
                 $result = yield from $this->send("pg_send_prepare", $name, $modifiedSql);
             } catch (\Throwable $exception) {
                 unset($this->statements[$name]);
                 throw $exception;
+            } finally {
+                $storage->promise = null;
             }
 
             switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
