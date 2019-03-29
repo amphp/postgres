@@ -346,6 +346,24 @@ abstract class AbstractLinkTest extends TestCase
         });
     }
 
+    public function testPrepareSimilarQueryReturnsDifferentStatements()
+    {
+        Loop::run(function () {
+            /** @var Statement $statement1 */
+            $statement1 = $this->connection->prepare("SELECT * FROM test WHERE domain=\$1");
+
+            /** @var Statement $statement2 */
+            $statement2 = $this->connection->prepare("SELECT * FROM test WHERE domain=:domain");
+
+            list($statement1, $statement2) = yield [$statement1, $statement2];
+
+            $this->assertInstanceOf(Statement::class, $statement1);
+            $this->assertInstanceOf(Statement::class, $statement2);
+
+            $this->assertNotSame($statement1, $statement2);
+        });
+    }
+
     public function testPrepareThenExecuteWithUnconsumedTupleResult()
     {
         Loop::run(function () {

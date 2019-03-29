@@ -54,9 +54,7 @@ final class Pool extends ConnectionPool implements Link
         $this->statements = $statements = new class($maxConnections) extends LRUCache implements \IteratorAggregate {
             public function getIterator(): \Iterator
             {
-                foreach ($this->data as $key => $data) {
-                    yield $key => $data;
-                }
+                yield from $this->data;
             }
         };
 
@@ -147,8 +145,10 @@ final class Pool extends ConnectionPool implements Link
         }
 
         return call(function () use ($sql) {
-            if ($this->statements->containsKey($sql)) {
-                $statement = $this->statements->get($sql);
+            $name = Handle::STATEMENT_NAME_PREFIX . \sha1($sql);
+
+            if ($this->statements->containsKey($name)) {
+                $statement = $this->statements->get($name);
 
                 if ($statement instanceof Promise) {
                     $statement = yield $statement; // Wait for prior request to resolve.
@@ -162,17 +162,17 @@ final class Pool extends ConnectionPool implements Link
             }
 
             $promise = parent::prepare($sql);
-            $this->statements->put($sql, $promise); // Insert promise into queue so subsequent requests get promise.
+            $this->statements->put($name, $promise); // Insert promise into queue so subsequent requests get promise.
 
             try {
                 $statement = yield $promise;
                 \assert($statement instanceof StatementPool);
             } catch (\Throwable $exception) {
-                $this->statements->remove($sql);
+                $this->statements->remove($name);
                 throw $exception;
             }
 
-            $this->statements->put($sql, $statement); // Replace promise in queue with statement object.
+            $this->statements->put($name, $statement); // Replace promise in queue with statement object.
 
             return $statement;
         });

@@ -366,7 +366,7 @@ final class PgSqlHandle implements Handle
 
         $modifiedSql = Internal\parseNamedParams($sql, $names);
 
-        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
+        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($sql);
 
         if (isset($this->statements[$name])) {
             $storage = $this->statements[$name];
