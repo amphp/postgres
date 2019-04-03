@@ -13,7 +13,7 @@ use Amp\Success;
 /**
  * @requires extension pq
  */
-class PqPoolTest extends AbstractPoolTest
+class PqPoolTest extends AbstractLinkTest
 {
     const POOL_SIZE = 3;
 
