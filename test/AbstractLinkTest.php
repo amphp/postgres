@@ -361,6 +361,19 @@ abstract class AbstractLinkTest extends TestCase
             $this->assertInstanceOf(Statement::class, $statement2);
 
             $this->assertNotSame($statement1, $statement2);
+
+            $data = $this->getData()[0];
+
+            $results = yield [$statement1->execute([$data[0]]), $statement2->execute(['domain' => $data[0]])];
+
+            foreach ($results as $result) {
+                /** @var \Amp\Postgres\ResultSet $result */
+                while (yield $result->advance()) {
+                    $row = $result->getCurrent();
+                    $this->assertSame($data[0], $row['domain']);
+                    $this->assertSame($data[1], $row['tld']);
+                }
+            }
         });
     }
 

@@ -385,34 +385,37 @@ final class PqHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
-        $modifiedSql = Internal\parseNamedParams($sql, $names);
+        return call(function () use ($sql) {
+            $modifiedSql = Internal\parseNamedParams($sql, $names);
 
-        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($sql);
+            $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
-        if (isset($this->statements[$name])) {
-            $storage = $this->statements[$name];
+            if (isset($this->statements[$name])) {
+                $storage = $this->statements[$name];
 
-            if ($storage->promise instanceof Promise) {
-                return $storage->promise;
+                if ($storage->promise instanceof Promise) {
+                    // Do not return promised prepared statement object, as the $names array may differ.
+                    yield $storage->promise;
+                }
+
+                ++$storage->refCount;
+
+                return new PqStatement($this, $name, $sql, $names);
             }
 
-            ++$storage->refCount; // Only increase refCount when returning a new object.
+            $storage = new class {
+                use Struct;
+                public $refCount = 1;
+                public $promise;
+                public $statement;
+            };
 
-            return new Success(new PqStatement($this, $name, $sql, $names));
-        }
+            $this->statements[$name] = $storage;
 
-        $storage = new class {
-            use Struct;
-            public $refCount = 1;
-            public $promise;
-            public $statement;
-        };
-
-        $this->statements[$name] = $storage;
-
-        return $storage->promise = call(function () use ($storage, $names, $name, $sql, $modifiedSql) {
             try {
-                $storage->statement = yield from $this->send([$this->handle, "prepareAsync"], $name, $modifiedSql);
+                $storage->statement = yield (
+                    $storage->promise = new Coroutine($this->send([$this->handle, "prepareAsync"], $name, $modifiedSql))
+                );
             } catch (\Throwable $exception) {
                 unset($this->statements[$name]);
                 throw $exception;

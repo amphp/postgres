@@ -364,34 +364,57 @@ final class PgSqlHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
-        $modifiedSql = Internal\parseNamedParams($sql, $names);
+        return call(function () use ($sql) {
+            $modifiedSql = Internal\parseNamedParams($sql, $names);
 
-        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($sql);
+            $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
-        if (isset($this->statements[$name])) {
-            $storage = $this->statements[$name];
+            if (isset($this->statements[$name])) {
+                $storage = $this->statements[$name];
 
-            if ($storage->promise instanceof Promise) {
-                return $storage->promise;
+                if ($storage->promise instanceof Promise) {
+                    // Do not return promised prepared statement object, as the $names array may differ.
+                    yield $storage->promise;
+                }
+
+                ++$storage->refCount;
+
+                return new PgSqlStatement($this, $name, $sql, $names);
             }
 
-            ++$storage->refCount; // Only increase refCount when returning a new object.
+            $storage = new class {
+                use Struct;
+                public $refCount = 1;
+                public $promise;
+            };
 
-            return new Success(new PgSqlStatement($this, $name, $sql, $names));
-        }
+            $this->statements[$name] = $storage;
 
-        $storage = new class {
-            use Struct;
-            public $refCount = 1;
-            public $promise;
-        };
-
-        $this->statements[$name] = $storage;
-
-        return $storage->promise = call(function () use ($storage, $name, $names, $sql, $modifiedSql) {
             try {
-                /** @var resource $result PostgreSQL result resource. */
-                $result = yield from $this->send("pg_send_prepare", $name, $modifiedSql);
+                yield ($storage->promise = call(function () use ($name, $modifiedSql) {
+                    $result = yield from $this->send("pg_send_prepare", $name, $modifiedSql);
+
+                    switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
+                        case \PGSQL_COMMAND_OK:
+                            return $name; // Statement created successfully.
+
+                        case \PGSQL_NONFATAL_ERROR:
+                        case \PGSQL_FATAL_ERROR:
+                            $diagnostics = [];
+                            foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
+                                $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
+                            }
+                            throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
+
+                        case \PGSQL_BAD_RESPONSE:
+                            throw new FailureException(\pg_result_error($result));
+
+                        default:
+                            // @codeCoverageIgnoreStart
+                            throw new FailureException("Unknown result status");
+                            // @codeCoverageIgnoreEnd
+                    }
+                }));
             } catch (\Throwable $exception) {
                 unset($this->statements[$name]);
                 throw $exception;
@@ -399,26 +422,7 @@ final class PgSqlHandle implements Handle
                 $storage->promise = null;
             }
 
-            switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
-                case \PGSQL_COMMAND_OK:
-                    return new PgSqlStatement($this, $name, $sql, $names);
-
-                case \PGSQL_NONFATAL_ERROR:
-                case \PGSQL_FATAL_ERROR:
-                    $diagnostics = [];
-                    foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
-                        $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
-                    }
-                    throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
-
-                case \PGSQL_BAD_RESPONSE:
-                    throw new FailureException(\pg_result_error($result));
-
-                default:
-                    // @codeCoverageIgnoreStart
-                    throw new FailureException("Unknown result status");
-                    // @codeCoverageIgnoreEnd
-            }
+            return new PgSqlStatement($this, $name, $sql, $names);
         });
     }
 
