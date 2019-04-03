@@ -29,6 +29,8 @@ final class PqUnbufferedResultSet implements ResultSet
     {
         $this->numCols = $result->numCols;
 
+        $destroyed = &$this->destroyed;
+
         $this->producer = new Producer(static function (callable $emit) use (&$destroyed, $release, $result, $fetch) {
             try {
                 do {
