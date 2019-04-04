@@ -21,9 +21,6 @@ abstract class Connection implements Link, Handle
     /** @var Deferred|null Used to only allow one transaction at a time. */
     private $busy;
 
-    /** @var callable */
-    protected $release;
-
     /**
      * @param ConnectionConfig $connectionConfig
      * @param CancellationToken $token
@@ -38,7 +35,6 @@ abstract class Connection implements Link, Handle
     public function __construct(Handle $handle)
     {
         $this->handle = $handle;
-        $this->release = $this->callableFromInstanceMethod("release");
     }
 
 
@@ -213,7 +209,7 @@ abstract class Connection implements Link, Handle
 
             $this->busy = new Deferred;
 
-            return new ConnectionTransaction($this->handle, $this->release, $isolation);
+            return new ConnectionTransaction($this->handle, $this->callableFromInstanceMethod("release"), $isolation);
         });
     }
 
