@@ -21,7 +21,7 @@ final class ConnectionConfig extends SqlConnectionConfig
 
         return new self(
             $parts["host"],
-            $parts["port"] ?? self::DEFAULT_PORT,
+            (int) ($parts["port"] ?? self::DEFAULT_PORT),
             $parts["user"] ?? null,
             $parts["password"] ?? null,
             $parts["db"] ?? null
