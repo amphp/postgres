@@ -393,12 +393,12 @@ final class PqHandle implements Handle
             if (isset($this->statements[$name])) {
                 $storage = $this->statements[$name];
 
+                ++$storage->refCount;
+
                 if ($storage->promise instanceof Promise) {
                     // Do not return promised prepared statement object, as the $names array may differ.
                     yield $storage->promise;
                 }
-
-                ++$storage->refCount;
 
                 return new PqStatement($this, $name, $sql, $names);
             }
