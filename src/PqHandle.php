@@ -516,4 +516,40 @@ final class PqHandle implements Handle
 
         return $this->handle->quoteName($name);
     }
+
+    /**
+     * @return bool True if result sets are buffered in memory, false if unbuffered.
+     */
+    public function isBufferingResults(): bool
+    {
+        if (!$this->handle) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
+        return !$this->handle->unbuffered;
+    }
+
+    /**
+     * Sets result sets to be fully buffered in local memory.
+     */
+    public function shouldBufferResults()
+    {
+        if (!$this->handle) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
+        $this->handle->unbuffered = false;
+    }
+
+    /**
+     * Sets result sets to be streamed from the database server.
+     */
+    public function shouldNotBufferResults()
+    {
+        if (!$this->handle) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
+        $this->handle->unbuffered = true;
+    }
 }

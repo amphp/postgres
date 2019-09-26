@@ -2,8 +2,11 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Loop;
 use Amp\Postgres\Link;
+use Amp\Postgres\PqBufferedResultSet;
 use Amp\Postgres\PqConnection;
+use Amp\Postgres\PqUnbufferedResultSet;
 
 /**
  * @requires extension pq
@@ -42,5 +45,54 @@ class PqConnectionTest extends AbstractConnectionTest
     {
         $this->handle->exec("ROLLBACK");
         $this->handle->exec("DROP TABLE test");
+    }
+
+    public function testBufferedResults()
+    {
+        Loop::run(function () {
+            \assert($this->connection instanceof PqConnection);
+            $this->connection->shouldBufferResults();
+
+            $this->assertTrue($this->connection->isBufferingResults());
+
+            $result = yield $this->connection->query("SELECT * FROM test");
+            \assert($result instanceof PqBufferedResultSet);
+
+            $this->assertSame(2, $result->getFieldCount());
+
+            $data = $this->getData();
+
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
+            }
+        });
+    }
+
+    /**
+     * @depends testBufferedResults
+     */
+    public function testUnbufferedResults()
+    {
+        Loop::run(function () {
+            \assert($this->connection instanceof PqConnection);
+            $this->connection->shouldNotBufferResults();
+
+            $this->assertFalse($this->connection->isBufferingResults());
+
+            $result = yield $this->connection->query("SELECT * FROM test");
+            \assert($result instanceof PqUnbufferedResultSet);
+
+            $this->assertSame(2, $result->getFieldCount());
+
+            $data = $this->getData();
+
+            for ($i = 0; yield $result->advance(); ++$i) {
+                $row = $result->getCurrent();
+                $this->assertSame($data[$i][0], $row['domain']);
+                $this->assertSame($data[$i][1], $row['tld']);
+            }
+        });
     }
 }

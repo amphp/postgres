@@ -13,6 +13,9 @@ use pq;
 
 final class PqConnection extends Connection implements Link
 {
+    /** @var PqHandle */
+    private $handle;
+
     /**
      * @param ConnectionConfig $connectionConfig
      * @param CancellationToken $token
@@ -74,6 +77,31 @@ final class PqConnection extends Connection implements Link
      */
     public function __construct(pq\Connection $handle)
     {
-        parent::__construct(new PqHandle($handle));
+        $this->handle = new PqHandle($handle);
+        parent::__construct($this->handle);
+    }
+
+    /**
+     * @return bool True if result sets are buffered in memory, false if unbuffered.
+     */
+    public function isBufferingResults(): bool
+    {
+        return $this->handle->isBufferingResults();
+    }
+
+    /**
+     * Sets result sets to be fully buffered in local memory.
+     */
+    public function shouldBufferResults()
+    {
+        $this->handle->shouldBufferResults();
+    }
+
+    /**
+     * Sets result sets to be streamed from the database server.
+     */
+    public function shouldNotBufferResults()
+    {
+        $this->handle->shouldNotBufferResults();
     }
 }
