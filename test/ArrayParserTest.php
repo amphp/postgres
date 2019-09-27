@@ -2,8 +2,9 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\PHPUnit\TestCase;
 use Amp\Postgres\Internal\ArrayParser;
+use Amp\Postgres\ParseException;
+use PHPUnit\Framework\TestCase;
 
 class ArrayParserTest extends TestCase
 {
@@ -127,42 +128,38 @@ class ArrayParserTest extends TestCase
         $this->assertSame($array, $this->parser->parse($string));
     }
 
-    /**
-     * @expectedException \Amp\Postgres\ParseException
-     * @expectedExceptionMessage Missing opening or closing brackets
-     */
     public function testNoClosingBracket()
     {
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage('Missing opening or closing brackets');
+
         $string = '{"one", "two"';
         $this->parser->parse($string);
     }
 
-    /**
-     * @expectedException \Amp\Postgres\ParseException
-     * @expectedExceptionMessage Data left in buffer after parsing
-     */
     public function testTrailingData()
     {
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage('Data left in buffer after parsing');
+
         $string = '{"one", "two"} data}';
         $this->parser->parse($string);
     }
 
-    /**
-     * @expectedException \Amp\Postgres\ParseException
-     * @expectedExceptionMessage Could not find matching quote in quoted value
-     */
     public function testMissingQuote()
     {
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage('Could not find matching quote in quoted value');
+
         $string = '{"one", "two}';
         $this->parser->parse($string);
     }
 
-    /**
-     * @expectedException \Amp\Postgres\ParseException
-     * @expectedExceptionMessage Invalid delimiter
-     */
     public function testInvalidDelimiter()
     {
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage('Invalid delimiter');
+
         $string = '{"one"; "two"}';
         $this->parser->parse($string);
     }

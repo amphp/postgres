@@ -4,15 +4,16 @@ namespace Amp\Postgres\Test;
 
 use Amp\CancellationToken;
 use Amp\CancellationTokenSource;
-use Amp\Loop;
+use Amp\CancelledException;
+use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\Connection;
 use Amp\Postgres\ConnectionConfig as PostgresConnectionConfig;
 use Amp\Promise;
 use Amp\Sql\ConnectionConfig;
+use Amp\Sql\FailureException;
 use Amp\TimeoutCancellationToken;
-use PHPUnit\Framework\TestCase;
 
-abstract class AbstractConnectTest extends TestCase
+abstract class AbstractConnectTest extends AsyncTestCase
 {
     /**
      * @param ConnectionConfig $connectionConfig
@@ -22,53 +23,47 @@ abstract class AbstractConnectTest extends TestCase
      */
     abstract public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise;
 
-    public function testConnect()
+    public function testConnect(): \Generator
     {
-        Loop::run(function () {
-            $connection = yield $this->connect(
-                PostgresConnectionConfig::fromString('host=localhost user=postgres'),
-                new TimeoutCancellationToken(100)
-            );
-            $this->assertInstanceOf(Connection::class, $connection);
-        });
+        $connection = yield $this->connect(
+            PostgresConnectionConfig::fromString('host=localhost user=postgres'),
+            new TimeoutCancellationToken(100)
+        );
+        $this->assertInstanceOf(Connection::class, $connection);
     }
 
     /**
      * @depends testConnect
-     * @expectedException \Amp\CancelledException
      */
-    public function testConnectCancellationBeforeConnect()
+    public function testConnectCancellationBeforeConnect(): Promise
     {
-        Loop::run(function () {
-            $source = new CancellationTokenSource;
-            $token = $source->getToken();
-            $source->cancel();
-            $connection = yield $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $token);
-        });
+        $this->expectException(CancelledException::class);
+
+        $source = new CancellationTokenSource;
+        $token = $source->getToken();
+        $source->cancel();
+        return $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $token);
     }
 
     /**
      * @depends testConnectCancellationBeforeConnect
      */
-    public function testConnectCancellationAfterConnect()
+    public function testConnectCancellationAfterConnect(): \Generator
     {
-        Loop::run(function () {
-            $source = new CancellationTokenSource;
-            $token = $source->getToken();
-            $connection = yield $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $token);
-            $this->assertInstanceOf(Connection::class, $connection);
-            $source->cancel();
-        });
+        $source = new CancellationTokenSource;
+        $token = $source->getToken();
+        $connection = yield $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $token);
+        $this->assertInstanceOf(Connection::class, $connection);
+        $source->cancel();
     }
 
     /**
      * @depends testConnectCancellationBeforeConnect
-     * @expectedException \Amp\Sql\FailureException
      */
-    public function testConnectInvalidUser()
+    public function testConnectInvalidUser(): Promise
     {
-        Loop::run(function () {
-            $connection = yield $this->connect(PostgresConnectionConfig::fromString('host=localhost user=invalid'), new TimeoutCancellationToken(100));
-        });
+        $this->expectException(FailureException::class);
+
+        return $this->connect(PostgresConnectionConfig::fromString('host=localhost user=invalid'), new TimeoutCancellationToken(100));
     }
 }

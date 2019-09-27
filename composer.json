@@ -25,8 +25,8 @@
         "amphp/sql-common": "^1"
     },
     "require-dev": {
-        "amphp/phpunit-util": "^1",
-        "phpunit/phpunit": "^6",
+        "amphp/phpunit-util": "^1.1.2",
+        "phpunit/phpunit": "^7 || ^6",
         "amphp/php-cs-fixer-config": "dev-master",
         "phpstan/phpstan": "^0.9"
     },

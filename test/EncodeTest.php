@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\PHPUnit\TestCase;
+use PHPUnit\Framework\TestCase;
 use function Amp\Postgres\encode;
 
 class EncodeTest extends TestCase
@@ -79,12 +79,11 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    /**
-     * @expectedException \Error
-     * @expectedExceptionMessage Object without a __toString() method in array
-     */
     public function testObjectWithoutToStringMethod()
     {
+        $this->expectException(\Error::class);
+        $this->expectExceptionMessage('Object without a __toString() method in array');
+
         encode([new \stdClass]);
     }
 }

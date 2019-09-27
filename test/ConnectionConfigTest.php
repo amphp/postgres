@@ -2,8 +2,8 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\PHPUnit\TestCase;
 use Amp\Postgres\ConnectionConfig;
+use PHPUnit\Framework\TestCase;
 
 class ConnectionConfigTest extends TestCase
 {

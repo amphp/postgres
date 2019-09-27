@@ -4,20 +4,22 @@ namespace Amp\Postgres\Test;
 
 use Amp\Coroutine;
 use Amp\Delayed;
+use Amp\Iterator;
 use Amp\Loop;
+use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryExecutionError;
 use Amp\Postgres\ResultSet;
 use Amp\Postgres\Transaction;
+use Amp\Promise;
 use Amp\Sql\CommandResult;
 use Amp\Sql\QueryError;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
-use PHPUnit\Framework\TestCase;
 
-abstract class AbstractLinkTest extends TestCase
+abstract class AbstractLinkTest extends AsyncTestCase
 {
     /** @var \Amp\Postgres\Connection */
     protected $connection;
@@ -44,438 +46,412 @@ abstract class AbstractLinkTest extends TestCase
 
     public function setUp()
     {
+        parent::setUp();
         $this->connection = $this->createLink('host=localhost user=postgres');
     }
 
-    public function testQueryWithTupleResult()
+    public function testQueryWithTupleResult(): \Generator
     {
-        Loop::run(function () {
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $this->connection->query("SELECT * FROM test");
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $this->connection->query("SELECT * FROM test");
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getFieldCount());
+        $this->assertSame(2, $result->getFieldCount());
 
-            $data = $this->getData();
+        $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
-            }
-        });
+        for ($i = 0; yield $result->advance(); ++$i) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
     }
 
-    public function testQueryWithUnconsumedTupleResult()
+    public function testQueryWithUnconsumedTupleResult(): \Generator
     {
-        Loop::run(function () {
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $this->connection->query("SELECT * FROM test");
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $this->connection->query("SELECT * FROM test");
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $this->connection->query("SELECT * FROM test");
+        unset($result); // Force destruction of result object.
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $this->connection->query("SELECT * FROM test");
 
-            $data = $this->getData();
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
-            }
-        });
+        $data = $this->getData();
+
+        for ($i = 0; yield $result->advance(); ++$i) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
     }
 
-    public function testQueryWithCommandResult()
+    public function testQueryWithCommandResult(): \Generator
     {
-        Loop::run(function () {
-            /** @var CommandResult $result */
-            $result = yield $this->connection->query("INSERT INTO test VALUES ('canon', 'jp')");
+        /** @var CommandResult $result */
+        $result = yield $this->connection->query("INSERT INTO test VALUES ('canon', 'jp')");
 
-            $this->assertInstanceOf(CommandResult::class, $result);
-            $this->assertSame(1, $result->getAffectedRowCount());
-        });
+        $this->assertInstanceOf(CommandResult::class, $result);
+        $this->assertSame(1, $result->getAffectedRowCount());
     }
 
     /**
      * @expectedException \Amp\Sql\QueryError
      */
-    public function testQueryWithEmptyQuery()
+    public function testQueryWithEmptyQuery(): Promise
     {
-        Loop::run(function () {
-            /** @var \Amp\Sql\CommandResult $result */
-            $result = yield $this->connection->query('');
-        });
+        /** @var \Amp\Sql\CommandResult $result */
+        return $this->connection->query('');
     }
 
-    public function testQueryWithSyntaxError()
+    public function testQueryWithSyntaxError(): \Generator
     {
-        Loop::run(function () {
-            /** @var \Amp\Sql\CommandResult $result */
-            try {
-                $result = yield $this->connection->query("SELECT & FROM test");
-                $this->fail(\sprintf("An instance of %s was expected to be thrown", QueryExecutionError::class));
-            } catch (QueryExecutionError $exception) {
-                $diagnostics  = $exception->getDiagnostics();
-                $this->assertArrayHasKey("sqlstate", $diagnostics);
-            }
-        });
+        /** @var \Amp\Sql\CommandResult $result */
+        try {
+            $result = yield $this->connection->query("SELECT & FROM test");
+            $this->fail(\sprintf("An instance of %s was expected to be thrown", QueryExecutionError::class));
+        } catch (QueryExecutionError $exception) {
+            $diagnostics  = $exception->getDiagnostics();
+            $this->assertArrayHasKey("sqlstate", $diagnostics);
+        }
     }
 
-    public function testPrepare()
+    public function testPrepare(): \Generator
     {
-        Loop::run(function () {
-            $query = "SELECT * FROM test WHERE domain=\$1";
+        $query = "SELECT * FROM test WHERE domain=\$1";
 
-            /** @var Statement $statement */
-            $statement = yield $this->connection->prepare($query);
+        /** @var Statement $statement */
+        $statement = yield $this->connection->prepare($query);
 
-            $this->assertSame($query, $statement->getQuery());
+        $this->assertSame($query, $statement->getQuery());
 
-            $data = $this->getData()[0];
+        $data = $this->getData()[0];
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement->execute([$data[0]]);
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement->execute([$data[0]]);
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getFieldCount());
+        $this->assertSame(2, $result->getFieldCount());
 
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
-            }
-        });
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
     }
 
     /**
      * @depends testPrepare
      */
-    public function testPrepareWithNamedParams()
+    public function testPrepareWithNamedParams(): \Generator
     {
-        Loop::run(function () {
-            $query = "SELECT * FROM test WHERE domain=:domain AND tld=:tld";
+        $query = "SELECT * FROM test WHERE domain=:domain AND tld=:tld";
 
-            /** @var Statement $statement */
-            $statement = yield $this->connection->prepare($query);
+        /** @var Statement $statement */
+        $statement = yield $this->connection->prepare($query);
 
-            $data = $this->getData()[0];
+        $data = $this->getData()[0];
 
-            $this->assertSame($query, $statement->getQuery());
+        $this->assertSame($query, $statement->getQuery());
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement->execute(['domain' => $data[0], 'tld' => $data[1]]);
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement->execute(['domain' => $data[0], 'tld' => $data[1]]);
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getFieldCount());
+        $this->assertSame(2, $result->getFieldCount());
 
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
-            }
-        });
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
     }
 
     /**
      * @depends testPrepare
      */
-    public function testPrepareWithUnnamedParams()
+    public function testPrepareWithUnnamedParams(): \Generator
     {
-        Loop::run(function () {
-            $query = "SELECT * FROM test WHERE domain=? AND tld=?";
+        $query = "SELECT * FROM test WHERE domain=? AND tld=?";
 
-            /** @var Statement $statement */
-            $statement = yield $this->connection->prepare($query);
+        /** @var Statement $statement */
+        $statement = yield $this->connection->prepare($query);
 
-            $data = $this->getData()[0];
+        $data = $this->getData()[0];
 
-            $this->assertSame($query, $statement->getQuery());
+        $this->assertSame($query, $statement->getQuery());
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement->execute([$data[0], $data[1]]);
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement->execute([$data[0], $data[1]]);
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getFieldCount());
+        $this->assertSame(2, $result->getFieldCount());
 
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
-            }
-        });
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
     }
 
     /**
      * @depends testPrepare
      */
-    public function testPrepareWithNamedParamsWithDataAppearingAsNamedParam()
+    public function testPrepareWithNamedParamsWithDataAppearingAsNamedParam(): \Generator
     {
-        Loop::run(function () {
-            $query = "SELECT * FROM test WHERE domain=:domain OR domain=':domain'";
+        $query = "SELECT * FROM test WHERE domain=:domain OR domain=':domain'";
 
-            /** @var Statement $statement */
-            $statement = yield $this->connection->prepare($query);
+        /** @var Statement $statement */
+        $statement = yield $this->connection->prepare($query);
 
-            $data = $this->getData()[0];
+        $data = $this->getData()[0];
 
-            $this->assertSame($query, $statement->getQuery());
+        $this->assertSame($query, $statement->getQuery());
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement->execute(['domain' => $data[0]]);
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement->execute(['domain' => $data[0]]);
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getFieldCount());
+        $this->assertSame(2, $result->getFieldCount());
 
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
-            }
-        });
-    }
-
-    /**
-     * @depends testPrepare
-     * @expectedException \Amp\Postgres\QueryExecutionError
-     * @expectedExceptionMessage column "invalid" does not exist
-     */
-    public function testPrepareInvalidQuery()
-    {
-        Loop::run(function () {
-            $query = "SELECT * FROM test WHERE invalid=\$1";
-
-            /** @var Statement $statement */
-            $statement = yield $this->connection->prepare($query);
-        });
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
     }
 
     /**
      * @depends testPrepare
      */
-    public function testPrepareSameQuery()
+    public function testPrepareInvalidQuery(): Promise
     {
-        Loop::run(function () {
-            $sql = "SELECT * FROM test WHERE domain=\$1";
+        $this->expectException(QueryExecutionError::class);
+        $this->expectExceptionMessage('column "invalid" does not exist');
 
-            /** @var Statement $statement1 */
-            $statement1 = yield $this->connection->prepare($sql);
+        $query = "SELECT * FROM test WHERE invalid=\$1";
 
-            /** @var Statement $statement2 */
-            $statement2 = yield $this->connection->prepare($sql);
+        /** @var Statement $statement */
+        return $this->connection->prepare($query);
+    }
 
-            $this->assertInstanceOf(Statement::class, $statement1);
-            $this->assertInstanceOf(Statement::class, $statement2);
+    /**
+     * @depends testPrepare
+     */
+    public function testPrepareSameQuery(): \Generator
+    {
+        $sql = "SELECT * FROM test WHERE domain=\$1";
 
-            unset($statement1);
+        /** @var Statement $statement1 */
+        $statement1 = yield $this->connection->prepare($sql);
 
-            $data = $this->getData()[0];
+        /** @var Statement $statement2 */
+        $statement2 = yield $this->connection->prepare($sql);
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement2->execute([$data[0]]);
+        $this->assertInstanceOf(Statement::class, $statement1);
+        $this->assertInstanceOf(Statement::class, $statement2);
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        unset($statement1);
 
-            $this->assertSame(2, $result->getFieldCount());
+        $data = $this->getData()[0];
 
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
-            }
-        });
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement2->execute([$data[0]]);
+
+        $this->assertInstanceOf(ResultSet::class, $result);
+
+        $this->assertSame(2, $result->getFieldCount());
+
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
     }
 
     /**
      * @depends testPrepareSameQuery
      */
-    public function testSimultaneousPrepareSameQuery()
+    public function testSimultaneousPrepareSameQuery(): \Generator
     {
-        Loop::run(function () {
-            $sql = "SELECT * FROM test WHERE domain=\$1";
+        $sql = "SELECT * FROM test WHERE domain=\$1";
 
-            $statement1 = $this->connection->prepare($sql);
-            $statement2 = $this->connection->prepare($sql);
+        $statement1 = $this->connection->prepare($sql);
+        $statement2 = $this->connection->prepare($sql);
 
-            /**
-             * @var Statement $statement1
-             * @var Statement $statement2
-             */
-            list($statement1, $statement2) = yield [$statement1, $statement2];
+        /**
+         * @var Statement $statement1
+         * @var Statement $statement2
+         */
+        list($statement1, $statement2) = yield [$statement1, $statement2];
 
-            $this->assertInstanceOf(Statement::class, $statement1);
-            $this->assertInstanceOf(Statement::class, $statement2);
+        $this->assertInstanceOf(Statement::class, $statement1);
+        $this->assertInstanceOf(Statement::class, $statement2);
 
-            $data = $this->getData()[0];
+        $data = $this->getData()[0];
 
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement1->execute([$data[0]]);
+
+        $this->assertInstanceOf(ResultSet::class, $result);
+
+        $this->assertSame(2, $result->getFieldCount());
+
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
+
+        unset($statement1);
+
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement2->execute([$data[0]]);
+
+        $this->assertInstanceOf(ResultSet::class, $result);
+
+        $this->assertSame(2, $result->getFieldCount());
+
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
+    }
+
+    public function testPrepareSimilarQueryReturnsDifferentStatements(): \Generator
+    {
+        /** @var Statement $statement1 */
+        $statement1 = $this->connection->prepare("SELECT * FROM test WHERE domain=\$1");
+
+        /** @var Statement $statement2 */
+        $statement2 = $this->connection->prepare("SELECT * FROM test WHERE domain=:domain");
+
+        list($statement1, $statement2) = yield [$statement1, $statement2];
+
+        $this->assertInstanceOf(Statement::class, $statement1);
+        $this->assertInstanceOf(Statement::class, $statement2);
+
+        $this->assertNotSame($statement1, $statement2);
+
+        $data = $this->getData()[0];
+
+        $results = [];
+
+        $results[] = yield Iterator\toArray(yield $statement1->execute([$data[0]]));
+        $results[] = yield Iterator\toArray(yield $statement2->execute(['domain' => $data[0]]));
+
+        foreach ($results as $result) {
             /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement1->execute([$data[0]]);
-
-            $this->assertInstanceOf(ResultSet::class, $result);
-
-            $this->assertSame(2, $result->getFieldCount());
-
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
+            foreach ($result as $row) {
                 $this->assertSame($data[0], $row['domain']);
                 $this->assertSame($data[1], $row['tld']);
             }
-
-            unset($statement1);
-
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement2->execute([$data[0]]);
-
-            $this->assertInstanceOf(ResultSet::class, $result);
-
-            $this->assertSame(2, $result->getFieldCount());
-
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
-            }
-        });
+        }
     }
 
-    public function testPrepareSimilarQueryReturnsDifferentStatements()
+    public function testPrepareThenExecuteWithUnconsumedTupleResult(): \Generator
     {
-        Loop::run(function () {
-            /** @var Statement $statement1 */
-            $statement1 = $this->connection->prepare("SELECT * FROM test WHERE domain=\$1");
+        /** @var Statement $statement */
+        $statement = yield $this->connection->prepare("SELECT * FROM test");
 
-            /** @var Statement $statement2 */
-            $statement2 = $this->connection->prepare("SELECT * FROM test WHERE domain=:domain");
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement->execute();
 
-            list($statement1, $statement2) = yield [$statement1, $statement2];
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertInstanceOf(Statement::class, $statement1);
-            $this->assertInstanceOf(Statement::class, $statement2);
+        unset($result); // Force destruction of result object.
 
-            $this->assertNotSame($statement1, $statement2);
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $statement->execute();
 
-            $data = $this->getData()[0];
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $results = yield [$statement1->execute([$data[0]]), $statement2->execute(['domain' => $data[0]])];
+        $data = $this->getData();
 
-            foreach ($results as $result) {
-                /** @var \Amp\Postgres\ResultSet $result */
-                while (yield $result->advance()) {
-                    $row = $result->getCurrent();
-                    $this->assertSame($data[0], $row['domain']);
-                    $this->assertSame($data[1], $row['tld']);
-                }
-            }
-        });
+        for ($i = 0; yield $result->advance(); ++$i) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
     }
 
-    public function testPrepareThenExecuteWithUnconsumedTupleResult()
+    public function testExecute(): \Generator
     {
-        Loop::run(function () {
-            /** @var Statement $statement */
-            $statement = yield $this->connection->prepare("SELECT * FROM test");
+        $data = $this->getData()[0];
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement->execute();
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $statement->execute();
+        $this->assertSame(2, $result->getFieldCount());
 
-            $this->assertInstanceOf(ResultSet::class, $result);
-
-            $data = $this->getData();
-
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
-            }
-        });
-    }
-
-    public function testExecute()
-    {
-        Loop::run(function () {
-            $data = $this->getData()[0];
-
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
-
-            $this->assertInstanceOf(ResultSet::class, $result);
-
-            $this->assertSame(2, $result->getFieldCount());
-
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
-            }
-        });
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
     }
 
     /**
      * @depends testExecute
      */
-    public function testExecuteWithNamedParams()
+    public function testExecuteWithNamedParams(): \Generator
     {
-        Loop::run(function () {
-            $data = $this->getData()[0];
+        $data = $this->getData()[0];
 
-            /** @var \Amp\Postgres\ResultSet $result */
-            $result = yield $this->connection->execute(
-                "SELECT * FROM test WHERE domain=:domain",
-                ['domain' =>  $data[0]]
-            );
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $this->connection->execute(
+            "SELECT * FROM test WHERE domain=:domain",
+            ['domain' =>  $data[0]]
+        );
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $this->assertSame(2, $result->getFieldCount());
+        $this->assertSame(2, $result->getFieldCount());
 
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
-                $this->assertSame($data[0], $row['domain']);
-                $this->assertSame($data[1], $row['tld']);
-            }
-        });
+        while (yield $result->advance()) {
+            $row = $result->getCurrent();
+            $this->assertSame($data[0], $row['domain']);
+            $this->assertSame($data[1], $row['tld']);
+        }
     }
     /**
      * @depends testExecute
-     * @expectedException \Error
-     * @expectedExceptionMessage Value for unnamed parameter at position 0 missing
      */
-    public function testExecuteWithInvalidParams()
+    public function testExecuteWithInvalidParams(): Promise
     {
-        Loop::run(function () {
-            $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1");
-        });
+        $this->expectException(\Error::class);
+        $this->expectExceptionMessage("Value for unnamed parameter at position 0 missing");
+
+        return $this->connection->execute("SELECT * FROM test WHERE domain=\$1");
     }
 
     /**
      * @depends testExecute
-     * @expectedException \Error
-     * @expectedExceptionMessage Value for named parameter 'domain' missing
      */
-    public function testExecuteWithInvalidNamedParams()
+    public function testExecuteWithInvalidNamedParams(): Promise
     {
-        Loop::run(function () {
-            $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=:domain", ['tld' => 'com']);
-        });
+        $this->expectException(\Error::class);
+        $this->expectExceptionMessage("Value for named parameter 'domain' missing");
+
+        return $this->connection->execute("SELECT * FROM test WHERE domain=:domain", ['tld' => 'com']);
     }
 
     /**
      * @depends testQueryWithTupleResult
      */
-    public function testSimultaneousQuery()
+    public function testSimultaneousQuery(): Promise
     {
         $callback = \Amp\coroutine(function ($value) {
             /** @var \Amp\Postgres\ResultSet $result */
@@ -491,15 +467,13 @@ abstract class AbstractLinkTest extends TestCase
             }
         });
 
-        Loop::run(function () use ($callback) {
-            yield [$callback(0), $callback(1)];
-        });
+        return Promise\all([$callback(0), $callback(1)]);
     }
 
     /**
      * @depends testSimultaneousQuery
      */
-    public function testSimultaneousQueryWithOneFailing()
+    public function testSimultaneousQueryWithOneFailing(): \Generator
     {
         $callback = \Amp\coroutine(function ($query) {
             /** @var \Amp\Postgres\ResultSet $result */
@@ -516,14 +490,14 @@ abstract class AbstractLinkTest extends TestCase
             return $result;
         });
 
-        try {
-            Loop::run(function () use (&$result, $callback) {
-                $successful = $callback("SELECT * FROM test");
-                $failing = $callback("SELECT & FROM test");
+        $result = null;
 
-                $result = yield $successful;
-                yield $failing;
-            });
+        try {
+            $successful = $callback("SELECT * FROM test");
+            $failing = $callback("SELECT & FROM test");
+
+            $result = yield $successful;
+            yield $failing;
         } catch (QueryError $exception) {
             $this->assertInstanceOf(ResultSet::class, $result);
             return;
@@ -532,7 +506,7 @@ abstract class AbstractLinkTest extends TestCase
         $this->fail(\sprintf("Test did not throw an instance of %s", QueryError::class));
     }
 
-    public function testSimultaneousQueryAndPrepare()
+    public function testSimultaneousQueryAndPrepare(): Promise
     {
         $promises = [];
         $promises[] = new Coroutine((function () {
@@ -564,12 +538,10 @@ abstract class AbstractLinkTest extends TestCase
             }
         })());
 
-        Loop::run(function () use ($promises) {
-            yield $promises;
-        });
+        return Promise\all($promises);
     }
 
-    public function testSimultaneousPrepareAndExecute()
+    public function testSimultaneousPrepareAndExecute(): Promise
     {
         $promises[] = new Coroutine((function () {
             /** @var Statement $statement */
@@ -600,121 +572,115 @@ abstract class AbstractLinkTest extends TestCase
             }
         })());
 
-        Loop::run(function () use ($promises) {
-            yield $promises;
-        });
+        return Promise\all($promises);
     }
 
-    public function testTransaction()
+    public function testTransaction(): \Generator
     {
-        Loop::run(function () {
-            $isolation = SqlTransaction::ISOLATION_COMMITTED;
+        $isolation = SqlTransaction::ISOLATION_COMMITTED;
 
-            /** @var \Amp\Postgres\Transaction $transaction */
-            $transaction = yield $this->connection->beginTransaction($isolation);
+        /** @var \Amp\Postgres\Transaction $transaction */
+        $transaction = yield $this->connection->beginTransaction($isolation);
 
-            $this->assertInstanceOf(Transaction::class, $transaction);
+        $this->assertInstanceOf(Transaction::class, $transaction);
 
-            $data = $this->getData()[0];
+        $data = $this->getData()[0];
 
-            $this->assertTrue($transaction->isAlive());
-            $this->assertTrue($transaction->isActive());
-            $this->assertSame($isolation, $transaction->getIsolationLevel());
+        $this->assertTrue($transaction->isAlive());
+        $this->assertTrue($transaction->isActive());
+        $this->assertSame($isolation, $transaction->getIsolationLevel());
 
-            yield $transaction->createSavepoint('test');
+        yield $transaction->createSavepoint('test');
 
-            $statement = yield $transaction->prepare("SELECT * FROM test WHERE domain=:domain");
-            $result = yield $statement->execute(['domain' => $data[0]]);
+        $statement = yield $transaction->prepare("SELECT * FROM test WHERE domain=:domain");
+        $result = yield $statement->execute(['domain' => $data[0]]);
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            $result = yield $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
+        unset($result); // Force destruction of result object.
 
-            $this->assertInstanceOf(ResultSet::class, $result);
+        $result = yield $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
 
-            yield $transaction->rollbackTo('test');
+        $this->assertInstanceOf(ResultSet::class, $result);
 
-            yield $transaction->commit();
+        unset($result); // Force destruction of result object.
 
-            $this->assertFalse($transaction->isAlive());
-            $this->assertFalse($transaction->isActive());
+        yield $transaction->rollbackTo('test');
 
-            try {
-                $result = yield $transaction->execute("SELECT * FROM test");
-                $this->fail('Query should fail after transaction commit');
-            } catch (TransactionError $exception) {
-                // Exception expected.
-            }
-        });
+        yield $transaction->commit();
+
+        $this->assertFalse($transaction->isAlive());
+        $this->assertFalse($transaction->isActive());
+
+        try {
+            $result = yield $transaction->execute("SELECT * FROM test");
+            $this->fail('Query should fail after transaction commit');
+        } catch (TransactionError $exception) {
+            // Exception expected.
+        }
     }
 
-    public function testListen()
+    public function testListen(): \Generator
     {
-        Loop::run(function () {
-            $channel = "test";
-            /** @var \Amp\Postgres\Listener $listener */
-            $listener = yield $this->connection->listen($channel);
+        $channel = "test";
+        /** @var \Amp\Postgres\Listener $listener */
+        $listener = yield $this->connection->listen($channel);
 
-            $this->assertInstanceOf(Listener::class, $listener);
-            $this->assertSame($channel, $listener->getChannel());
+        $this->assertInstanceOf(Listener::class, $listener);
+        $this->assertSame($channel, $listener->getChannel());
 
-            Loop::delay(100, function () use ($channel) {
-                yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
-                yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
-            });
-
-            $count = 0;
-            Loop::delay(200, function () use ($listener) {
-                $listener->unlisten();
-            });
-
-            while (yield $listener->advance()) {
-                $this->assertSame($listener->getCurrent()->payload, (string) $count++);
-            }
-
-            $this->assertSame(2, $count);
+        Loop::delay(100, function () use ($channel) {
+            yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
+            yield $this->connection->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
         });
+
+        $count = 0;
+        Loop::delay(200, function () use ($listener) {
+            $listener->unlisten();
+        });
+
+        while (yield $listener->advance()) {
+            $this->assertSame($listener->getCurrent()->payload, (string) $count++);
+        }
+
+        $this->assertSame(2, $count);
     }
 
     /**
      * @depends testListen
      */
-    public function testNotify()
+    public function testNotify(): \Generator
     {
-        Loop::run(function () {
-            $channel = "test";
-            /** @var \Amp\Postgres\Listener $listener */
-            $listener = yield $this->connection->listen($channel);
+        $channel = "test";
+        /** @var \Amp\Postgres\Listener $listener */
+        $listener = yield $this->connection->listen($channel);
 
-            Loop::delay(100, function () use ($channel) {
-                yield $this->connection->notify($channel, '0');
-                yield $this->connection->notify($channel, '1');
-            });
-
-            $count = 0;
-            Loop::delay(200, function () use ($listener) {
-                $listener->unlisten();
-            });
-
-            while (yield $listener->advance()) {
-                $this->assertSame($listener->getCurrent()->payload, (string) $count++);
-            }
-
-            $this->assertSame(2, $count);
+        Loop::delay(100, function () use ($channel) {
+            yield $this->connection->notify($channel, '0');
+            yield $this->connection->notify($channel, '1');
         });
+
+        $count = 0;
+        Loop::delay(200, function () use ($listener) {
+            $listener->unlisten();
+        });
+
+        while (yield $listener->advance()) {
+            $this->assertSame($listener->getCurrent()->payload, (string) $count++);
+        }
+
+        $this->assertSame(2, $count);
     }
 
     /**
      * @depends testListen
-     * @expectedException \Amp\Sql\QueryError
-     * @expectedExceptionMessage Already listening on channel
      */
-    public function testListenOnSameChannel()
+    public function testListenOnSameChannel(): Promise
     {
-        Loop::run(function () {
-            $channel = "test";
-            $listener = yield $this->connection->listen($channel);
-            $listener = yield $this->connection->listen($channel);
-        });
+        $this->expectException(QueryError::class);
+        $this->expectExceptionMessage('Already listening on channel');
+
+        $channel = "test";
+        return Promise\all([$this->connection->listen($channel), $this->connection->listen($channel)]);
     }
 }
