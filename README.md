@@ -35,6 +35,7 @@ More examples can be found in the [`examples`](examples) directory.
 ```php
 use Amp\Postgres;
 use Amp\Postgres\ConnectionConfig;
+use Amp\Sql\Statement;
 
 Amp\Loop::run(function () {
     $config = ConnectionConfig::fromString("host=localhost user=postgres dbname=test");
@@ -42,7 +43,7 @@ Amp\Loop::run(function () {
     /** @var Postgres\Pool $pool */
     $pool = Postgres\pool($config);
 
-    /** @var Postgres\Statement $statement */
+    /** @var Statement $statement */
     $statement = yield $pool->prepare("SELECT * FROM test WHERE id = :id");
 
     /** @var Postgres\ResultSet $result */
