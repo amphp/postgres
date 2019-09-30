@@ -52,9 +52,10 @@ final class PqUnbufferedResultSet implements ResultSet
             return;
         }
 
-        asyncCall(function () {
+        $producer = $this->producer;
+        asyncCall(static function () use ($producer) {
             try {
-                while (yield $this->producer->advance());
+                while (yield $producer->advance());
             } catch (\Throwable $exception) {
                 // Ignore iterator failure when destroying.
             }
