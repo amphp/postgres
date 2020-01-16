@@ -42,15 +42,23 @@ final class ArrayParser
      */
     private function parser(string $data, callable $cast = null, string $delimiter = ','): \Generator
     {
-        if ($data[0] !== '{' || \substr($data, -1) !== '}') {
-            throw new ParseException("Missing opening or closing brackets");
+        if ($data === '') {
+            throw new ParseException("Unexpected end of data");
+        }
+
+        if ($data[0] !== '{') {
+            throw new ParseException("Missing opening bracket");
         }
 
         $data = \ltrim(\substr($data, 1));
 
         do {
             if ($data === '') {
-                throw new ParseException("Missing closing bracket");
+                throw new ParseException("Unexpected end of data");
+            }
+
+            if ($data[0] === '}') { // Empty array
+                return \ltrim(\substr($data, 1));
             }
 
             if ($data[0] === '{') { // Array

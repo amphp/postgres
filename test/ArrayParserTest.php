@@ -128,12 +128,76 @@ class ArrayParserTest extends TestCase
         $this->assertSame($array, $this->parser->parse($string));
     }
 
+    public function testEmptyArray()
+    {
+        $array = [];
+        $string = '{}';
+
+        $this->assertSame($array, $this->parser->parse($string));
+    }
+
+    public function testArrayContainingEmptyArray()
+    {
+        $array = [[], [1], []];
+        $string = '{{},{1},{}}';
+
+        $cast = function (string $value): int {
+            return (int) $value;
+        };
+
+        $this->assertSame($array, $this->parser->parse($string, $cast));
+    }
+
+    public function testArrayWithEmptyString()
+    {
+        $array = [''];
+        $string = '{""}';
+
+        $this->assertSame($array, $this->parser->parse($string));
+    }
+
+    public function testMalformedNestedArray()
+    {
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage('Unexpected end of data');
+
+        $string = '{{}';
+        $this->parser->parse($string);
+    }
+
+    public function testEmptyString()
+    {
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage('Unexpected end of data');
+
+        $string = ' ';
+        $this->parser->parse($string);
+    }
+
+    public function testNoOpeningBracket()
+    {
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage('Missing opening bracket');
+
+        $string = '"one", "two"}';
+        $this->parser->parse($string);
+    }
+
     public function testNoClosingBracket()
     {
         $this->expectException(ParseException::class);
-        $this->expectExceptionMessage('Missing opening or closing brackets');
+        $this->expectExceptionMessage('Unexpected end of data');
 
         $string = '{"one", "two"';
+        $this->parser->parse($string);
+    }
+
+    public function testExtraClosingBracket()
+    {
+        $this->expectException(ParseException::class);
+        $this->expectExceptionMessage('Data left in buffer after parsing');
+
+        $string = '{"one", "two"}}';
         $this->parser->parse($string);
     }
 
