@@ -22,7 +22,7 @@ final class PqConnection extends Connection implements Link
      *
      * @return Promise<PqConnection>
      */
-    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
+    public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): Promise
     {
         $connectionString = \str_replace(";", " ", $connectionConfig->getConnectionString());
 
@@ -63,7 +63,7 @@ final class PqConnection extends Connection implements Link
         $token = $token ?? new NullCancellationToken();
         $id = $token->subscribe([$deferred, "fail"]);
 
-        $promise->onResolve(function () use ($poll, $await, $id, $token) {
+        $promise->onResolve(function () use ($poll, $await, $id, $token): void {
             $token->unsubscribe($id);
             Loop::cancel($poll);
             Loop::cancel($await);
@@ -92,7 +92,7 @@ final class PqConnection extends Connection implements Link
     /**
      * Sets result sets to be fully buffered in local memory.
      */
-    public function shouldBufferResults()
+    public function shouldBufferResults(): void
     {
         $this->handle->shouldBufferResults();
     }
@@ -100,7 +100,7 @@ final class PqConnection extends Connection implements Link
     /**
      * Sets result sets to be streamed from the database server.
      */
-    public function shouldNotBufferResults()
+    public function shouldNotBufferResults(): void
     {
         $this->handle->shouldNotBufferResults();
     }

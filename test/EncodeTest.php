@@ -7,7 +7,7 @@ use function Amp\Postgres\encode;
 
 class EncodeTest extends TestCase
 {
-    public function testSingleDimensionalStringArray()
+    public function testSingleDimensionalStringArray(): void
     {
         $array = ["one", "two", "three"];
         $string = '{"one","two","three"}';
@@ -15,7 +15,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testMultiDimensionalStringArray()
+    public function testMultiDimensionalStringArray(): void
     {
         $array = ["one", "two", ["three", "four"], "five"];
         $string = '{"one","two",{"three","four"},"five"}';
@@ -23,7 +23,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testQuotedStrings()
+    public function testQuotedStrings(): void
     {
         $array = ["one", "two", ["three", "four"], "five"];
         $string = '{"one","two",{"three","four"},"five"}';
@@ -31,7 +31,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testEscapedQuoteDelimiter()
+    public function testEscapedQuoteDelimiter(): void
     {
         $array = ['va"lue1', 'value"2'];
         $string = '{"va\\"lue1","value\\"2"}';
@@ -39,7 +39,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testNullValue()
+    public function testNullValue(): void
     {
         $array = ["one", null, "three"];
         $string = '{"one",NULL,"three"}';
@@ -47,7 +47,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testSingleDimensionalIntegerArray()
+    public function testSingleDimensionalIntegerArray(): void
     {
         $array = [1, 2, 3];
         $string = '{' . \implode(',', $array) . '}';
@@ -55,7 +55,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testIntegerArrayWithNull()
+    public function testIntegerArrayWithNull(): void
     {
         $array = [1, 2, null, 3];
         $string = '{1,2,NULL,3}';
@@ -63,7 +63,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testMultidimensionalIntegerArray()
+    public function testMultidimensionalIntegerArray(): void
     {
         $array = [1, 2, [3, 4], [5], 6, 7, [[8, 9], 10]];
         $string = '{1,2,{3,4},{5},6,7,{{8,9},10}}';
@@ -71,7 +71,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testEscapedBackslashesInQuotedValue()
+    public function testEscapedBackslashesInQuotedValue(): void
     {
         $array = ["test\\ing", "esca\\ped\\"];
         $string = '{"test\\\\ing","esca\\\\ped\\\\"}';
@@ -79,7 +79,7 @@ class EncodeTest extends TestCase
         $this->assertSame($string, encode($array));
     }
 
-    public function testObjectWithoutToStringMethod()
+    public function testObjectWithoutToStringMethod(): void
     {
         $this->expectException(\Error::class);
         $this->expectExceptionMessage('Object without a __toString() method in array');

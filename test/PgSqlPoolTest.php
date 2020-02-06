@@ -66,7 +66,7 @@ class PgSqlPoolTest extends AbstractLinkTest
         return $pool;
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         foreach ($this->handles as $handle) {
             \pg_get_result($handle); // Consume any leftover results from test.

@@ -35,7 +35,7 @@ final class PooledListener implements Listener
         return $this->listener->advance();
     }
 
-    public function getCurrent()
+    public function getCurrent(): Notification
     {
         return $this->listener->getCurrent();
     }

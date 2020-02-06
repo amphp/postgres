@@ -11,7 +11,7 @@ use function Amp\Postgres\connect;
 
 class FunctionsTest extends AsyncTestCase
 {
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

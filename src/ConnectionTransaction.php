@@ -72,7 +72,7 @@ final class ConnectionTransaction implements Transaction
      *
      * Closes and commits all changes in the transaction.
      */
-    public function close()
+    public function close(): void
     {
         if ($this->handle) {
             $this->commit(); // Invokes $this->release callback.

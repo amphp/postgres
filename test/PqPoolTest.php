@@ -63,7 +63,7 @@ class PqPoolTest extends AbstractLinkTest
         return $pool;
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         $this->handles[0]->exec("ROLLBACK");
         $this->handles[0]->exec("DROP TABLE test");

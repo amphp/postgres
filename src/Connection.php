@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
 use Amp\CancellationToken;
 use Amp\Deferred;
 use Amp\Promise;
@@ -13,8 +12,6 @@ use function Amp\call;
 
 abstract class Connection implements Link, Handle
 {
-    use CallableMaker;
-
     /** @var Handle */
     private $handle;
 
@@ -27,7 +24,7 @@ abstract class Connection implements Link, Handle
      *
      * @return Promise<Connection>
      */
-    abstract public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise;
+    abstract public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): Promise;
 
     /**
      * @param Handle $handle
@@ -63,7 +60,7 @@ abstract class Connection implements Link, Handle
     /**
      * {@inheritdoc}
      */
-    final public function close()
+    final public function close(): void
     {
         if ($this->handle) {
             $this->handle->close();
@@ -100,7 +97,7 @@ abstract class Connection implements Link, Handle
     /**
      * Releases the transaction lock.
      */
-    private function release()
+    private function release(): void
     {
         \assert($this->busy !== null);
 
@@ -209,7 +206,7 @@ abstract class Connection implements Link, Handle
 
             $this->busy = new Deferred;
 
-            return new ConnectionTransaction($this->handle, $this->callableFromInstanceMethod("release"), $isolation);
+            return new ConnectionTransaction($this->handle, \Closure::fromCallable([$this, 'release']), $isolation);
         });
     }
 

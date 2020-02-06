@@ -37,7 +37,7 @@ final class Pool extends ConnectionPool implements Link
         int $maxConnections = self::DEFAULT_MAX_CONNECTIONS,
         int $idleTimeout = self::DEFAULT_IDLE_TIMEOUT,
         bool $resetConnections = true,
-        Connector $connector = null
+        ?Connector $connector = null
     ) {
         parent::__construct($config, $maxConnections, $idleTimeout, $connector);
 

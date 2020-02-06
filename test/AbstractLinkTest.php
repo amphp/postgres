@@ -27,7 +27,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     /**
      * @return array Start test data for database.
      */
-    public function getData()
+    public function getData(): array
     {
         return [
             ['amphp', 'org'],
@@ -44,7 +44,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
      */
     abstract public function createLink(string $connectionString): Link;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
         $this->connection = $this->createLink('host=localhost user=postgres');
@@ -100,11 +100,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->assertSame(1, $result->getAffectedRowCount());
     }
 
-    /**
-     * @expectedException \Amp\Sql\QueryError
-     */
     public function testQueryWithEmptyQuery(): Promise
     {
+        $this->expectException(QueryError::class);
+
         /** @var \Amp\Sql\CommandResult $result */
         return $this->connection->query('');
     }

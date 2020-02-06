@@ -10,7 +10,7 @@ use Amp\Sql\Connector;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class . "\\Postgres";
 
-function connector(Connector $connector = null): Connector
+function connector(?Connector $connector = null): Connector
 {
     if ($connector === null) {
         $connector = Loop::getState(LOOP_CONNECTOR_IDENTIFIER);

@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
 use Amp\Coroutine;
 use Amp\Deferred;
 use Amp\Emitter;
@@ -19,8 +18,6 @@ use function Amp\coroutine;
 
 final class PqHandle implements Handle
 {
-    use CallableMaker;
-
     /** @var \pq\Connection PostgreSQL connection object. */
     private $handle;
 
@@ -42,15 +39,6 @@ final class PqHandle implements Handle
     /** @var Struct[] */
     private $statements = [];
 
-    /** @var callable */
-    private $fetch;
-
-    /** @var callable */
-    private $unlisten;
-
-    /** @var callable */
-    private $release;
-
     /** @var int */
     private $lastUsedAt;
 
@@ -69,7 +57,7 @@ final class PqHandle implements Handle
         $deferred = &$this->deferred;
         $listeners = &$this->listeners;
 
-        $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle) {
+        $this->poll = Loop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle): void {
             $lastUsedAt = \time();
 
             if ($handle->poll() === pq\Connection::POLLING_FAILED) {
@@ -103,7 +91,7 @@ final class PqHandle implements Handle
             }
         });
 
-        $this->await = Loop::onWritable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
+        $this->await = Loop::onWritable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, &$handle): void {
             try {
                 if (!$handle->flush()) {
                     return; // Not finished sending data, continue polling for writability.
@@ -126,10 +114,6 @@ final class PqHandle implements Handle
 
         Loop::disable($this->poll);
         Loop::disable($this->await);
-
-        $this->fetch = coroutine($this->callableFromInstanceMethod("fetch"));
-        $this->unlisten = $this->callableFromInstanceMethod("unlisten");
-        $this->release = $this->callableFromInstanceMethod("release");
     }
 
     /**
@@ -159,7 +143,7 @@ final class PqHandle implements Handle
     /**
      * {@inheritdoc}
      */
-    public function close()
+    public function close(): void
     {
         if ($this->deferred) {
             $deferred = $this->deferred;
@@ -172,7 +156,7 @@ final class PqHandle implements Handle
         $this->free();
     }
 
-    private function free()
+    private function free(): void
     {
         Loop::cancel($this->poll);
         Loop::cancel($this->await);
@@ -239,7 +223,11 @@ final class PqHandle implements Handle
 
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
-                $result = new PqUnbufferedResultSet($this->fetch, $result, $this->release);
+                $result = new PqUnbufferedResultSet(
+                    coroutine(\Closure::fromCallable([$this, 'fetch'])),
+                    $result,
+                    \Closure::fromCallable([$this, 'release'])
+                );
                 return $result;
 
             case pq\Result::NONFATAL_ERROR:
@@ -289,7 +277,7 @@ final class PqHandle implements Handle
         }
     }
 
-    private function release()
+    private function release(): void
     {
         \assert(
             $this->busy instanceof Deferred && $this->busy !== $this->deferred,
@@ -465,7 +453,7 @@ final class PqHandle implements Handle
             }
 
             Loop::enable($this->poll);
-            return new ConnectionListener($emitter->iterate(), $channel, $this->unlisten);
+            return new ConnectionListener($emitter->iterate(), $channel, \Closure::fromCallable([$this, 'unlisten']));
         });
     }
 

@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
 use Amp\Deferred;
 use Amp\Emitter;
 use Amp\Loop;
@@ -16,8 +15,6 @@ use function Amp\call;
 
 final class PgSqlHandle implements Handle
 {
-    use CallableMaker;
-
     const DIAGNOSTIC_CODES = [
         \PGSQL_DIAG_SEVERITY => "severity",
         \PGSQL_DIAG_SQLSTATE => "sqlstate",
@@ -48,9 +45,6 @@ final class PgSqlHandle implements Handle
     /** @var \Amp\Emitter[] */
     private $listeners = [];
 
-    /** @var callable */
-    private $unlisten;
-
     /** @var Struct[] */
     private $statements = [];
 
@@ -74,7 +68,7 @@ final class PgSqlHandle implements Handle
         $deferred = &$this->deferred;
         $listeners = &$this->listeners;
 
-        $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle) {
+        $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle): void {
             $lastUsedAt = \time();
 
             if (!\pg_consume_input($handle)) {
@@ -123,7 +117,7 @@ final class PgSqlHandle implements Handle
             }
         });
 
-        $this->await = Loop::onWritable($socket, static function ($watcher) use (&$deferred, &$listeners, &$handle) {
+        $this->await = Loop::onWritable($socket, static function ($watcher) use (&$deferred, &$listeners, &$handle): void {
             $flush = \pg_flush($handle);
             if ($flush === 0) {
                 return; // Not finished sending data, listen again.
@@ -147,8 +141,6 @@ final class PgSqlHandle implements Handle
 
         Loop::disable($this->poll);
         Loop::disable($this->await);
-
-        $this->unlisten = $this->callableFromInstanceMethod("unlisten");
     }
 
     /**
@@ -162,7 +154,7 @@ final class PgSqlHandle implements Handle
     /**
      * {@inheritdoc}
      */
-    public function close()
+    public function close(): void
     {
         if ($this->deferred) {
             $deferred = $this->deferred;
@@ -175,7 +167,7 @@ final class PgSqlHandle implements Handle
         $this->handle = null;
     }
 
-    private function free()
+    private function free(): void
     {
         if (\is_resource($this->handle)) {
             \pg_close($this->handle);
@@ -458,7 +450,7 @@ final class PgSqlHandle implements Handle
             }
 
             Loop::enable($this->poll);
-            return new ConnectionListener($emitter->iterate(), $channel, $this->unlisten);
+            return new ConnectionListener($emitter->iterate(), $channel, \Closure::fromCallable([$this, 'unlisten']));
         });
     }
 

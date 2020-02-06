@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 
 class ConnectionConfigTest extends TestCase
 {
-    public function testBasicSyntax()
+    public function testBasicSyntax(): void
     {
         $config = ConnectionConfig::fromString("host=localhost port=5434 user=postgres password=test db=test");
 
@@ -18,7 +18,7 @@ class ConnectionConfigTest extends TestCase
         $this->assertSame($config->getDatabase(), "test");
     }
 
-    public function testAlternativeSyntax()
+    public function testAlternativeSyntax(): void
     {
         $config = ConnectionConfig::fromString("host=localhost;port=5434;user=postgres;password=test;db=test");
 
@@ -29,14 +29,14 @@ class ConnectionConfigTest extends TestCase
         $this->assertSame($config->getDatabase(), "test");
     }
 
-    public function testNoHost()
+    public function testNoHost(): void
     {
         $this->expectException(\Error::class);
         $this->expectExceptionMessage("Host must be provided in connection string");
         $config = ConnectionConfig::fromString("user=postgres");
     }
 
-    public function testInvalidString()
+    public function testInvalidString(): void
     {
         $this->expectException(\Error::class);
         $this->expectExceptionMessage("Host must be provided in connection string");

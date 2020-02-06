@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\CallableMaker;
 use Amp\CancellationToken;
 use Amp\Deferred;
 use Amp\Failure;
@@ -13,8 +12,6 @@ use Amp\Sql\ConnectionException;
 
 final class PgSqlConnection extends Connection implements Link
 {
-    use CallableMaker;
-
     /**
      * @param ConnectionConfig $connectionConfig
      * @param CancellationToken $token
@@ -23,7 +20,7 @@ final class PgSqlConnection extends Connection implements Link
      *
      * @throws \Error If pecl-ev is used as a loop extension.
      */
-    public static function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
+    public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): Promise
     {
         // @codeCoverageIgnoreStart
         if (Loop::get()->getHandle() instanceof \EvLoop) {
@@ -72,7 +69,7 @@ final class PgSqlConnection extends Connection implements Link
         $token = $token ?? new NullCancellationToken();
         $id = $token->subscribe([$deferred, "fail"]);
 
-        $promise->onResolve(function ($exception) use ($connection, $poll, $await, $id, $token) {
+        $promise->onResolve(function ($exception) use ($connection, $poll, $await, $id, $token): void {
             if ($exception) {
                 \pg_close($connection);
             }

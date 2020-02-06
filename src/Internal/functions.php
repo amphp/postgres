@@ -10,14 +10,14 @@ REGEX;
 
 /**
  * @param string $sql SQL statement with named and unnamed placeholders.
- * @param array $names Array of parameter positions mapped to names and/or indexed locations.
+ * @param array $names [Output] Array of parameter positions mapped to names and/or indexed locations.
  *
  * @return string SQL statement with Postgres-style placeholders
  */
-function parseNamedParams(string $sql, array &$names = null): string
+function parseNamedParams(string $sql, ?array &$names): string
 {
     $names = [];
-    return \preg_replace_callback(STATEMENT_PARAM_REGEX, function (array $matches) use (&$names) {
+    return \preg_replace_callback(STATEMENT_PARAM_REGEX, function (array $matches) use (&$names): string {
         static $index = 0, $unnamed = 0, $numbered = 1;
 
         if (isset($matches[4])) {
