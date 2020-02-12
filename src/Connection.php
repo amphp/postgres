@@ -5,7 +5,6 @@ namespace Amp\Postgres;
 use Amp\CancellationToken;
 use Amp\Deferred;
 use Amp\Promise;
-use Amp\Sql\FailureException;
 use Amp\Sql\Link;
 use Amp\Sql\Transaction;
 use function Amp\call;
@@ -45,15 +44,9 @@ abstract class Connection implements Link, Handle
 
     /**
      * {@inheritdoc}
-     *
-     * @throws FailureException
      */
     final public function getLastUsedAt(): int
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return $this->handle->getLastUsedAt();
     }
 
@@ -62,9 +55,7 @@ abstract class Connection implements Link, Handle
      */
     final public function close(): void
     {
-        if ($this->handle) {
-            $this->handle->close();
-        }
+        $this->handle->close();
     }
 
     /**
@@ -72,26 +63,30 @@ abstract class Connection implements Link, Handle
      * @param mixed ...$args Arguments to pass to function.
      *
      * @return Promise
-     *
-     * @throws FailureException
      */
     private function send(string $methodName, ...$args): Promise
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         if ($this->busy) {
             return call(function () use ($methodName, $args) {
                 while ($this->busy) {
                     yield $this->busy->promise();
                 }
 
-                return yield ([$this->handle, $methodName])(...$args);
+                return yield $this->handle->{$methodName}(...$args);
             });
         }
 
-        return ([$this->handle, $methodName])(...$args);
+        return $this->handle->{$methodName}(...$args);
+    }
+
+    /**
+     * Reserves the connection for a transaction.
+     */
+    private function reserve(): void
+    {
+        \assert($this->busy === null);
+
+        $this->busy = new Deferred;
     }
 
     /**
@@ -111,10 +106,6 @@ abstract class Connection implements Link, Handle
      */
     final public function query(string $sql): Promise
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return $this->send("query", $sql);
     }
 
@@ -123,24 +114,14 @@ abstract class Connection implements Link, Handle
      */
     final public function execute(string $sql, array $params = []): Promise
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return $this->send("execute", $sql, $params);
     }
 
     /**
      * {@inheritdoc}
-     *
-     * Statement instances returned by this method must also implement Operation.
      */
     final public function prepare(string $sql): Promise
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return $this->send("prepare", $sql);
     }
 
@@ -150,61 +131,50 @@ abstract class Connection implements Link, Handle
      */
     final public function notify(string $channel, string $payload = ""): Promise
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return $this->send("notify", $channel, $payload);
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws FailureException
      */
     final public function listen(string $channel): Promise
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return $this->send("listen", $channel);
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws FailureException
      */
     final public function beginTransaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return call(function () use ($isolation) {
-            switch ($isolation) {
-                case Transaction::ISOLATION_UNCOMMITTED:
-                    yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
-                    break;
+            $this->reserve();
 
-                case Transaction::ISOLATION_COMMITTED:
-                    yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
-                    break;
+            try {
+                switch ($isolation) {
+                    case Transaction::ISOLATION_UNCOMMITTED:
+                        yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
+                        break;
 
-                case Transaction::ISOLATION_REPEATABLE:
-                    yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
-                    break;
+                    case Transaction::ISOLATION_COMMITTED:
+                        yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
+                        break;
 
-                case Transaction::ISOLATION_SERIALIZABLE:
-                    yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
-                    break;
+                    case Transaction::ISOLATION_REPEATABLE:
+                        yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+                        break;
 
-                default:
-                    throw new \Error("Invalid transaction type");
+                    case Transaction::ISOLATION_SERIALIZABLE:
+                        yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+                        break;
+
+                    default:
+                        throw new \Error("Invalid transaction type");
+                }
+            } catch (\Throwable $exception) {
+                $this->release();
+                throw $exception;
             }
-
-            $this->busy = new Deferred;
 
             return new ConnectionTransaction($this->handle, \Closure::fromCallable([$this, 'release']), $isolation);
         });
@@ -212,29 +182,17 @@ abstract class Connection implements Link, Handle
 
     /**
      * {@inheritdoc}
-     *
-     * @throws FailureException
      */
     final public function quoteString(string $data): string
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return $this->handle->quoteString($data);
     }
 
     /**
      * {@inheritdoc}
-     *
-     * @throws FailureException
      */
     final public function quoteName(string $name): string
     {
-        if (! $this->handle) {
-            throw new FailureException('Not connected');
-        }
-
         return $this->handle->quoteName($name);
     }
 }
