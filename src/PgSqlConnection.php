@@ -27,9 +27,7 @@ final class PgSqlConnection extends Connection implements Link
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
         } // @codeCoverageIgnoreEnd
 
-        $connectionString = \str_replace(";", " ", $connectionConfig->getConnectionString());
-
-        if (!$connection = @\pg_connect($connectionString, \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
+        if (!$connection = @\pg_connect($connectionConfig->getConnectionString(), \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
             return new Failure(new ConnectionException("Failed to create connection resource"));
         }
 
@@ -43,13 +41,11 @@ final class PgSqlConnection extends Connection implements Link
 
         $deferred = new Deferred;
 
-        $callback = function ($watcher, $resource) use ($connection, $deferred) {
+        $callback = function ($watcher, $resource) use ($connection, $deferred): void {
             switch (\pg_connect_poll($connection)) {
-                case \PGSQL_POLLING_READING:
-                    return; // Connection not ready, poll again.
-
-                case \PGSQL_POLLING_WRITING:
-                    return; // Still writing...
+                case \PGSQL_POLLING_READING: // Connection not ready, poll again.
+                case \PGSQL_POLLING_WRITING: // Still writing...
+                    return;
 
                 case \PGSQL_POLLING_FAILED:
                     $deferred->fail(new ConnectionException(\pg_last_error($connection)));
@@ -66,7 +62,7 @@ final class PgSqlConnection extends Connection implements Link
 
         $promise = $deferred->promise();
 
-        $token = $token ?? new NullCancellationToken();
+        $token = $token ?? new NullCancellationToken;
         $id = $token->subscribe([$deferred, "fail"]);
 
         $promise->onResolve(function ($exception) use ($connection, $poll, $await, $id, $token): void {

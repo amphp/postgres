@@ -24,10 +24,8 @@ final class PqConnection extends Connection implements Link
      */
     public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): Promise
     {
-        $connectionString = \str_replace(";", " ", $connectionConfig->getConnectionString());
-
         try {
-            $connection = new pq\Connection($connectionString, pq\Connection::ASYNC);
+            $connection = new pq\Connection($connectionConfig->getConnectionString(), pq\Connection::ASYNC);
         } catch (pq\Exception $exception) {
             return new Failure(new ConnectionException("Could not connect to PostgreSQL server", 0, $exception));
         }
@@ -37,13 +35,11 @@ final class PqConnection extends Connection implements Link
 
         $deferred = new Deferred;
 
-        $callback = function () use ($connection, $deferred) {
+        $callback = function () use ($connection, $deferred): void {
             switch ($connection->poll()) {
-                case pq\Connection::POLLING_READING:
-                    return; // Connection not ready, poll again.
-
-                case pq\Connection::POLLING_WRITING:
-                    return; // Still writing...
+                case pq\Connection::POLLING_READING: // Connection not ready, poll again.
+                case pq\Connection::POLLING_WRITING: // Still writing...
+                    return;
 
                 case pq\Connection::POLLING_FAILED:
                     $deferred->fail(new ConnectionException($connection->errorMessage));
@@ -60,7 +56,7 @@ final class PqConnection extends Connection implements Link
 
         $promise = $deferred->promise();
 
-        $token = $token ?? new NullCancellationToken();
+        $token = $token ?? new NullCancellationToken;
         $id = $token->subscribe([$deferred, "fail"]);
 
         $promise->onResolve(function () use ($poll, $await, $id, $token): void {
