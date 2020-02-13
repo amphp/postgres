@@ -121,7 +121,7 @@ final class PqHandle implements Handle
      */
     public function __destruct()
     {
-        $this->free();
+        $this->close();
     }
 
     /**

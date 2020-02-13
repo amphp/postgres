@@ -148,7 +148,7 @@ final class PgSqlHandle implements Handle
      */
     public function __destruct()
     {
-        $this->free();
+        $this->close();
     }
 
     /**
