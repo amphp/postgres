@@ -11,7 +11,7 @@ class QueryExecutionError extends QueryError
 
     public function __construct(string $message, array $diagnostics, \Throwable $previous = null)
     {
-        parent::__construct($message, 0, $previous);
+        parent::__construct($message, $diagnostics['sql'], $previous);
         $this->diagnostics = $diagnostics;
     }
 

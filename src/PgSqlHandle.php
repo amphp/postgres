@@ -241,13 +241,14 @@ final class PgSqlHandle implements Handle
 
     /**
      * @param resource $result PostgreSQL result resource.
+     * @param string $sql SQL query text or statement id for error message
      *
      * @return \Amp\Sql\CommandResult|ResultSet
      *
      * @throws FailureException
      * @throws QueryError
      */
-    private function createResult($result)
+    private function createResult($result, &$sql)
     {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:
@@ -265,6 +266,7 @@ final class PgSqlHandle implements Handle
                 foreach (self::DIAGNOSTIC_CODES as $fieldCode => $desciption) {
                     $diagnostics[$desciption] = \pg_result_error_field($result, $fieldCode);
                 }
+                $diagnostics['sql'] = $sql;
                 throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
 
             case \PGSQL_BAD_RESPONSE:
@@ -286,7 +288,7 @@ final class PgSqlHandle implements Handle
     public function statementExecute(string $name, array $params): Promise
     {
         return call(function () use ($name, $params) {
-            return $this->createResult(yield from $this->send("pg_send_execute", $name, $params));
+            return $this->createResult(yield from $this->send("pg_send_execute", $name, $params), $name);
         });
     }
 
@@ -326,7 +328,7 @@ final class PgSqlHandle implements Handle
         }
 
         return call(function () use ($sql) {
-            return $this->createResult(yield from $this->send("pg_send_query", $sql));
+            return $this->createResult(yield from $this->send("pg_send_query", $sql), $sql);
         });
     }
 
@@ -343,7 +345,7 @@ final class PgSqlHandle implements Handle
         $params = Internal\replaceNamedParams($params, $names);
 
         return call(function () use ($sql, $params) {
-            return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params));
+            return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params), $sql);
         });
     }
 

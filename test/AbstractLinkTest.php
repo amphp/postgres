@@ -117,6 +117,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         } catch (QueryExecutionError $exception) {
             $diagnostics  = $exception->getDiagnostics();
             $this->assertArrayHasKey("sqlstate", $diagnostics);
+            $this->assertEquals('SELECT & FROM test', $diagnostics['sql']);
         }
     }
 
