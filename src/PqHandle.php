@@ -232,7 +232,7 @@ final class PqHandle implements Handle
 
             case pq\Result::NONFATAL_ERROR:
             case pq\Result::FATAL_ERROR:
-                throw new QueryExecutionError($result->errorMessage, array_merge($result->diag, ['sql' => $args[0] ?? '']));
+                throw new QueryExecutionError($result->errorMessage, \array_merge($result->diag, ['sql' => $args[0] ?? '']));
 
             case pq\Result::BAD_RESPONSE:
                 throw new FailureException($result->errorMessage);
