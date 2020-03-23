@@ -248,7 +248,7 @@ final class PgSqlHandle implements Handle
      * @throws FailureException
      * @throws QueryError
      */
-    private function createResult($result, &$sql)
+    private function createResult($result, $sql)
     {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:
@@ -398,6 +398,7 @@ final class PgSqlHandle implements Handle
                             foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
                                 $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                             }
+                            $diagnostics['sql'] = $modifiedSql;
                             throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
 
                         case \PGSQL_BAD_RESPONSE:
