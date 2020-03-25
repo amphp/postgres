@@ -241,13 +241,14 @@ final class PgSqlHandle implements Handle
 
     /**
      * @param resource $result PostgreSQL result resource.
+     * @param string $sql Query SQL.
      *
      * @return \Amp\Sql\CommandResult|ResultSet
      *
      * @throws FailureException
      * @throws QueryError
      */
-    private function createResult($result)
+    private function createResult($result, string $sql)
     {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:
@@ -265,7 +266,7 @@ final class PgSqlHandle implements Handle
                 foreach (self::DIAGNOSTIC_CODES as $fieldCode => $desciption) {
                     $diagnostics[$desciption] = \pg_result_error_field($result, $fieldCode);
                 }
-                throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
+                throw new QueryExecutionError(\pg_result_error($result), $diagnostics, null, $sql);
 
             case \PGSQL_BAD_RESPONSE:
                 throw new FailureException(\pg_result_error($result));
@@ -286,7 +287,8 @@ final class PgSqlHandle implements Handle
     public function statementExecute(string $name, array $params): Promise
     {
         return call(function () use ($name, $params) {
-            return $this->createResult(yield from $this->send("pg_send_execute", $name, $params));
+            \assert(isset($this->statements[$name]), "Named statement not found when executing");
+            return $this->createResult(yield from $this->send("pg_send_execute", $name, $params), $this->statements[$name]->sql);
         });
     }
 
@@ -326,7 +328,7 @@ final class PgSqlHandle implements Handle
         }
 
         return call(function () use ($sql) {
-            return $this->createResult(yield from $this->send("pg_send_query", $sql));
+            return $this->createResult(yield from $this->send("pg_send_query", $sql), $sql);
         });
     }
 
@@ -343,7 +345,7 @@ final class PgSqlHandle implements Handle
         $params = Internal\replaceNamedParams($params, $names);
 
         return call(function () use ($sql, $params) {
-            return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params));
+            return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params), $sql);
         });
     }
 
@@ -378,12 +380,15 @@ final class PgSqlHandle implements Handle
                 use Struct;
                 public $refCount = 1;
                 public $promise;
+                public $sql;
             };
+
+            $storage->sql = $sql;
 
             $this->statements[$name] = $storage;
 
             try {
-                yield ($storage->promise = call(function () use ($name, $modifiedSql) {
+                yield ($storage->promise = call(function () use ($name, $modifiedSql, $sql) {
                     $result = yield from $this->send("pg_send_prepare", $name, $modifiedSql);
 
                     switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
@@ -396,7 +401,7 @@ final class PgSqlHandle implements Handle
                             foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
                                 $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                             }
-                            throw new QueryExecutionError(\pg_result_error($result), $diagnostics);
+                            throw new QueryExecutionError(\pg_result_error($result), $diagnostics, null, $sql);
 
                         case \PGSQL_BAD_RESPONSE:
                             throw new FailureException(\pg_result_error($result));

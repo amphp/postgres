@@ -163,6 +163,7 @@ final class PqHandle implements Handle
     }
 
     /**
+     * @param string|null Query SQL or null if not related.
      * @param callable $method Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
@@ -172,7 +173,7 @@ final class PqHandle implements Handle
      *
      * @throws FailureException
      */
-    private function send(callable $method, ...$args): \Generator
+    private function send(?string $sql, callable $method, ...$args): \Generator
     {
         while ($this->busy) {
             try {
@@ -232,7 +233,7 @@ final class PqHandle implements Handle
 
             case pq\Result::NONFATAL_ERROR:
             case pq\Result::FATAL_ERROR:
-                throw new QueryExecutionError($result->errorMessage, $result->diag);
+                throw new QueryExecutionError($result->errorMessage, $result->diag, null, $sql ?? '');
 
             case pq\Result::BAD_RESPONSE:
                 throw new FailureException($result->errorMessage);
@@ -306,7 +307,7 @@ final class PqHandle implements Handle
 
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        return new Coroutine($this->send([$storage->statement, "execAsync"], $params));
+        return new Coroutine($this->send($storage->sql, [$storage->statement, "execAsync"], $params));
     }
 
     /**
@@ -334,7 +335,7 @@ final class PqHandle implements Handle
 
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        return new Coroutine($this->send([$storage->statement, "deallocateAsync"]));
+        return new Coroutine($this->send(null, [$storage->statement, "deallocateAsync"]));
     }
 
     /**
@@ -346,7 +347,7 @@ final class PqHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
-        return new Coroutine($this->send([$this->handle, "execAsync"], $sql));
+        return new Coroutine($this->send($sql, [$this->handle, "execAsync"], $sql));
     }
 
     /**
@@ -361,7 +362,7 @@ final class PqHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        return new Coroutine($this->send([$this->handle, "execParamsAsync"], $sql, $params));
+        return new Coroutine($this->send($sql, [$this->handle, "execParamsAsync"], $sql, $params));
     }
 
     /**
@@ -396,13 +397,16 @@ final class PqHandle implements Handle
                 public $refCount = 1;
                 public $promise;
                 public $statement;
+                public $sql;
             };
+
+            $storage->sql = $sql;
 
             $this->statements[$name] = $storage;
 
             try {
                 $storage->statement = yield (
-                    $storage->promise = new Coroutine($this->send([$this->handle, "prepareAsync"], $name, $modifiedSql))
+                    $storage->promise = new Coroutine($this->send($sql, [$this->handle, "prepareAsync"], $name, $modifiedSql))
                 );
             } catch (\Throwable $exception) {
                 unset($this->statements[$name]);
@@ -420,7 +424,7 @@ final class PqHandle implements Handle
      */
     public function notify(string $channel, string $payload = ""): Promise
     {
-        return new Coroutine($this->send([$this->handle, "notifyAsync"], $channel, $payload));
+        return new Coroutine($this->send(null, [$this->handle, "notifyAsync"], $channel, $payload));
     }
 
     /**
@@ -437,6 +441,7 @@ final class PqHandle implements Handle
 
             try {
                 yield from $this->send(
+                    null,
                     [$this->handle, "listenAsync"],
                     $channel,
                     static function (string $channel, string $message, int $pid) use ($emitter) {
@@ -474,7 +479,7 @@ final class PqHandle implements Handle
         if (!$this->handle) {
             $promise = new Success; // Connection already closed.
         } else {
-            $promise = new Coroutine($this->send([$this->handle, "unlistenAsync"], $channel));
+            $promise = new Coroutine($this->send(null, [$this->handle, "unlistenAsync"], $channel));
         }
 
         $promise->onResolve([$emitter, "complete"]);

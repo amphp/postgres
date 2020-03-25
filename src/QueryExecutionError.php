@@ -9,9 +9,9 @@ class QueryExecutionError extends QueryError
     /** @var mixed[] */
     private $diagnostics;
 
-    public function __construct(string $message, array $diagnostics, \Throwable $previous = null)
+    public function __construct(string $message, array $diagnostics, \Throwable $previous = null, string $query = '')
     {
-        parent::__construct($message, 0, $previous);
+        parent::__construct($message, $query, $previous);
         $this->diagnostics = $diagnostics;
     }
 
