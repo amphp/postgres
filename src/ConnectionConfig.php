@@ -6,7 +6,19 @@ use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
 
 final class ConnectionConfig extends SqlConnectionConfig
 {
-    const DEFAULT_PORT = 5432;
+    public const DEFAULT_PORT = 5432;
+
+    public const SSL_MODES = [
+        'disable',
+        'allow',
+        'prefer',
+        'require',
+        'verify-ca',
+        'verify-full',
+    ];
+
+    /** @var string|null */
+    private $sslMode = null;
 
     /** @var string|null */
     private $string;
@@ -19,13 +31,19 @@ final class ConnectionConfig extends SqlConnectionConfig
             throw new \Error("Host must be provided in connection string");
         }
 
-        return new self(
+        $config = new self(
             $parts["host"],
             (int) ($parts["port"] ?? self::DEFAULT_PORT),
             $parts["user"] ?? null,
             $parts["password"] ?? null,
             $parts["db"] ?? null
         );
+
+        if (isset($parts["sslmode"])) {
+            $config = $config->withSslMode($parts["sslmode"]);
+        }
+
+        return $config;
     }
 
     public function __construct(
@@ -41,6 +59,29 @@ final class ConnectionConfig extends SqlConnectionConfig
     public function __clone()
     {
         $this->string = null;
+    }
+
+    public function getSslMode(): ?string
+    {
+        return $this->sslMode;
+    }
+
+    public function withSslMode(string $mode): self
+    {
+        if (!\in_array($mode, self::SSL_MODES, true)) {
+            throw new \Error('Invalid SSL mode, must be one of: ' . \implode(', ', self::SSL_MODES));
+        }
+
+        $new = clone $this;
+        $new->sslMode = $mode;
+        return $new;
+    }
+
+    public function withoutSslMode(): self
+    {
+        $new = clone $this;
+        $new->sslMode = null;
+        return $new;
     }
 
     /**
@@ -70,6 +111,10 @@ final class ConnectionConfig extends SqlConnectionConfig
         $database = $this->getDatabase();
         if ($database !== null) {
             $chunks[] = "dbname=" . $database;
+        }
+
+        if ($this->sslMode !== null) {
+            $chunks[] = "sslmode=" . $this->sslMode;
         }
 
         return $this->string = \implode(" ", $chunks);

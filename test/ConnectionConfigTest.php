@@ -42,4 +42,22 @@ class ConnectionConfigTest extends TestCase
         $this->expectExceptionMessage("Host must be provided in connection string");
         $config = ConnectionConfig::fromString("invalid connection string");
     }
+
+    public function testSslMode(): void
+    {
+        $config = ConnectionConfig::fromString("host=localhost sslmode=verify-ca");
+        $this->assertSame('verify-ca', $config->getSslMode());
+
+        $altered = $config->withoutSslMode();
+        $this->assertNull($altered->getSslMode());
+        $this->assertSame('verify-ca', $config->getSslMode());
+
+        $altered = $altered->withSslMode('allow');
+        $this->assertSame('allow', $altered->getSslMode());
+
+        $this->expectException(\Error::class);
+        $this->expectExceptionMessage('Invalid SSL mode');
+
+        $config->withSslMode('invalid');
+    }
 }
