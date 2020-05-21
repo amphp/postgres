@@ -62,8 +62,7 @@ class PqConnectionTest extends AbstractConnectionTest
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
+            for ($i = 0; $row = yield $result->continue(); ++$i) {
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
             }
@@ -87,8 +86,7 @@ class PqConnectionTest extends AbstractConnectionTest
 
         $data = $this->getData();
 
-        for ($i = 0; yield $result->advance(); ++$i) {
-            $row = $result->getCurrent();
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
             $this->assertSame($data[$i][0], $row['domain']);
             $this->assertSame($data[$i][1], $row['tld']);
         }

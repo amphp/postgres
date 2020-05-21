@@ -32,23 +32,4 @@ final class PgSqlCommandResult implements CommandResult
     {
         return \pg_affected_rows($this->handle);
     }
-
-    /**
-     * @deprecated This is not meant to be used to get the last insertion ID. Use `INSERT ... RETURNING column_name`
-     *             to get the last auto-increment ID.
-     *
-     * $sql = "INSERT INTO person (lastname, firstname) VALUES (?, ?) RETURNING id;"
-     * $statement = yield $pool->prepare($sql);
-     * $result = yield $statement->execute(['Doe', 'John']);
-     * if (!yield $result->advance()) {
-     *     throw new \RuntimeException("Insertion failed");
-     * }
-     * $id = $result->getCurrent()['id'];
-     *
-     * @return string
-     */
-    public function getLastOid(): string
-    {
-        return (string) \pg_last_oid($this->handle);
-    }
 }

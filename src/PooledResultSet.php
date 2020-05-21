@@ -3,6 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Sql\Common\PooledResultSet as SqlPooledResultSet;
+use Amp\Sql\ResultSet as SqlResultSet;
 
 final class PooledResultSet extends SqlPooledResultSet implements ResultSet
 {
@@ -17,6 +18,12 @@ final class PooledResultSet extends SqlPooledResultSet implements ResultSet
     {
         parent::__construct($result, $release);
         $this->result = $result;
+    }
+
+    protected function createNewInstanceFrom(SqlResultSet $result, callable $release): SqlPooledResultSet
+    {
+        \assert($result instanceof ResultSet);
+        return new self($result, $release);
     }
 
     public function getFieldCount(): int

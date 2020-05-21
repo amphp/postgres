@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres;
 
+use Amp\DisposedException;
+use Amp\Failure;
 use Amp\Promise;
 use Amp\Sql\FailureException;
 use Amp\Success;
@@ -13,9 +15,6 @@ final class PgSqlResultSet implements ResultSet
 
     /** @var int */
     private $position = 0;
-
-    /** @var mixed Last row emitted. */
-    private $currentRow;
 
     /** @var int[] */
     private $fieldTypes = [];
@@ -51,30 +50,16 @@ final class PgSqlResultSet implements ResultSet
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
-    public function advance(): Promise
+    public function continue(): Promise
     {
-        $this->currentRow = null;
+        if ($this->handle === null) {
+            return new Failure(new DisposedException);
+        }
 
         if (++$this->position > \pg_num_rows($this->handle)) {
-            return new Success(false);
-        }
-
-        return new Success(true);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getCurrent(): array
-    {
-        if ($this->currentRow !== null) {
-            return $this->currentRow;
-        }
-
-        if ($this->position > \pg_num_rows($this->handle)) {
-            throw new \Error("No more rows remain in the result set");
+            return new Success(null);
         }
 
         $result = \pg_fetch_array($this->handle, null, \PGSQL_NUM);
@@ -82,9 +67,30 @@ final class PgSqlResultSet implements ResultSet
         if ($result === false) {
             $message = \pg_result_error($this->handle);
             \pg_free_result($this->handle);
-            throw new FailureException($message);
+            return new Failure(new FailureException($message));
         }
 
+        return new Success($this->processRow($result));
+    }
+
+    public function dispose()
+    {
+        $this->handle = null;
+    }
+
+    public function getNextResultSet(): Promise
+    {
+        return new Success;
+    }
+
+    /**
+     * @param array<int, mixed> $result
+     *
+     * @return array<string, mixed>
+     * @throws ParseException
+     */
+    private function processRow(array $result): array
+    {
         $columnCount = \count($result);
         for ($column = 0; $column < $columnCount; ++$column) {
             if ($result[$column] === null) {
@@ -94,7 +100,7 @@ final class PgSqlResultSet implements ResultSet
             $result[$column] = $this->cast($column, $result[$column]);
         }
 
-        return $this->currentRow = \array_combine($this->fieldNames, $result);
+        return \array_combine($this->fieldNames, $result);
     }
 
     /**
@@ -213,52 +219,10 @@ final class PgSqlResultSet implements ResultSet
     }
 
     /**
-     * @return int Number of rows in the result set.
-     */
-    public function numRows(): int
-    {
-        return \pg_num_rows($this->handle);
-    }
-
-    /**
      * @return int Number of fields in each row.
      */
     public function getFieldCount(): int
     {
         return \pg_num_fields($this->handle);
-    }
-
-    /**
-     * @param int $fieldNum
-     *
-     * @return string Column name at index $fieldNum
-     *
-     * @throws \Error If the field number does not exist in the result.
-     */
-    public function getFieldName(int $fieldNum): string
-    {
-        if (0 > $fieldNum || $this->getFieldCount() <= $fieldNum) {
-            throw new \Error(\sprintf('No field with index %d in result', $fieldNum));
-        }
-
-        return \pg_field_name($this->handle, $fieldNum);
-    }
-
-    /**
-     * @param string $fieldName
-     *
-     * @return int Index of field with given name.
-     *
-     * @throws \Error If the field name does not exist in the result.
-     */
-    public function getFieldIndex(string $fieldName): int
-    {
-        $result = \pg_field_num($this->handle, $fieldName);
-
-        if (-1 === $result) {
-            throw new \Error(\sprintf('No field with name "%s" in result', $fieldName));
-        }
-
-        return $result;
     }
 }

@@ -3,12 +3,12 @@
 namespace Amp\Postgres;
 
 use Amp\Deferred;
-use Amp\Emitter;
 use Amp\Loop;
 use Amp\Promise;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
+use Amp\StreamSource;
 use Amp\Struct;
 use Amp\Success;
 use function Amp\call;
@@ -33,7 +33,7 @@ final class PgSqlHandle implements Handle
     /** @var resource PostgreSQL connection handle. */
     private $handle;
 
-    /** @var \Amp\Deferred|null */
+    /** @var Deferred|null */
     private $deferred;
 
     /** @var string */
@@ -42,7 +42,7 @@ final class PgSqlHandle implements Handle
     /** @var string */
     private $await;
 
-    /** @var \Amp\Emitter[] */
+    /** @var StreamSource[] */
     private $listeners = [];
 
     /** @var Struct[] */
@@ -99,7 +99,7 @@ final class PgSqlHandle implements Handle
                 $notification->channel = $channel;
                 $notification->pid = $result["pid"];
                 $notification->payload = $result["payload"];
-                $listeners[$channel]->emit($notification);
+                $listeners[$channel]->yield($notification);
             }
 
             if ($deferred === null) {
@@ -445,7 +445,7 @@ final class PgSqlHandle implements Handle
                 throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
             }
 
-            $this->listeners[$channel] = $emitter = new Emitter;
+            $this->listeners[$channel] = $source = new StreamSource;
 
             try {
                 yield $this->query(\sprintf("LISTEN %s", $this->quoteName($channel)));
@@ -455,7 +455,7 @@ final class PgSqlHandle implements Handle
             }
 
             Loop::enable($this->poll);
-            return new ConnectionListener($emitter->iterate(), $channel, \Closure::fromCallable([$this, 'unlisten']));
+            return new ConnectionListener($source->stream(), $channel, \Closure::fromCallable([$this, 'unlisten']));
         });
     }
 
@@ -470,7 +470,7 @@ final class PgSqlHandle implements Handle
     {
         \assert(isset($this->listeners[$channel]), "Not listening on that channel");
 
-        $emitter = $this->listeners[$channel];
+        $source = $this->listeners[$channel];
         unset($this->listeners[$channel]);
 
         if (!\is_resource($this->handle)) {
@@ -479,7 +479,7 @@ final class PgSqlHandle implements Handle
             $promise = $this->query(\sprintf("UNLISTEN %s", $this->quoteName($channel)));
         }
 
-        $promise->onResolve([$emitter, "complete"]);
+        $promise->onResolve([$source, "complete"]);
         return $promise;
     }
 

@@ -2,13 +2,13 @@
 
 namespace Amp\Postgres;
 
-use Amp\Iterator;
 use Amp\Promise;
+use Amp\Stream;
 
 final class ConnectionListener implements Listener
 {
-    /** @var \Amp\Iterator */
-    private $iterator;
+    /** @var Stream */
+    private $stream;
 
     /** @var string */
     private $channel;
@@ -17,13 +17,13 @@ final class ConnectionListener implements Listener
     private $unlisten;
 
     /**
-     * @param \Amp\Iterator $iterator Iterator emitting notificatons on the channel.
+     * @param Stream $stream  Stream emitting notificatons on the channel.
      * @param string $channel Channel name.
      * @param callable(string $channel):  $unlisten Function invoked to unlisten from the channel.
      */
-    public function __construct(Iterator $iterator, string $channel, callable $unlisten)
+    public function __construct(Stream $stream, string $channel, callable $unlisten)
     {
-        $this->iterator = $iterator;
+        $this->stream = $stream;
         $this->channel = $channel;
         $this->unlisten = $unlisten;
     }
@@ -38,19 +38,15 @@ final class ConnectionListener implements Listener
     /**
      * {@inheritdoc}
      */
-    public function advance(): Promise
+    public function continue(): Promise
     {
-        return $this->iterator->advance();
+        return $this->stream->continue();
     }
 
-    /**
-     * {@inheritdoc}
-     *
-     * @return Notification
-     */
-    public function getCurrent(): Notification
+    public function dispose()
     {
-        return $this->iterator->getCurrent();
+        $this->stream->dispose();
+        $this->unlisten();
     }
 
     /**

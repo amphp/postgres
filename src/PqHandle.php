@@ -4,12 +4,12 @@ namespace Amp\Postgres;
 
 use Amp\Coroutine;
 use Amp\Deferred;
-use Amp\Emitter;
 use Amp\Loop;
 use Amp\Promise;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
+use Amp\StreamSource;
 use Amp\Struct;
 use Amp\Success;
 use pq;
@@ -21,10 +21,10 @@ final class PqHandle implements Handle
     /** @var \pq\Connection PostgreSQL connection object. */
     private $handle;
 
-    /** @var \Amp\Deferred|null */
+    /** @var Deferred|null */
     private $deferred;
 
-    /** @var \Amp\Deferred|null */
+    /** @var Deferred|null */
     private $busy;
 
     /** @var string */
@@ -33,7 +33,7 @@ final class PqHandle implements Handle
     /** @var string */
     private $await;
 
-    /** @var \Amp\Emitter[] */
+    /** @var StreamSource[] */
     private $listeners;
 
     /** @var Struct[] */
@@ -437,19 +437,19 @@ final class PqHandle implements Handle
                 throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
             }
 
-            $this->listeners[$channel] = $emitter = new Emitter;
+            $this->listeners[$channel] = $source = new StreamSource;
 
             try {
                 yield from $this->send(
                     null,
                     [$this->handle, "listenAsync"],
                     $channel,
-                    static function (string $channel, string $message, int $pid) use ($emitter) {
+                    static function (string $channel, string $message, int $pid) use ($source) {
                         $notification = new Notification;
                         $notification->channel = $channel;
                         $notification->pid = $pid;
                         $notification->payload = $message;
-                        $emitter->emit($notification);
+                        $source->yield($notification);
                     }
                 );
             } catch (\Throwable $exception) {
@@ -458,7 +458,7 @@ final class PqHandle implements Handle
             }
 
             Loop::enable($this->poll);
-            return new ConnectionListener($emitter->iterate(), $channel, \Closure::fromCallable([$this, 'unlisten']));
+            return new ConnectionListener($source->stream(), $channel, \Closure::fromCallable([$this, 'unlisten']));
         });
     }
 
@@ -473,7 +473,7 @@ final class PqHandle implements Handle
     {
         \assert(isset($this->listeners[$channel]), "Not listening on that channel");
 
-        $emitter = $this->listeners[$channel];
+        $source = $this->listeners[$channel];
         unset($this->listeners[$channel]);
 
         if (!$this->handle) {
@@ -482,7 +482,7 @@ final class PqHandle implements Handle
             $promise = new Coroutine($this->send(null, [$this->handle, "unlistenAsync"], $channel));
         }
 
-        $promise->onResolve([$emitter, "complete"]);
+        $promise->onResolve([$source, "complete"]);
         return $promise;
     }
 

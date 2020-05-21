@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres;
 
+use Amp\DisposedException;
+use Amp\Failure;
 use Amp\Promise;
 use Amp\Success;
 use pq;
@@ -14,9 +16,6 @@ final class PqBufferedResultSet implements ResultSet
     /** @var int */
     private $position = 0;
 
-    /** @var mixed Last row emitted. */
-    private $currentRow;
-
     /**
      * @param pq\Result $result PostgreSQL result object.
      */
@@ -27,38 +26,32 @@ final class PqBufferedResultSet implements ResultSet
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
-    public function advance(): Promise
+    public function continue(): Promise
     {
-        $this->currentRow = null;
-
-        if (++$this->position > $this->result->numRows) {
-            return new Success(false);
+        if ($this->result === null) {
+            return new Failure(new DisposedException);
         }
 
-        return new Success(true);
+        if (++$this->position > $this->result->numRows) {
+            return new Success(null);
+        }
+
+        return new Success($this->result->fetchRow(pq\Result::FETCH_ASSOC));
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
-    public function getCurrent(): array
+    public function dispose()
     {
-        if ($this->currentRow !== null) {
-            return $this->currentRow;
-        }
-
-        if ($this->position > $this->result->numRows) {
-            throw new \Error("No more rows remain in the result set");
-        }
-
-        return $this->currentRow = $this->result->fetchRow(pq\Result::FETCH_ASSOC);
+        $this->result = null;
     }
 
-    public function getNumRows(): int
+    public function getNextResultSet(): Promise
     {
-        return $this->result->numRows;
+        return new Success; // Empty stub for now.
     }
 
     public function getFieldCount(): int

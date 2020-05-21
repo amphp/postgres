@@ -30,14 +30,14 @@ final class PooledListener implements Listener
         }
     }
 
-    public function advance(): Promise
+    public function continue(): Promise
     {
-        return $this->listener->advance();
+        return $this->listener->continue();
     }
 
-    public function getCurrent(): Notification
+    public function dispose(): void
     {
-        return $this->listener->getCurrent();
+        $this->listener->dispose();
     }
 
     public function getChannel(): string

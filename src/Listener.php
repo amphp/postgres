@@ -2,11 +2,16 @@
 
 namespace Amp\Postgres;
 
-use Amp\Iterator;
 use Amp\Promise;
+use Amp\Stream;
 
-interface Listener extends Iterator
+interface Listener extends Stream
 {
+    /**
+     * @return Promise<Notification|null>
+     */
+    public function continue(): Promise;
+
     /**
      * @return string Channel name.
      */

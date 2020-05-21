@@ -20,9 +20,9 @@
     ],
     "require": {
         "php": "^7.1",
-        "amphp/amp": "^2",
-        "amphp/sql": "^1",
-        "amphp/sql-common": "^1"
+        "amphp/amp": "dev-streams as 2.6",
+        "amphp/sql": "dev-streams as 2",
+        "amphp/sql-common": "dev-streams as 2"
     },
     "require-dev": {
         "ext-pgsql": "*",

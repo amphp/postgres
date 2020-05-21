@@ -4,7 +4,6 @@ namespace Amp\Postgres\Test;
 
 use Amp\Coroutine;
 use Amp\Delayed;
-use Amp\Iterator;
 use Amp\Loop;
 use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\Link;
@@ -18,6 +17,7 @@ use Amp\Sql\QueryError;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
+use Amp\Stream;
 
 abstract class AbstractLinkTest extends AsyncTestCase
 {
@@ -61,8 +61,39 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData();
 
-        for ($i = 0; yield $result->advance(); ++$i) {
-            $row = $result->getCurrent();
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
+
+        $result = yield $result->getNextResultSet();
+
+        $this->assertNull($result);
+    }
+
+    public function testMultipleQueryWithTupleResult(): \Generator
+    {
+        $this->markTestSkipped('Unimplemented');
+
+        /** @var \Amp\Postgres\ResultSet $result */
+        $result = yield $this->connection->query("SELECT * FROM test; SELECT * FROM test");
+
+        $this->assertInstanceOf(ResultSet::class, $result);
+
+        $this->assertSame(2, $result->getFieldCount());
+
+        $data = $this->getData();
+
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
+
+        $result = yield $result->getNextResultSet();
+
+        $this->assertInstanceOf(ResultSet::class, $result);
+
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
             $this->assertSame($data[$i][0], $row['domain']);
             $this->assertSame($data[$i][1], $row['tld']);
         }
@@ -84,8 +115,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData();
 
-        for ($i = 0; yield $result->advance(); ++$i) {
-            $row = $result->getCurrent();
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
             $this->assertSame($data[$i][0], $row['domain']);
             $this->assertSame($data[$i][1], $row['tld']);
         }
@@ -138,8 +168,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -166,8 +195,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -194,8 +222,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -222,8 +249,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -270,8 +296,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -305,8 +330,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -320,8 +344,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -346,8 +369,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $results = [];
 
-        $results[] = yield Iterator\toArray(yield $statement1->execute([$data[0]]));
-        $results[] = yield Iterator\toArray(yield $statement2->execute(['domain' => $data[0]]));
+        $results[] = yield Stream\toArray(yield $statement1->execute([$data[0]]));
+        $results[] = yield Stream\toArray(yield $statement2->execute(['domain' => $data[0]]));
 
         foreach ($results as $result) {
             /** @var \Amp\Postgres\ResultSet $result */
@@ -377,8 +400,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData();
 
-        for ($i = 0; yield $result->advance(); ++$i) {
-            $row = $result->getCurrent();
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
             $this->assertSame($data[$i][0], $row['domain']);
             $this->assertSame($data[$i][1], $row['tld']);
         }
@@ -395,8 +417,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -419,8 +440,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(2, $result->getFieldCount());
 
-        while (yield $result->advance()) {
-            $row = $result->getCurrent();
+        while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
             $this->assertSame($data[1], $row['tld']);
         }
@@ -460,8 +480,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
                 yield new Delayed(100);
             }
 
-            while (yield $result->advance()) {
-                $row = $result->getCurrent();
+            while ($row = yield $result->continue()) {
                 $this->assertEquals($value, $row['value']);
             }
         });
@@ -480,8 +499,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
+            for ($i = 0; $row = yield $result->continue(); ++$i) {
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
             }
@@ -514,8 +532,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
+            for ($i = 0; $row = yield $result->continue(); ++$i) {
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
             }
@@ -530,8 +547,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
+            for ($i = 0; $row = yield $result->continue(); ++$i) {
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
             }
@@ -551,8 +567,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
+            for ($i = 0; $row = yield $result->continue(); ++$i) {
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
             }
@@ -564,8 +579,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
             $data = $this->getData();
 
-            for ($i = 0; yield $result->advance(); ++$i) {
-                $row = $result->getCurrent();
+            for ($i = 0; $row = yield $result->continue(); ++$i) {
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
             }
@@ -638,8 +652,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $listener->unlisten();
         });
 
-        while (yield $listener->advance()) {
-            $this->assertSame($listener->getCurrent()->payload, (string) $count++);
+        while ($notification = yield $listener->continue()) {
+            $this->assertSame($notification->payload, (string) $count++);
         }
 
         $this->assertSame(2, $count);
@@ -664,8 +678,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $listener->unlisten();
         });
 
-        while (yield $listener->advance()) {
-            $this->assertSame($listener->getCurrent()->payload, (string) $count++);
+        while ($notification = yield $listener->continue()) {
+            $this->assertSame($notification->payload, (string) $count++);
         }
 
         $this->assertSame(2, $count);
