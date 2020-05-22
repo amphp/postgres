@@ -3,9 +3,9 @@
 namespace Amp\Postgres;
 
 use Amp\AsyncGenerator;
+use Amp\Deferred;
 use Amp\DisposedException;
 use Amp\Promise;
-use Amp\Success;
 use pq;
 
 final class PqUnbufferedResultSet implements ResultSet
@@ -16,8 +16,11 @@ final class PqUnbufferedResultSet implements ResultSet
     /** @var AsyncGenerator */
     private $generator;
 
+    /** @var Deferred */
+    private $next;
+
     /**
-     * @param callable():Promise<pq\Result> $fetch Function to fetch next result row.
+     * @param callable():Promise<pq\Result|ResultSet|null> $fetch Function to fetch next result row.
      * @param \pq\Result $result PostgreSQL result object.
      * @param callable():void $release Invoked once the result has been fully consumed.
      */
@@ -25,8 +28,9 @@ final class PqUnbufferedResultSet implements ResultSet
     {
         $this->numCols = $result->numCols;
 
+        $this->next = $deferred = new Deferred;
         $this->generator = new AsyncGenerator(static function (callable $yield) use (
-            $release, $result, $fetch
+            $deferred, $release, $result, $fetch
         ): \Generator {
             try {
                 do {
@@ -37,18 +41,26 @@ final class PqUnbufferedResultSet implements ResultSet
                 } while ($result instanceof pq\Result);
             } catch (DisposedException $exception) {
                 // Discard remaining rows in the result set.
-                while ((yield $promise) instanceof pq\Result) {
+                while (($result = yield $promise) instanceof pq\Result) {
                     $promise = $fetch();
                 }
             } finally {
+                if ($result instanceof ResultSet) {
+                    $deferred->resolve($result);
+                    return;
+                }
+
+                // Only release if there was no next result set.
                 $release();
+
+                $deferred->resolve(null);
             }
         });
     }
 
     public function getNextResultSet(): Promise
     {
-        return new Success; // Empty stub for now.
+        return $this->next->promise();
     }
 
     /**
@@ -62,7 +74,7 @@ final class PqUnbufferedResultSet implements ResultSet
     /**
      * @inheritDoc
      */
-    public function dispose()
+    public function dispose(): void
     {
         $this->generator->dispose();
     }

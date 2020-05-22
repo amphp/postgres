@@ -25,12 +25,17 @@ final class PgSqlResultSet implements ResultSet
     /** @var Internal\ArrayParser */
     private $parser;
 
+    /** @var Promise<ResultSet|null> */
+    private $nextResult;
+
     /**
      * @param resource $handle PostgreSQL result resource.
+     * @param Promise<ResultSet|null> $nextResult
      */
-    public function __construct($handle)
+    public function __construct($handle, Promise $nextResult)
     {
         $this->handle = $handle;
+        $this->nextResult = $nextResult;
 
         $numFields = \pg_num_fields($this->handle);
         for ($i = 0; $i < $numFields; ++$i) {
@@ -73,14 +78,14 @@ final class PgSqlResultSet implements ResultSet
         return new Success($this->processRow($result));
     }
 
-    public function dispose()
+    public function dispose(): void
     {
         $this->handle = null;
     }
 
     public function getNextResultSet(): Promise
     {
-        return new Success;
+        return $this->nextResult;
     }
 
     /**

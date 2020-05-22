@@ -73,8 +73,6 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testMultipleQueryWithTupleResult(): \Generator
     {
-        $this->markTestSkipped('Unimplemented');
-
         /** @var \Amp\Postgres\ResultSet $result */
         $result = yield $this->connection->query("SELECT * FROM test; SELECT * FROM test");
 

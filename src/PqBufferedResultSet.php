@@ -16,13 +16,18 @@ final class PqBufferedResultSet implements ResultSet
     /** @var int */
     private $position = 0;
 
+    /** @var Promise<ResultSet|null> */
+    private $nextResult;
+
     /**
      * @param pq\Result $result PostgreSQL result object.
+     * @param Promise<ResultSet|null> $nextResult Promise for next result set.
      */
-    public function __construct(pq\Result $result)
+    public function __construct(pq\Result $result, Promise $nextResult)
     {
         $this->result = $result;
         $this->result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
+        $this->nextResult = $nextResult;
     }
 
     /**
@@ -44,14 +49,14 @@ final class PqBufferedResultSet implements ResultSet
     /**
      * @inheritDoc
      */
-    public function dispose()
+    public function dispose(): void
     {
         $this->result = null;
     }
 
     public function getNextResultSet(): Promise
     {
-        return new Success; // Empty stub for now.
+        return $this->nextResult;
     }
 
     public function getFieldCount(): int

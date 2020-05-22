@@ -29,8 +29,7 @@ Amp\Loop::run(function () {
 
     $format = "%-20s | %-10s\n";
     \printf($format, 'TLD', 'Domain');
-    while (yield $result->advance()) {
-        $row = $result->getCurrent();
+    while ($row = yield $result->continue()) {
         \printf($format, $row['domain'], $row['tld']);
     }
 

@@ -3,9 +3,9 @@
 
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
-use Amp\Iterator;
 use Amp\Loop;
 use Amp\Postgres;
+use Amp\Stream;
 
 Loop::run(function () {
     $config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
@@ -51,10 +51,9 @@ Loop::run(function () {
         return $pool->notify($channel1, "Data 1.2");
     });
 
-    $iterator = Iterator\merge([$listener1, $listener2]); // Merge both listeners into single iterator.
+    $stream = Stream\merge([$listener1, $listener2]); // Merge both listeners into single iterator.
 
-    while (yield $iterator->advance()) {
-        $notification = $iterator->getCurrent();
+    while ($notification = yield $stream->continue()) {
         \printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",
             $notification->pid,

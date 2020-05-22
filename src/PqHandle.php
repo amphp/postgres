@@ -169,8 +169,6 @@ final class PqHandle implements Handle
      *
      * @return \Generator
      *
-     * @resolve \Amp\Sql\CommandResult|\pq\Statement
-     *
      * @throws FailureException
      */
     private function send(?string $sql, callable $method, ...$args): \Generator
@@ -208,19 +206,64 @@ final class PqHandle implements Handle
             throw new FailureException("Unknown query result");
         }
 
+        $result = $this->makeResult($result, $sql);
+
+        if ($handle instanceof pq\Statement) {
+            return $handle; // Will be wrapped into a PqStatement object.
+        }
+
+        return $result;
+
+//        switch ($result->status) {
+//            case pq\Result::EMPTY_QUERY:
+//                throw new QueryError("Empty query string");
+//
+//            case pq\Result::COMMAND_OK:
+//                if ($handle instanceof pq\Statement) {
+//                    return $handle; // Will be wrapped into a PqStatement object.
+//                }
+//
+//                return new PqCommandResult($result);
+//
+//            case pq\Result::TUPLES_OK:
+//                return new PqBufferedResultSet($result);
+//
+//            case pq\Result::SINGLE_TUPLE:
+//                $this->busy = new Deferred;
+//                $result = new PqUnbufferedResultSet(
+//                    coroutine(\Closure::fromCallable([$this, 'fetch'])),
+//                    $result,
+//                    \Closure::fromCallable([$this, 'release'])
+//                );
+//                return $result;
+//
+//            case pq\Result::NONFATAL_ERROR:
+//            case pq\Result::FATAL_ERROR:
+//                throw new QueryExecutionError($result->errorMessage, $result->diag, null, $sql ?? '');
+//
+//            case pq\Result::BAD_RESPONSE:
+//                throw new FailureException($result->errorMessage);
+//
+//            default:
+//                throw new FailureException("Unknown result status");
+//        }
+    }
+
+    private function makeResult(pq\Result $result, ?string $sql)
+    {
         switch ($result->status) {
             case pq\Result::EMPTY_QUERY:
                 throw new QueryError("Empty query string");
 
             case pq\Result::COMMAND_OK:
-                if ($handle instanceof pq\Statement) {
-                    return $handle; // Will be wrapped into a PqStatement object.
-                }
-
                 return new PqCommandResult($result);
 
             case pq\Result::TUPLES_OK:
-                return new PqBufferedResultSet($result);
+                if (!$this->handle->busy && ($next = $this->handle->getResult()) instanceof pq\Result) {
+                    $next = new Success($this->makeResult($next, $sql));
+                }
+
+                return new PqBufferedResultSet($result, $next ?? new Success);
 
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
@@ -268,6 +311,14 @@ final class PqHandle implements Handle
 
         switch ($result->status) {
             case pq\Result::TUPLES_OK: // End of result set.
+                while (!$this->handle->busy && ($next = $this->handle->getResult()) instanceof pq\Result) {
+                    if ($next->status === pq\Result::TUPLES_OK) {
+                        continue;
+                    }
+
+                    return $this->makeResult($result, null);
+                }
+
                 return null;
 
             case pq\Result::SINGLE_TUPLE:

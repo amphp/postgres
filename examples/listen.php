@@ -31,8 +31,7 @@ Loop::run(function () {
         return $pool->notify($channel, "Data 2"); // Send second notification.
     });
 
-    while (yield $listener->advance()) {
-        $notification = $listener->getCurrent();
+    while ($notification = yield $listener->continue()) {
         \printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",
             $notification->pid,

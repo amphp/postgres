@@ -14,8 +14,7 @@ Amp\Loop::run(function () {
     /** @var \Amp\Postgres\ResultSet $result */
     $result = yield $connection->query('SHOW ALL');
 
-    while (yield $result->advance()) {
-        $row = $result->getCurrent();
+    while ($row = yield $result->continue()) {
         \printf("%-35s = %s (%s)\n", $row['name'], $row['setting'], $row['description']);
     }
 });
