@@ -6,9 +6,10 @@ use Amp\AsyncGenerator;
 use Amp\Deferred;
 use Amp\DisposedException;
 use Amp\Promise;
+use Amp\Sql\Result;
 use pq;
 
-final class PqUnbufferedResultSet implements ResultSet
+final class PqUnbufferedResultSet implements Result
 {
     /** @var int */
     private $numCols;
@@ -45,7 +46,7 @@ final class PqUnbufferedResultSet implements ResultSet
                     $promise = $fetch();
                 }
             } finally {
-                if ($result instanceof ResultSet) {
+                if ($result instanceof Result) {
                     $deferred->resolve($result);
                     return;
                 }
@@ -58,7 +59,7 @@ final class PqUnbufferedResultSet implements ResultSet
         });
     }
 
-    public function getNextResultSet(): Promise
+    public function getNextResult(): Promise
     {
         return $this->next->promise();
     }
@@ -80,10 +81,10 @@ final class PqUnbufferedResultSet implements ResultSet
     }
 
     /**
-     * @return int Number of fields (columns) in each result set.
+     * @inheritDoc
      */
-    public function getFieldCount(): int
+    public function getRowCount(): ?int
     {
-        return $this->numCols;
+        return null; // Unbuffered result sets do not have a total row count.
     }
 }

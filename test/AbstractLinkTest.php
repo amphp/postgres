@@ -9,11 +9,11 @@ use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryExecutionError;
-use Amp\Postgres\ResultSet;
 use Amp\Postgres\Transaction;
 use Amp\Promise;
-use Amp\Sql\CommandResult;
+use Amp\Sql\Common\CommandResult;
 use Amp\Sql\QueryError;
+use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
@@ -52,12 +52,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testQueryWithTupleResult(): \Generator
     {
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $this->connection->query("SELECT * FROM test");
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         $data = $this->getData();
 
@@ -66,19 +64,15 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $this->assertSame($data[$i][1], $row['tld']);
         }
 
-        $result = yield $result->getNextResultSet();
-
-        $this->assertNull($result);
+        $this->assertNull(yield $result->getNextResult());
     }
 
     public function testMultipleQueryWithTupleResult(): \Generator
     {
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $this->connection->query("SELECT * FROM test; SELECT * FROM test");
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         $data = $this->getData();
 
@@ -87,29 +81,80 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $this->assertSame($data[$i][1], $row['tld']);
         }
 
-        $result = yield $result->getNextResultSet();
+        $result = yield $result->getNextResult();
 
-        $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(Result::class, $result);
 
         for ($i = 0; $row = yield $result->continue(); ++$i) {
             $this->assertSame($data[$i][0], $row['domain']);
             $this->assertSame($data[$i][1], $row['tld']);
         }
+
+        $this->assertNull(yield $result->getNextResult());
+    }
+
+    public function testMultipleQueryWithCommandResultFirst(): \Generator
+    {
+        /** @var Result $result */
+        $result = yield $this->connection->query("INSERT INTO test (domain, tld) VALUES ('gitlab', 'com'); SELECT * FROM test");
+
+        $this->assertInstanceOf(Result::class, $result);
+
+        $this->assertNull(yield $result->continue());
+
+        $this->assertSame(1, $result->getRowCount());
+
+        $result = yield $result->getNextResult();
+
+        $this->assertInstanceOf(Result::class, $result);
+
+        $data = $this->getData();
+        $data[] = ['gitlab', 'com']; // Add inserted row to expected data.
+
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
+
+        $this->assertNull(yield $result->getNextResult());
+    }
+
+    public function testMultipleQueryWithCommandResultSecond(): \Generator
+    {
+        /** @var Result $result */
+        $result = yield $this->connection->query("SELECT * FROM test; INSERT INTO test (domain, tld) VALUES ('gitlab', 'com')");
+
+        $this->assertInstanceOf(Result::class, $result);
+
+        $data = $this->getData();
+
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
+
+        $result = yield $result->getNextResult();
+
+        $this->assertNull(yield $result->continue());
+
+        $this->assertSame(1, $result->getRowCount());
+
+        $this->assertNull(yield $result->getNextResult());
     }
 
     public function testQueryWithUnconsumedTupleResult(): \Generator
     {
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $this->connection->query("SELECT * FROM test");
 
-        $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(Result::class, $result);
 
         unset($result); // Force destruction of result object.
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $this->connection->query("SELECT * FROM test");
 
-        $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(Result::class, $result);
 
         $data = $this->getData();
 
@@ -119,26 +164,62 @@ abstract class AbstractLinkTest extends AsyncTestCase
         }
     }
 
+    public function testMultipleQueries(): \Generator
+    {
+        /** @var Result $result */
+        $result = yield $this->connection->query("SELECT * FROM test; INSERT INTO test (domain, tld) VALUES ('gitlab', 'com'); SELECT * FROM test");
+
+        $this->assertInstanceOf(Result::class, $result);
+
+        $data = $this->getData();
+
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
+
+        $result = yield $result->getNextResult();
+
+        $this->assertNull(yield $result->continue());
+
+        $this->assertSame(1, $result->getRowCount());
+
+        $result = yield $result->getNextResult();
+
+        $this->assertInstanceOf(Result::class, $result);
+
+        $data = $this->getData();
+        $data[] = ['gitlab', 'com']; // Add inserted row to expected data.
+
+        for ($i = 0; $row = yield $result->continue(); ++$i) {
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
+
+        $this->assertNull(yield $result->getNextResult());
+
+        $this->assertNull(yield $result->getNextResult());
+    }
+
     public function testQueryWithCommandResult(): \Generator
     {
-        /** @var CommandResult $result */
+        /** @var Result $result */
         $result = yield $this->connection->query("INSERT INTO test VALUES ('canon', 'jp')");
 
-        $this->assertInstanceOf(CommandResult::class, $result);
-        $this->assertSame(1, $result->getAffectedRowCount());
+        $this->assertInstanceOf(Result::class, $result);
+        $this->assertSame(1, $result->getRowCount());
     }
 
     public function testQueryWithEmptyQuery(): Promise
     {
         $this->expectException(QueryError::class);
 
-        /** @var \Amp\Sql\CommandResult $result */
         return $this->connection->query('');
     }
 
     public function testQueryWithSyntaxError(): \Generator
     {
-        /** @var \Amp\Sql\CommandResult $result */
+        /** @var Result $result */
         try {
             $result = yield $this->connection->query("SELECT & FROM test");
             $this->fail(\sprintf("An instance of %s was expected to be thrown", QueryExecutionError::class));
@@ -159,12 +240,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement->execute([$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -186,12 +265,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame($query, $statement->getQuery());
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement->execute(['domain' => $data[0], 'tld' => $data[1]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -213,12 +290,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame($query, $statement->getQuery());
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement->execute([$data[0], $data[1]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -240,12 +315,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame($query, $statement->getQuery());
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement->execute(['domain' => $data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -287,12 +360,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement2->execute([$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -321,12 +392,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement1->execute([$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -335,12 +404,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         unset($statement1);
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement2->execute([$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -371,7 +438,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $results[] = yield Stream\toArray(yield $statement2->execute(['domain' => $data[0]]));
 
         foreach ($results as $result) {
-            /** @var \Amp\Postgres\ResultSet $result */
+            /** @var Result $result */
             foreach ($result as $row) {
                 $this->assertSame($data[0], $row['domain']);
                 $this->assertSame($data[1], $row['tld']);
@@ -384,17 +451,17 @@ abstract class AbstractLinkTest extends AsyncTestCase
         /** @var Statement $statement */
         $statement = yield $this->connection->prepare("SELECT * FROM test");
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement->execute();
 
-        $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(Result::class, $result);
 
         unset($result); // Force destruction of result object.
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $statement->execute();
 
-        $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(Result::class, $result);
 
         $data = $this->getData();
 
@@ -408,12 +475,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -428,15 +493,13 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
+        /** @var Result $result */
         $result = yield $this->connection->execute(
             "SELECT * FROM test WHERE domain=:domain",
             ['domain' =>  $data[0]]
         );
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        $this->assertSame(2, $result->getFieldCount());
+        $this->assertInstanceOf(Result::class, $result);
 
         while ($row = yield $result->continue()) {
             $this->assertSame($data[0], $row['domain']);
@@ -471,7 +534,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function testSimultaneousQuery(): Promise
     {
         $callback = \Amp\coroutine(function ($value) {
-            /** @var \Amp\Postgres\ResultSet $result */
+            /** @var Result $result */
             $result = yield $this->connection->query("SELECT {$value} as value");
 
             if ($value) {
@@ -492,7 +555,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function testSimultaneousQueryWithOneFailing(): \Generator
     {
         $callback = \Amp\coroutine(function ($query) {
-            /** @var \Amp\Postgres\ResultSet $result */
+            /** @var Result $result */
             $result = yield $this->connection->query($query);
 
             $data = $this->getData();
@@ -514,7 +577,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $result = yield $successful;
             yield $failing;
         } catch (QueryError $exception) {
-            $this->assertInstanceOf(ResultSet::class, $result);
+            $this->assertInstanceOf(Result::class, $result);
             return;
         }
 
@@ -525,7 +588,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $promises = [];
         $promises[] = new Coroutine((function () {
-            /** @var \Amp\Postgres\ResultSet $result */
+            /** @var Result $result */
             $result = yield $this->connection->query("SELECT * FROM test");
 
             $data = $this->getData();
@@ -540,7 +603,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             /** @var Statement $statement */
             $statement = (yield $this->connection->prepare("SELECT * FROM test"));
 
-            /** @var \Amp\Postgres\ResultSet $result */
+            /** @var Result $result */
             $result = yield $statement->execute();
 
             $data = $this->getData();
@@ -560,7 +623,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             /** @var Statement $statement */
             $statement = yield $this->connection->prepare("SELECT * FROM test");
 
-            /** @var \Amp\Postgres\ResultSet $result */
+            /** @var Result $result */
             $result = yield $statement->execute();
 
             $data = $this->getData();
@@ -572,7 +635,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         })());
 
         $promises[] = new Coroutine((function () {
-            /** @var \Amp\Postgres\ResultSet $result */
+            /** @var Result $result */
             $result = yield $this->connection->execute("SELECT * FROM test");
 
             $data = $this->getData();
@@ -606,13 +669,13 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $statement = yield $transaction->prepare("SELECT * FROM test WHERE domain=:domain");
         $result = yield $statement->execute(['domain' => $data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(Result::class, $result);
 
         unset($result); // Force destruction of result object.
 
         $result = yield $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(Result::class, $result);
 
         unset($result); // Force destruction of result object.
 

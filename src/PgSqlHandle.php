@@ -5,9 +5,11 @@ namespace Amp\Postgres;
 use Amp\Deferred;
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
+use Amp\Sql\Result;
 use Amp\StreamSource;
 use Amp\Struct;
 use Amp\Success;
@@ -243,28 +245,28 @@ final class PgSqlHandle implements Handle
      * @param resource $result PostgreSQL result resource.
      * @param string $sql Query SQL.
      *
-     * @return \Amp\Sql\CommandResult|ResultSet
+     * @return Result
      *
      * @throws FailureException
      * @throws QueryError
      */
-    private function createResult($result, string $sql)
+    private function createResult($result, string $sql): Result
     {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:
                 throw new QueryError("Empty query string");
 
             case \PGSQL_COMMAND_OK:
-                return new PgSqlCommandResult($result);
+                return new CommandResult(\pg_affected_rows($result), new Success($this->fetchNextResult($sql)));
 
             case \PGSQL_TUPLES_OK:
-                return new PgSqlResultSet($result);
+                return new PgSqlResultSet($result, new Success($this->fetchNextResult($sql)));
 
             case \PGSQL_NONFATAL_ERROR:
             case \PGSQL_FATAL_ERROR:
                 $diagnostics = [];
-                foreach (self::DIAGNOSTIC_CODES as $fieldCode => $desciption) {
-                    $diagnostics[$desciption] = \pg_result_error_field($result, $fieldCode);
+                foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
+                    $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                 }
                 throw new QueryExecutionError(\pg_result_error($result), $diagnostics, null, $sql);
 
@@ -276,6 +278,22 @@ final class PgSqlHandle implements Handle
                 throw new FailureException("Unknown result status");
                 // @codeCoverageIgnoreEnd
         }
+    }
+
+    /**
+     * @param string $sql
+     *
+     * @return Result|null
+     *
+     * @throws FailureException
+     */
+    private function fetchNextResult(string $sql): ?Result
+    {
+        if ($result = \pg_get_result($this->handle)) {
+            return $this->createResult($result, $sql);
+        }
+
+        return null;
     }
 
     /**

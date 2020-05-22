@@ -2,10 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\CommandResult;
+use Amp\Sql\Result;
 use pq;
 
-final class PqCommandResult implements CommandResult
+final class PqCommandResult implements Result
 {
     /** @var \pq\Result PostgreSQL result object. */
     private $result;

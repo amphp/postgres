@@ -3,8 +3,8 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Common\PooledTransaction as SqlPooledTransaction;
-use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement as SqlStatement;
 
 final class PooledTransaction extends SqlPooledTransaction implements Transaction
@@ -15,12 +15,6 @@ final class PooledTransaction extends SqlPooledTransaction implements Transactio
     protected function createStatement(SqlStatement $statement, callable $release): SqlStatement
     {
         return new PooledStatement($statement, $release);
-    }
-
-    protected function createResultSet(SqlResultSet $resultSet, callable $release): SqlResultSet
-    {
-        \assert($resultSet instanceof ResultSet);
-        return new PooledResultSet($resultSet, $release);
     }
 
     /**

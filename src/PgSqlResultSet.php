@@ -6,9 +6,10 @@ use Amp\DisposedException;
 use Amp\Failure;
 use Amp\Promise;
 use Amp\Sql\FailureException;
+use Amp\Sql\Result;
 use Amp\Success;
 
-final class PgSqlResultSet implements ResultSet
+final class PgSqlResultSet implements Result
 {
     /** @var resource PostgreSQL result resource. */
     private $handle;
@@ -25,12 +26,12 @@ final class PgSqlResultSet implements ResultSet
     /** @var Internal\ArrayParser */
     private $parser;
 
-    /** @var Promise<ResultSet|null> */
+    /** @var Promise<Result|null> */
     private $nextResult;
 
     /**
      * @param resource $handle PostgreSQL result resource.
-     * @param Promise<ResultSet|null> $nextResult
+     * @param Promise<Result|null> $nextResult
      */
     public function __construct($handle, Promise $nextResult)
     {
@@ -51,7 +52,9 @@ final class PgSqlResultSet implements ResultSet
      */
     public function __destruct()
     {
-        \pg_free_result($this->handle);
+        if ($this->handle !== null) {
+            \pg_free_result($this->handle);
+        }
     }
 
     /**
@@ -75,7 +78,13 @@ final class PgSqlResultSet implements ResultSet
             return new Failure(new FailureException($message));
         }
 
-        return new Success($this->processRow($result));
+        try {
+            return new Success($this->processRow($result));
+        } catch (\Throwable $exception) {
+            \pg_free_result($this->handle);
+            $this->handle = null;
+            return new Failure($exception);
+        }
     }
 
     public function dispose(): void
@@ -83,7 +92,7 @@ final class PgSqlResultSet implements ResultSet
         $this->handle = null;
     }
 
-    public function getNextResultSet(): Promise
+    public function getNextResult(): Promise
     {
         return $this->nextResult;
     }
@@ -224,10 +233,10 @@ final class PgSqlResultSet implements ResultSet
     }
 
     /**
-     * @return int Number of fields in each row.
+     * @return int Number of rows returned.
      */
-    public function getFieldCount(): int
+    public function getRowCount(): int
     {
-        return \pg_num_fields($this->handle);
+        return \pg_num_rows($this->handle);
     }
 }

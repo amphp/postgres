@@ -5,10 +5,11 @@ namespace Amp\Postgres;
 use Amp\DisposedException;
 use Amp\Failure;
 use Amp\Promise;
+use Amp\Sql\Result;
 use Amp\Success;
 use pq;
 
-final class PqBufferedResultSet implements ResultSet
+final class PqBufferedResultSet implements Result
 {
     /** @var \pq\Result */
     private $result;
@@ -54,13 +55,19 @@ final class PqBufferedResultSet implements ResultSet
         $this->result = null;
     }
 
-    public function getNextResultSet(): Promise
+    /**
+     * @inheritDoc
+     */
+    public function getNextResult(): Promise
     {
         return $this->nextResult;
     }
 
-    public function getFieldCount(): int
+    /**
+     * @inheritDoc
+     */
+    public function getRowCount(): int
     {
-        return $this->result->numCols;
+        return $this->result->numRows;
     }
 }

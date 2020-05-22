@@ -58,7 +58,7 @@ class PqConnectionTest extends AbstractConnectionTest
             $result = yield $this->connection->query("SELECT * FROM test");
             \assert($result instanceof PqBufferedResultSet);
 
-            $this->assertSame(2, $result->getFieldCount());
+            //$this->assertSame(2, $result->getFieldCount());
 
             $data = $this->getData();
 
@@ -82,7 +82,7 @@ class PqConnectionTest extends AbstractConnectionTest
         $result = yield $this->connection->query("SELECT * FROM test");
         \assert($result instanceof PqUnbufferedResultSet);
 
-        $this->assertSame(2, $result->getFieldCount());
+        //$this->assertSame(2, $result->getFieldCount());
 
         $data = $this->getData();
 

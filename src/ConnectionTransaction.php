@@ -3,6 +3,9 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Common\PooledResult;
+use Amp\Sql\Common\PooledStatement;
+use Amp\Sql\Result;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
 use function Amp\call;
@@ -122,12 +125,8 @@ final class ConnectionTransaction implements Transaction
                 ($this->release)();
             }
 
-            if ($result instanceof ResultSet) {
-                ++$this->refCount;
-                return new PooledResultSet($result, $this->release);
-            }
-
-            return $result;
+            ++$this->refCount;
+            return new PooledResult($result, $this->release);
         });
     }
 
@@ -174,12 +173,8 @@ final class ConnectionTransaction implements Transaction
                 ($this->release)();
             }
 
-            if ($result instanceof ResultSet) {
-                ++$this->refCount;
-                return new PooledResultSet($result, $this->release);
-            }
-
-            return $result;
+            ++$this->refCount;
+            return new PooledResult($result, $this->release);
         });
     }
 
@@ -201,7 +196,7 @@ final class ConnectionTransaction implements Transaction
     /**
      * Commits the transaction and makes it inactive.
      *
-     * @return Promise<\Amp\Sql\CommandResult>
+     * @return Promise<Result>
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -221,7 +216,7 @@ final class ConnectionTransaction implements Transaction
     /**
      * Rolls back the transaction and makes it inactive.
      *
-     * @return Promise<\Amp\Sql\CommandResult>
+     * @return Promise<Result>
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -243,7 +238,7 @@ final class ConnectionTransaction implements Transaction
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return Promise<\Amp\Sql\CommandResult>
+     * @return Promise<Result>
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -257,7 +252,7 @@ final class ConnectionTransaction implements Transaction
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return Promise<\Amp\Sql\CommandResult>
+     * @return Promise<Result>
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -271,7 +266,7 @@ final class ConnectionTransaction implements Transaction
      *
      * @param string $identifier Savepoint identifier.
      *
-     * @return Promise<\Amp\Sql\CommandResult>
+     * @return Promise<Result>
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */

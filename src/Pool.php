@@ -5,11 +5,11 @@ namespace Amp\Postgres;
 use Amp\Coroutine;
 use Amp\Promise;
 use Amp\Sql\Common\ConnectionPool;
+use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Common\StatementPool as SqlStatementPool;
 use Amp\Sql\ConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\Pool as SqlPool;
-use Amp\Sql\ResultSet as SqlResultSet;
 use Amp\Sql\Statement as SqlStatement;
 use Amp\Sql\Transaction as SqlTransaction;
 use function Amp\call;
@@ -66,12 +66,6 @@ final class Pool extends ConnectionPool implements Link
     {
         \assert($transaction instanceof Transaction);
         return new PooledTransaction($transaction, $release);
-    }
-
-    protected function createResultSet(SqlResultSet $resultSet, callable $release): SqlResultSet
-    {
-        \assert($resultSet instanceof ResultSet);
-        return new PooledResultSet($resultSet, $release);
     }
 
     protected function pop(): \Generator

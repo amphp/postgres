@@ -9,7 +9,7 @@
 <a href="https://github.com/amphp/postgres/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"/></a>
 </p>
 
-<p align="center"><strong>Async PostgreSQL client built with <a href="https://amphp.org/">Amp</a>.</strong></p>
+<p align="center"><strong>Async PostgreSQL client for PHP built with <a href="https://amphp.org/">Amp</a>.</strong></p>
 
 ## Installation
 
@@ -21,7 +21,7 @@ composer require amphp/postgres
 
 ## Requirements
 
-- PHP 7.0+
+- PHP 7.1+
 - [ext-pgsql](https://secure.php.net/pgsql) or [pecl-pq](https://pecl.php.net/package/pq)
 
 Note: [pecl-ev](https://pecl.php.net/package/ev) is not compatible with ext-pgsql. If you wish to use pecl-ev for the event loop backend, you must use pecl-pq.
@@ -35,6 +35,7 @@ More examples can be found in the [`examples`](examples) directory.
 ```php
 use Amp\Postgres;
 use Amp\Postgres\ConnectionConfig;
+use Amp\Sql\Result;
 use Amp\Sql\Statement;
 
 Amp\Loop::run(function () {
@@ -46,7 +47,7 @@ Amp\Loop::run(function () {
     /** @var Statement $statement */
     $statement = yield $pool->prepare("SELECT * FROM test WHERE id = :id");
 
-    /** @var Postgres\ResultSet $result */
+    /** @var Result $result */
     $result = yield $statement->execute(['id' => 1337]);
     while (yield $result->advance()) {
         $row = $result->getCurrent();

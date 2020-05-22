@@ -6,15 +6,16 @@ use Amp\Coroutine;
 use Amp\Deferred;
 use Amp\Loop;
 use Amp\Promise;
+use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
+use Amp\Sql\Result;
 use Amp\StreamSource;
 use Amp\Struct;
 use Amp\Success;
 use pq;
 use function Amp\call;
-use function Amp\coroutine;
 
 final class PqHandle implements Handle
 {
@@ -181,7 +182,7 @@ final class PqHandle implements Handle
             }
         }
 
-        if (!$this->handle) {
+        if ($this->handle === null) {
             throw new ConnectionException("The connection to the database has been closed");
         }
 
@@ -213,66 +214,29 @@ final class PqHandle implements Handle
         }
 
         return $result;
-
-//        switch ($result->status) {
-//            case pq\Result::EMPTY_QUERY:
-//                throw new QueryError("Empty query string");
-//
-//            case pq\Result::COMMAND_OK:
-//                if ($handle instanceof pq\Statement) {
-//                    return $handle; // Will be wrapped into a PqStatement object.
-//                }
-//
-//                return new PqCommandResult($result);
-//
-//            case pq\Result::TUPLES_OK:
-//                return new PqBufferedResultSet($result);
-//
-//            case pq\Result::SINGLE_TUPLE:
-//                $this->busy = new Deferred;
-//                $result = new PqUnbufferedResultSet(
-//                    coroutine(\Closure::fromCallable([$this, 'fetch'])),
-//                    $result,
-//                    \Closure::fromCallable([$this, 'release'])
-//                );
-//                return $result;
-//
-//            case pq\Result::NONFATAL_ERROR:
-//            case pq\Result::FATAL_ERROR:
-//                throw new QueryExecutionError($result->errorMessage, $result->diag, null, $sql ?? '');
-//
-//            case pq\Result::BAD_RESPONSE:
-//                throw new FailureException($result->errorMessage);
-//
-//            default:
-//                throw new FailureException("Unknown result status");
-//        }
     }
 
-    private function makeResult(pq\Result $result, ?string $sql)
+    private function makeResult(pq\Result $result, ?string $sql): Result
     {
         switch ($result->status) {
             case pq\Result::EMPTY_QUERY:
                 throw new QueryError("Empty query string");
 
             case pq\Result::COMMAND_OK:
-                return new PqCommandResult($result);
+                return new CommandResult($result->affectedRows, new Success($this->fetchNextResult($sql)));
 
             case pq\Result::TUPLES_OK:
-                if (!$this->handle->busy && ($next = $this->handle->getResult()) instanceof pq\Result) {
-                    $next = new Success($this->makeResult($next, $sql));
-                }
-
-                return new PqBufferedResultSet($result, $next ?? new Success);
+                return new PqBufferedResultSet($result, new Success($this->fetchNextResult($sql)));
 
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
-                $result = new PqUnbufferedResultSet(
-                    coroutine(\Closure::fromCallable([$this, 'fetch'])),
+                return new PqUnbufferedResultSet(
+                    function () use ($sql): Promise {
+                        return new Coroutine($this->fetch($sql));
+                    },
                     $result,
                     \Closure::fromCallable([$this, 'release'])
                 );
-                return $result;
 
             case pq\Result::NONFATAL_ERROR:
             case pq\Result::FATAL_ERROR:
@@ -286,8 +250,28 @@ final class PqHandle implements Handle
         }
     }
 
-    private function fetch(): \Generator
+    /**
+     * @param string|null $sql
+     *
+     * @return Result|null
+     *
+     * @throws FailureException
+     */
+    private function fetchNextResult(?string $sql): ?Result
     {
+        if (!$this->handle->busy && ($next = $this->handle->getResult()) instanceof pq\Result) {
+            return $this->makeResult($next, $sql);
+        }
+
+        return null;
+    }
+
+    private function fetch(string $sql): \Generator
+    {
+        if ($this->handle === null) {
+            return null;
+        }
+
         if (!$this->handle->busy) { // Results buffered.
             $result = $this->handle->getResult();
         } else {
@@ -311,15 +295,7 @@ final class PqHandle implements Handle
 
         switch ($result->status) {
             case pq\Result::TUPLES_OK: // End of result set.
-                while (!$this->handle->busy && ($next = $this->handle->getResult()) instanceof pq\Result) {
-                    if ($next->status === pq\Result::TUPLES_OK) {
-                        continue;
-                    }
-
-                    return $this->makeResult($result, null);
-                }
-
-                return null;
+                return $this->fetchNextResult($sql);
 
             case pq\Result::SINGLE_TUPLE:
                 return $result;
