@@ -11,7 +11,6 @@ use Amp\Postgres\Listener;
 use Amp\Postgres\QueryExecutionError;
 use Amp\Postgres\Transaction;
 use Amp\Promise;
-use Amp\Sql\Common\CommandResult;
 use Amp\Sql\QueryError;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
