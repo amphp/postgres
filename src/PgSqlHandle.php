@@ -268,7 +268,7 @@ final class PgSqlHandle implements Handle
                 foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
                     $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                 }
-                throw new QueryExecutionError(\pg_result_error($result), $diagnostics, null, $sql);
+                throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
 
             case \PGSQL_BAD_RESPONSE:
                 throw new FailureException(\pg_result_error($result));
@@ -419,7 +419,7 @@ final class PgSqlHandle implements Handle
                             foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
                                 $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                             }
-                            throw new QueryExecutionError(\pg_result_error($result), $diagnostics, null, $sql);
+                            throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
 
                         case \PGSQL_BAD_RESPONSE:
                             throw new FailureException(\pg_result_error($result));
