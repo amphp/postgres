@@ -3,7 +3,6 @@
 namespace Amp\Postgres;
 
 use Amp\AsyncGenerator;
-use Amp\Deferred;
 use Amp\DisposedException;
 use Amp\Promise;
 use Amp\Sql\Result;
@@ -11,28 +10,21 @@ use pq;
 
 final class PqUnbufferedResultSet implements Result
 {
-    /** @var int */
-    private $numCols;
-
-    /** @var AsyncGenerator */
+    /** @var AsyncGenerator<array<string, mixed>, null, null> */
     private $generator;
 
-    /** @var Deferred */
-    private $next;
+    /** @var Promise<Result|null> */
+    private $nextResult;
 
     /**
-     * @param callable():Promise<pq\Result|ResultSet|null> $fetch Function to fetch next result row.
-     * @param \pq\Result $result PostgreSQL result object.
-     * @param callable():void $release Invoked once the result has been fully consumed.
+     * @param callable():Promise<\pq\Result|Result|null> $fetch Function to fetch next result row.
+     * @param \pq\Result $result Initial PostgreSQL result object.
+     * @param Promise<Result|null> $nextResult
      */
-    public function __construct(callable $fetch, pq\Result $result, callable $release)
+    public function __construct(callable $fetch, pq\Result $result, Promise $nextResult)
     {
-        $this->numCols = $result->numCols;
-
-        $this->next = $deferred = new Deferred;
-        $this->generator = new AsyncGenerator(static function (callable $yield) use (
-            $deferred, $release, $result, $fetch
-        ): \Generator {
+        $this->nextResult = $nextResult;
+        $this->generator = new AsyncGenerator(static function (callable $yield) use ($result, $fetch): \Generator {
             try {
                 do {
                     $promise = $fetch();
@@ -45,23 +37,13 @@ final class PqUnbufferedResultSet implements Result
                 while (($result = yield $promise) instanceof pq\Result) {
                     $promise = $fetch();
                 }
-            } finally {
-                if ($result instanceof Result) {
-                    $deferred->resolve($result);
-                    return;
-                }
-
-                // Only release if there was no next result set.
-                $release();
-
-                $deferred->resolve(null);
             }
         });
     }
 
     public function getNextResult(): Promise
     {
-        return $this->next->promise();
+        return $this->nextResult;
     }
 
     /**

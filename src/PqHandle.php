@@ -182,7 +182,7 @@ final class PqHandle implements Handle
             }
         }
 
-        if ($this->handle === null) {
+        if (!$this->handle) {
             throw new ConnectionException("The connection to the database has been closed");
         }
 
@@ -216,6 +216,14 @@ final class PqHandle implements Handle
         return $result;
     }
 
+    /**
+     * @param pq\Result   $result
+     * @param string|null $sql
+     *
+     * @return Result
+     *
+     * @throws FailureException
+     */
     private function makeResult(pq\Result $result, ?string $sql): Result
     {
         switch ($result->status) {
@@ -235,7 +243,7 @@ final class PqHandle implements Handle
                         return new Coroutine($this->fetch($sql));
                     },
                     $result,
-                    \Closure::fromCallable([$this, 'release'])
+                    $this->busy->promise()
                 );
 
             case pq\Result::NONFATAL_ERROR:
@@ -268,8 +276,8 @@ final class PqHandle implements Handle
 
     private function fetch(string $sql): \Generator
     {
-        if ($this->handle === null) {
-            return null;
+        if (!$this->handle) {
+            throw new ConnectionException("Connection closed");
         }
 
         if (!$this->handle->busy) { // Results buffered.
@@ -295,7 +303,16 @@ final class PqHandle implements Handle
 
         switch ($result->status) {
             case pq\Result::TUPLES_OK: // End of result set.
-                return $this->fetchNextResult($sql);
+                $deferred = $this->busy;
+                $this->busy = null;
+
+                try {
+                    $deferred->resolve($this->fetchNextResult($sql));
+                } catch (\Throwable $exception) {
+                    $deferred->fail($exception);
+                }
+
+                return null;
 
             case pq\Result::SINGLE_TUPLE:
                 return $result;
@@ -303,18 +320,6 @@ final class PqHandle implements Handle
             default:
                 throw new FailureException($result->errorMessage);
         }
-    }
-
-    private function release(): void
-    {
-        \assert(
-            $this->busy instanceof Deferred && $this->busy !== $this->deferred,
-            "Connection in invalid state when releasing"
-        );
-
-        $deferred = $this->busy;
-        $this->busy = null;
-        $deferred->resolve();
     }
 
     /**
