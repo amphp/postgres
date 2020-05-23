@@ -4,6 +4,9 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\ParseException;
 
+/**
+ * @internal
+ */
 final class ArrayParser
 {
     /**
