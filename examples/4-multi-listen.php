@@ -5,6 +5,7 @@ require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Loop;
 use Amp\Postgres;
+use Amp\Postgres\Listener;
 use Amp\Stream;
 
 Loop::run(function () {
@@ -15,12 +16,12 @@ Loop::run(function () {
     $channel1 = "test1";
     $channel2 = "test2";
 
-    /** @var \Amp\Postgres\Listener $listener1 */
+    /** @var Listener $listener1 */
     $listener1 = yield $pool->listen($channel1);
 
     \printf("Listening on channel '%s'\n", $listener1->getChannel());
 
-    /** @var \Amp\Postgres\Listener $listener2 */
+    /** @var Listener $listener2 */
     $listener2 = yield $pool->listen($channel2);
 
     \printf("Listening on channel '%s'\n", $listener2->getChannel());

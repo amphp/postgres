@@ -4,14 +4,16 @@
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres;
+use Amp\Postgres\Connection;
+use Amp\Sql\Result;
 
 Amp\Loop::run(function () {
     $config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
 
-    /** @var \Amp\Postgres\Connection $connection */
+    /** @var Connection $connection */
     $connection = yield Postgres\connect($config);
 
-    /** @var \Amp\Postgres\ResultSet $result */
+    /** @var Result $result */
     $result = yield $connection->query('SHOW ALL');
 
     while ($row = yield $result->continue()) {

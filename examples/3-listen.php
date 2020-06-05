@@ -5,6 +5,7 @@ require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Loop;
 use Amp\Postgres;
+use Amp\Postgres\Listener;
 
 Loop::run(function () {
     $config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
@@ -13,7 +14,7 @@ Loop::run(function () {
 
     $channel = "test";
 
-    /** @var \Amp\Postgres\Listener $listener */
+    /** @var Listener $listener */
     $listener = yield $pool->listen($channel);
 
     \printf("Listening on channel '%s'\n", $listener->getChannel());
