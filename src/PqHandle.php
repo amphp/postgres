@@ -481,7 +481,7 @@ final class PqHandle implements Handle
                         $notification->channel = $channel;
                         $notification->pid = $pid;
                         $notification->payload = $message;
-                        $source->yield($notification);
+                        $source->emit($notification);
                     }
                 );
             } catch (\Throwable $exception) {

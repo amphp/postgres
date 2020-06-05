@@ -101,7 +101,7 @@ final class PgSqlHandle implements Handle
                 $notification->channel = $channel;
                 $notification->pid = $result["pid"];
                 $notification->payload = $result["payload"];
-                $listeners[$channel]->yield($notification);
+                $listeners[$channel]->emit($notification);
             }
 
             if ($deferred === null) {
