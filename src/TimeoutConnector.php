@@ -36,7 +36,7 @@ final class TimeoutConnector implements Connector
             throw new \TypeError(\sprintf("Must provide an instance of %s to Postgres connectors", ConnectionConfig::class));
         }
 
-        $token = new TimeoutCancellationToken($this->timeout);
+        $token = new TimeoutCancellationToken($this->timeout, "Connecting to the Postgres database timed out");
 
         if (\extension_loaded("pq")) {
             return PqConnection::connect($connectionConfig, $token);
