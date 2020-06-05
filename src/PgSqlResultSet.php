@@ -17,6 +17,9 @@ final class PgSqlResultSet implements Result
     /** @var int */
     private $position = 0;
 
+    /** @var int */
+    private $rowCount;
+
     /** @var int[] */
     private $fieldTypes = [];
 
@@ -36,6 +39,7 @@ final class PgSqlResultSet implements Result
     public function __construct($handle, Promise $nextResult)
     {
         $this->handle = $handle;
+        $this->rowCount = \pg_num_rows($this->handle);
         $this->nextResult = $nextResult;
 
         $numFields = \pg_num_fields($this->handle);
@@ -66,7 +70,7 @@ final class PgSqlResultSet implements Result
             return new Failure(new DisposedException);
         }
 
-        if (++$this->position > \pg_num_rows($this->handle)) {
+        if (++$this->position > $this->rowCount) {
             return new Success(null);
         }
 
@@ -74,21 +78,23 @@ final class PgSqlResultSet implements Result
 
         if ($result === false) {
             $message = \pg_result_error($this->handle);
-            \pg_free_result($this->handle);
             return new Failure(new FailureException($message));
         }
 
         try {
             return new Success($this->processRow($result));
         } catch (\Throwable $exception) {
-            \pg_free_result($this->handle);
-            $this->handle = null;
             return new Failure($exception);
         }
     }
 
     public function dispose(): void
     {
+        if ($this->handle === null) {
+            return;
+        }
+
+        \pg_free_result($this->handle);
         $this->handle = null;
     }
 
@@ -237,6 +243,6 @@ final class PgSqlResultSet implements Result
      */
     public function getRowCount(): int
     {
-        return \pg_num_rows($this->handle);
+        return $this->rowCount;
     }
 }

@@ -17,16 +17,20 @@ final class PqBufferedResultSet implements Result
     /** @var int */
     private $position = 0;
 
-    /** @var Promise<ResultSet|null> */
+    /** @var int */
+    private $rowCount;
+
+    /** @var Promise<Result|null> */
     private $nextResult;
 
     /**
      * @param pq\Result $result PostgreSQL result object.
-     * @param Promise<ResultSet|null> $nextResult Promise for next result set.
+     * @param Promise<Result|null> $nextResult Promise for next result set.
      */
     public function __construct(pq\Result $result, Promise $nextResult)
     {
         $this->result = $result;
+        $this->rowCount = $result->numRows;
         $this->result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
         $this->nextResult = $nextResult;
     }
@@ -68,6 +72,6 @@ final class PqBufferedResultSet implements Result
      */
     public function getRowCount(): int
     {
-        return $this->result->numRows;
+        return $this->rowCount;
     }
 }

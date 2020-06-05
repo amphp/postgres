@@ -17,19 +17,19 @@ final class PqUnbufferedResultSet implements Result
     private $nextResult;
 
     /**
-     * @param callable():Promise<\pq\Result|Result|null> $fetch Function to fetch next result row.
-     * @param \pq\Result $result Initial PostgreSQL result object.
+     * @param callable():Promise<\pq\Result|null> $fetch Function to fetch next result row.
+     * @param \pq\Result $result Initial pq\Result result object.
      * @param Promise<Result|null> $nextResult
      */
     public function __construct(callable $fetch, pq\Result $result, Promise $nextResult)
     {
         $this->nextResult = $nextResult;
-        $this->generator = new AsyncGenerator(static function (callable $yield) use ($result, $fetch): \Generator {
+        $this->generator = new AsyncGenerator(static function (callable $emit) use ($result, $fetch): \Generator {
             try {
                 do {
                     $promise = $fetch();
                     $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
-                    yield $yield($result->fetchRow(pq\Result::FETCH_ASSOC));
+                    yield $emit($result->fetchRow(pq\Result::FETCH_ASSOC));
                     $result = yield $promise;
                 } while ($result instanceof pq\Result);
             } catch (DisposedException $exception) {
