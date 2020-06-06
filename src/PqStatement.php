@@ -42,25 +42,25 @@ final class PqStatement implements Statement
         $this->handle->statementDeallocate($this->name);
     }
 
-    /** {@inheritdoc} */
+    /** @inheritDoc */
     public function isAlive(): bool
     {
         return $this->handle->isAlive();
     }
 
-    /** {@inheritdoc} */
+    /** @inheritDoc */
     public function getQuery(): string
     {
         return $this->sql;
     }
 
-    /** {@inheritdoc} */
+    /** @inheritDoc */
     public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }
 
-    /** {@inheritdoc} */
+    /** @inheritDoc */
     public function execute(array $params = []): Promise
     {
         $this->lastUsedAt = \time();

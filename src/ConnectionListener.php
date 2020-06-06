@@ -36,7 +36,7 @@ final class ConnectionListener implements Listener
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function continue(): Promise
     {
@@ -68,7 +68,7 @@ final class ConnectionListener implements Listener
     /**
      * Unlistens from the channel. No more values will be emitted from this listener.
      *
-     * @return Promise<\Amp\Sql\CommandResult>
+     * @return Promise<void>
      *
      * @throws \Error If this method was previously invoked.
      */

@@ -24,7 +24,7 @@ final class TimeoutConnector implements Connector
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      *
      * @throws FailureException If connecting fails.
      *

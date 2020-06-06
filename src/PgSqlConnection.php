@@ -23,6 +23,7 @@ final class PgSqlConnection extends Connection implements Link
     public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): Promise
     {
         // @codeCoverageIgnoreStart
+        /** @psalm-suppress UndefinedClass */
         if (Loop::get()->getHandle() instanceof \EvLoop) {
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
         } // @codeCoverageIgnoreEnd

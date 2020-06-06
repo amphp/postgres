@@ -35,7 +35,7 @@ abstract class Connection implements Link, Handle
 
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function isAlive(): bool
     {
@@ -43,7 +43,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function getLastUsedAt(): int
     {
@@ -51,7 +51,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function close(): void
     {
@@ -102,7 +102,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function query(string $sql): Promise
     {
@@ -110,7 +110,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function execute(string $sql, array $params = []): Promise
     {
@@ -118,7 +118,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function prepare(string $sql): Promise
     {
@@ -127,7 +127,7 @@ abstract class Connection implements Link, Handle
 
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function notify(string $channel, string $payload = ""): Promise
     {
@@ -135,7 +135,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function listen(string $channel): Promise
     {
@@ -143,7 +143,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function beginTransaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise
     {
@@ -181,7 +181,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function quoteString(string $data): string
     {
@@ -189,7 +189,7 @@ abstract class Connection implements Link, Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     final public function quoteName(string $name): string
     {

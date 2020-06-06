@@ -63,7 +63,7 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function getLastUsedAt(): int
     {
@@ -71,7 +71,7 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      *
      * Closes and commits all changes in the transaction.
      */
@@ -83,7 +83,7 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function isAlive(): bool
     {
@@ -107,7 +107,7 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -131,7 +131,7 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -155,7 +155,7 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -180,7 +180,7 @@ final class ConnectionTransaction implements Transaction
 
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -276,7 +276,7 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
@@ -290,7 +290,7 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */

@@ -42,25 +42,25 @@ final class PgSqlStatement implements Statement
         $this->handle->statementDeallocate($this->name);
     }
 
-    /** {@inheritdoc} */
+    /** @inheritDoc */
     public function isAlive(): bool
     {
         return $this->handle->isAlive();
     }
 
-    /** {@inheritdoc} */
+    /** @inheritDoc */
     public function getQuery(): string
     {
         return $this->sql;
     }
 
-    /** {@inheritdoc} */
+    /** @inheritDoc */
     public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }
 
-    /** {@inheritdoc} */
+    /** @inheritDoc */
     public function execute(array $params = []): Promise
     {
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));

@@ -81,7 +81,7 @@ final class Pool extends ConnectionPool implements Link
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function notify(string $channel, string $payload = ""): Promise
     {
@@ -100,7 +100,7 @@ final class Pool extends ConnectionPool implements Link
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function listen(string $channel): Promise
     {

@@ -37,7 +37,7 @@ final class PqHandle implements Handle
     /** @var StreamSource[] */
     private $listeners;
 
-    /** @var Struct[] */
+    /** @var object[] Anonymous class using Struct trait. */
     private $statements = [];
 
     /** @var int */
@@ -126,7 +126,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function isAlive(): bool
     {
@@ -134,7 +134,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function getLastUsedAt(): int
     {
@@ -142,7 +142,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function close(): void
     {
@@ -371,7 +371,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function query(string $sql): Promise
     {
@@ -383,7 +383,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function execute(string $sql, array $params = []): Promise
     {
@@ -398,7 +398,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function prepare(string $sql): Promise
     {
@@ -452,7 +452,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function notify(string $channel, string $payload = ""): Promise
     {
@@ -460,7 +460,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function listen(string $channel): Promise
     {
@@ -519,7 +519,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function quoteString(string $data): string
     {
@@ -531,7 +531,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * {@inheritdoc}
+     * @inheritDoc
      */
     public function quoteName(string $name): string
     {

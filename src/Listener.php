@@ -25,7 +25,7 @@ interface Listener extends Stream
     /**
      * Unlistens from the channel. No more values will be emitted from this listener.
      *
-     * @return Promise<\Amp\Sql\CommandResult>
+     * @return Promise<void>
      *
      * @throws \Error If this method was previously invoked.
      */
