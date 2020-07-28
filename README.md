@@ -38,7 +38,7 @@ use Amp\Postgres\ConnectionConfig;
 use Amp\Sql\Statement;
 
 Amp\Loop::run(function () {
-    $config = ConnectionConfig::fromString("host=localhost user=postgres dbname=test");
+    $config = ConnectionConfig::fromString("host=localhost user=postgres db=test");
 
     /** @var Postgres\Pool $pool */
     $pool = Postgres\pool($config);
