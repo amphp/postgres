@@ -682,4 +682,18 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $channel = "test";
         return Promise\all([$this->connection->listen($channel), $this->connection->listen($channel)]);
     }
+
+    public function testQueryAfterErroredQuery(): \Generator
+    {
+        try {
+            $result = yield $this->connection->query("INSERT INTO test (domain, tld) VALUES ('github', 'com')");
+        } catch (QueryExecutionError $exception) {
+            // Expected exception due to duplicate key.
+        }
+
+        /** @var CommandResult $result */
+        $result = yield $this->connection->query("INSERT INTO test (domain, tld) VALUES ('gitlab', 'com')");
+
+        $this->assertSame(1, $result->getAffectedRowCount());
+    }
 }

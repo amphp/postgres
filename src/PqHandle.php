@@ -233,12 +233,15 @@ final class PqHandle implements Handle
 
             case pq\Result::NONFATAL_ERROR:
             case pq\Result::FATAL_ERROR:
+                while ($this->handle->busy && $this->handle->getResult());
                 throw new QueryExecutionError($result->errorMessage, $result->diag, null, $sql ?? '');
 
             case pq\Result::BAD_RESPONSE:
+                $this->close();
                 throw new FailureException($result->errorMessage);
 
             default:
+                $this->close();
                 throw new FailureException("Unknown result status");
         }
     }
@@ -274,6 +277,7 @@ final class PqHandle implements Handle
                 return $result;
 
             default:
+                $this->close();
                 throw new FailureException($result->errorMessage);
         }
     }
