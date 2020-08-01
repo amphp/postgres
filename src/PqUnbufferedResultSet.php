@@ -39,6 +39,7 @@ final class PqUnbufferedResultSet implements Result
                 }
             }
         });
+        $this->generator->getReturn(); // Force generator to start execution.
     }
 
     public function getNextResult(): Promise
@@ -60,6 +61,22 @@ final class PqUnbufferedResultSet implements Result
     public function dispose(): void
     {
         $this->generator->dispose();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onDisposal(callable $onDisposal): void
+    {
+        $this->generator->onDisposal($onDisposal);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onCompletion(callable $onCompletion): void
+    {
+        $this->generator->onCompletion($onCompletion);
     }
 
     /**

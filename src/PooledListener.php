@@ -40,6 +40,16 @@ final class PooledListener implements Listener
         $this->listener->dispose();
     }
 
+    public function onDisposal(callable $onDisposal): void
+    {
+        $this->listener->onDisposal($onDisposal);
+    }
+
+    public function onCompletion(callable $onCompletion): void
+    {
+        $this->listener->onCompletion($onCompletion);
+    }
+
     public function getChannel(): string
     {
         return $this->listener->getChannel();

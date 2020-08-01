@@ -2,32 +2,21 @@
 
 namespace Amp\Postgres;
 
-use Amp\DisposedException;
-use Amp\Failure;
+use Amp\AsyncGenerator;
 use Amp\Promise;
 use Amp\Sql\FailureException;
 use Amp\Sql\Result;
-use Amp\Success;
 
 final class PgSqlResultSet implements Result
 {
-    /** @var resource PostgreSQL result resource. */
-    private $handle;
+    /** @var Internal\ArrayParser */
+    private static $parser;
 
-    /** @var int */
-    private $position = 0;
+    /** @var AsyncGenerator */
+    private $generator;
 
     /** @var int */
     private $rowCount;
-
-    /** @var int[] */
-    private $fieldTypes = [];
-
-    /** @var string[] */
-    private $fieldNames = [];
-
-    /** @var Internal\ArrayParser */
-    private $parser;
 
     /** @var Promise<Result|null> */
     private $nextResult;
@@ -38,27 +27,35 @@ final class PgSqlResultSet implements Result
      */
     public function __construct($handle, Promise $nextResult)
     {
-        $this->handle = $handle;
-        $this->rowCount = \pg_num_rows($this->handle);
+        $fieldNames = [];
+        $fieldTypes = [];
+        $numFields = \pg_num_fields($handle);
+        for ($i = 0; $i < $numFields; ++$i) {
+            $fieldNames[] = \pg_field_name($handle, $i);
+            $fieldTypes[] = \pg_field_type_oid($handle, $i);
+        }
+
+        $this->rowCount = \pg_num_rows($handle);
         $this->nextResult = $nextResult;
 
-        $numFields = \pg_num_fields($this->handle);
-        for ($i = 0; $i < $numFields; ++$i) {
-            $this->fieldNames[] = \pg_field_name($this->handle, $i);
-            $this->fieldTypes[] = \pg_field_type_oid($this->handle, $i);
-        }
+        $this->generator = new AsyncGenerator(static function (callable $emit) use ($handle, $fieldNames, $fieldTypes): \Generator {
+            $position = 0;
 
-        $this->parser = new Internal\ArrayParser;
-    }
+            try {
+                while (++$position <= \pg_num_rows($handle)) {
+                    $result = \pg_fetch_array($handle, null, \PGSQL_NUM);
 
-    /**
-     * Frees the result resource.
-     */
-    public function __destruct()
-    {
-        if ($this->handle !== null) {
-            \pg_free_result($this->handle);
-        }
+                    if ($result === false) {
+                        throw new FailureException(\pg_result_error($handle));
+                    }
+
+                    yield $emit(self::processRow($fieldNames, $fieldTypes, $result));
+                }
+            } finally {
+                \pg_free_result($handle);
+            }
+        });
+        $this->generator->getReturn(); // Force generator to start execution.
     }
 
     /**
@@ -66,50 +63,58 @@ final class PgSqlResultSet implements Result
      */
     public function continue(): Promise
     {
-        if ($this->handle === null) {
-            return new Failure(new DisposedException);
-        }
-
-        if (++$this->position > $this->rowCount) {
-            return new Success(null);
-        }
-
-        $result = \pg_fetch_array($this->handle, null, \PGSQL_NUM);
-
-        if ($result === false) {
-            $message = \pg_result_error($this->handle);
-            return new Failure(new FailureException($message));
-        }
-
-        try {
-            return new Success($this->processRow($result));
-        } catch (\Throwable $exception) {
-            return new Failure($exception);
-        }
+        return $this->generator->continue();
     }
 
+    /**
+     * @inheritDoc
+     */
     public function dispose(): void
     {
-        if ($this->handle === null) {
-            return;
-        }
-
-        \pg_free_result($this->handle);
-        $this->handle = null;
+        $this->generator->dispose();
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function onDisposal(callable $onDisposal): void
+    {
+        $this->generator->onDisposal($onDisposal);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onCompletion(callable $onCompletion): void
+    {
+        $this->generator->onCompletion($onCompletion);
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function getNextResult(): Promise
     {
         return $this->nextResult;
     }
 
     /**
+     * @return int Number of rows returned.
+     */
+    public function getRowCount(): int
+    {
+        return $this->rowCount;
+    }
+
+    /**
+     * @param array<int, string> $fieldNames
+     * @param array<int, int> $fieldTypes
      * @param array<int, mixed> $result
      *
      * @return array<string, mixed>
      * @throws ParseException
      */
-    private function processRow(array $result): array
+    private static function processRow(array $fieldNames, array $fieldTypes, array $result): array
     {
         $columnCount = \count($result);
         for ($column = 0; $column < $columnCount; ++$column) {
@@ -117,15 +122,16 @@ final class PgSqlResultSet implements Result
                 continue;
             }
 
-            $result[$column] = $this->cast($column, $result[$column]);
+            $result[$column] = self::cast($fieldTypes, $column, $result[$column]);
         }
 
-        return \array_combine($this->fieldNames, $result);
+        return \array_combine($fieldNames, $result);
     }
 
     /**
      * @see https://github.com/postgres/postgres/blob/REL_10_STABLE/src/include/catalog/pg_type.h for OID types.
      *
+     * @param array<int, int> $fieldTypes
      * @param int $column
      * @param string $value
      *
@@ -133,9 +139,9 @@ final class PgSqlResultSet implements Result
      *
      * @throws ParseException
      */
-    private function cast(int $column, string $value)
+    private static function cast(array $fieldTypes, int $column, string $value)
     {
-        switch ($this->fieldTypes[$column]) {
+        switch ($fieldTypes[$column]) {
             case 16: // bool
                 return $value === 't';
 
@@ -152,7 +158,7 @@ final class PgSqlResultSet implements Result
                 return (float) $value;
 
             case 1000: // boolean[]
-                return $this->parser->parse($value, function (string $value): bool {
+                return self::$parser->parse($value, function (string $value): bool {
                     return $value === 't';
                 });
 
@@ -162,18 +168,18 @@ final class PgSqlResultSet implements Result
             case 1011: // xid[]
             case 1016: // int8[]
             case 1028: // oid[]
-                return $this->parser->parse($value, function (string $value): int {
+                return self::$parser->parse($value, function (string $value): int {
                     return (int) $value;
                 });
 
             case 1021: // real[]
             case 1022: // double-precision[]
-                return $this->parser->parse($value, function (string $value): float {
+                return self::$parser->parse($value, function (string $value): float {
                     return (float) $value;
                 });
 
             case 1020: // box[] (semi-colon delimited)
-                return $this->parser->parse($value, null, ';');
+                return self::$parser->parse($value, null, ';');
 
             case 199:  // json[]
             case 629:  // line[]
@@ -231,18 +237,14 @@ final class PgSqlResultSet implements Result
             case 3927: // int8range[]
             case 4090: // regnamespace[]
             case 4097: // regrole[]
-                return $this->parser->parse($value);
+                return self::$parser->parse($value);
 
             default:
                 return $value;
         }
     }
-
-    /**
-     * @return int Number of rows returned.
-     */
-    public function getRowCount(): int
-    {
-        return $this->rowCount;
-    }
 }
+
+(function () {
+    self::$parser = new Internal\ArrayParser;
+})->bindTo(null, PgSqlResultSet::class)();

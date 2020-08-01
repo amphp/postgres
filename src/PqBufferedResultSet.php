@@ -2,20 +2,15 @@
 
 namespace Amp\Postgres;
 
-use Amp\DisposedException;
-use Amp\Failure;
+use Amp\AsyncGenerator;
 use Amp\Promise;
 use Amp\Sql\Result;
-use Amp\Success;
 use pq;
 
 final class PqBufferedResultSet implements Result
 {
-    /** @var \pq\Result */
-    private $result;
-
-    /** @var int */
-    private $position = 0;
+    /** @var AsyncGenerator */
+    private $generator;
 
     /** @var int */
     private $rowCount;
@@ -29,10 +24,17 @@ final class PqBufferedResultSet implements Result
      */
     public function __construct(pq\Result $result, Promise $nextResult)
     {
-        $this->result = $result;
         $this->rowCount = $result->numRows;
-        $this->result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
         $this->nextResult = $nextResult;
+
+        $this->generator = new AsyncGenerator(static function (callable $emit) use ($result): \Generator {
+            $position = 0;
+
+            while (++$position <= $result->numRows) {
+                $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
+                yield $emit($result->fetchRow(pq\Result::FETCH_ASSOC));
+            }
+        });
     }
 
     /**
@@ -40,15 +42,7 @@ final class PqBufferedResultSet implements Result
      */
     public function continue(): Promise
     {
-        if ($this->result === null) {
-            return new Failure(new DisposedException);
-        }
-
-        if (++$this->position > $this->result->numRows) {
-            return new Success(null);
-        }
-
-        return new Success($this->result->fetchRow(pq\Result::FETCH_ASSOC));
+        return $this->generator->continue();
     }
 
     /**
@@ -56,7 +50,23 @@ final class PqBufferedResultSet implements Result
      */
     public function dispose(): void
     {
-        $this->result = null;
+        $this->generator->dispose();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onDisposal(callable $onDisposal): void
+    {
+        $this->generator->onDisposal($onDisposal);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onCompletion(callable $onCompletion): void
+    {
+        $this->generator->onCompletion($onCompletion);
     }
 
     /**

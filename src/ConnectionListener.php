@@ -43,10 +43,29 @@ final class ConnectionListener implements Listener
         return $this->stream->continue();
     }
 
+    /**
+     * @inheritDoc
+     */
     public function dispose()
     {
         $this->stream->dispose();
         $this->unlisten();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onDisposal(callable $onDisposal): void
+    {
+        $this->stream->onDisposal($onDisposal);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function onCompletion(callable $onCompletion): void
+    {
+        $this->stream->onCompletion($onCompletion);
     }
 
     /**
