@@ -29,7 +29,7 @@ final class Pool extends ConnectionPool implements Link
      * @param ConnectionConfig $config
      * @param int              $maxConnections
      * @param int              $idleTimeout
-     * @param bool             $resetConnections True to automatically execute RESET ALL on a connection before use.
+     * @param bool             $resetConnections True to automatically execute DISCARD ALL on a connection before use.
      * @param Connector|null   $connector
      */
     public function __construct(
@@ -80,7 +80,7 @@ final class Pool extends ConnectionPool implements Link
         \assert($connection instanceof Connection);
 
         if ($this->resetConnections) {
-            yield $connection->query("RESET ALL");
+            yield $connection->query("DISCARD ALL");
         }
 
         return $connection;
