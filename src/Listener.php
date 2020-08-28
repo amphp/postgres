@@ -2,10 +2,10 @@
 
 namespace Amp\Postgres;
 
+use Amp\Pipeline;
 use Amp\Promise;
-use Amp\Stream;
 
-interface Listener extends Stream
+interface Listener extends Pipeline
 {
     /**
      * @return Promise<Notification|null>

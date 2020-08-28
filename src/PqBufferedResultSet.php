@@ -56,22 +56,6 @@ final class PqBufferedResultSet implements Result
     /**
      * @inheritDoc
      */
-    public function onDisposal(callable $onDisposal): void
-    {
-        $this->generator->onDisposal($onDisposal);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function onCompletion(callable $onCompletion): void
-    {
-        $this->generator->onCompletion($onCompletion);
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function getNextResult(): Promise
     {
         return $this->nextResult;

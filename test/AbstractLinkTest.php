@@ -6,6 +6,7 @@ use Amp\Coroutine;
 use Amp\Delayed;
 use Amp\Loop;
 use Amp\PHPUnit\AsyncTestCase;
+use Amp\Pipeline;
 use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryExecutionError;
@@ -16,7 +17,6 @@ use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
-use Amp\Stream;
 
 abstract class AbstractLinkTest extends AsyncTestCase
 {
@@ -433,8 +433,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $results = [];
 
-        $results[] = yield Stream\toArray(yield $statement1->execute([$data[0]]));
-        $results[] = yield Stream\toArray(yield $statement2->execute(['domain' => $data[0]]));
+        $results[] = yield Pipeline\toArray(yield $statement1->execute([$data[0]]));
+        $results[] = yield Pipeline\toArray(yield $statement2->execute(['domain' => $data[0]]));
 
         foreach ($results as $result) {
             /** @var Result $result */

@@ -55,7 +55,6 @@ final class PgSqlResultSet implements Result
                 \pg_free_result($handle);
             }
         });
-        $this->generator->getReturn(); // Force generator to start execution.
     }
 
     /**
@@ -72,22 +71,6 @@ final class PgSqlResultSet implements Result
     public function dispose(): void
     {
         $this->generator->dispose();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function onDisposal(callable $onDisposal): void
-    {
-        $this->generator->onDisposal($onDisposal);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function onCompletion(callable $onCompletion): void
-    {
-        $this->generator->onCompletion($onCompletion);
     }
 
     /**

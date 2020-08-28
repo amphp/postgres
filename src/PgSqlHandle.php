@@ -4,13 +4,13 @@ namespace Amp\Postgres;
 
 use Amp\Deferred;
 use Amp\Loop;
+use Amp\PipelineSource;
 use Amp\Promise;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
 use Amp\Sql\Result;
-use Amp\StreamSource;
 use Amp\Struct;
 use Amp\Success;
 use function Amp\call;
@@ -44,7 +44,7 @@ final class PgSqlHandle implements Handle
     /** @var string */
     private $await;
 
-    /** @var StreamSource[] */
+    /** @var PipelineSource[] */
     private $listeners = [];
 
     /** @var object[] Anonymous class using Struct trait. */
@@ -463,7 +463,7 @@ final class PgSqlHandle implements Handle
                 throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
             }
 
-            $this->listeners[$channel] = $source = new StreamSource;
+            $this->listeners[$channel] = $source = new PipelineSource;
 
             try {
                 yield $this->query(\sprintf("LISTEN %s", $this->quoteName($channel)));
@@ -473,7 +473,7 @@ final class PgSqlHandle implements Handle
             }
 
             Loop::enable($this->poll);
-            return new ConnectionListener($source->stream(), $channel, \Closure::fromCallable([$this, 'unlisten']));
+            return new ConnectionListener($source->pipe(), $channel, \Closure::fromCallable([$this, 'unlisten']));
         });
     }
 

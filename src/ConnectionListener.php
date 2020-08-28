@@ -2,12 +2,12 @@
 
 namespace Amp\Postgres;
 
+use Amp\Pipeline;
 use Amp\Promise;
-use Amp\Stream;
 
 final class ConnectionListener implements Listener
 {
-    /** @var Stream */
+    /** @var Pipeline */
     private $stream;
 
     /** @var string */
@@ -17,13 +17,13 @@ final class ConnectionListener implements Listener
     private $unlisten;
 
     /**
-     * @param Stream $stream  Stream emitting notificatons on the channel.
+     * @param Pipeline $pipeline Pipeline emitting notificatons on the channel.
      * @param string $channel Channel name.
      * @param callable(string $channel):  $unlisten Function invoked to unlisten from the channel.
      */
-    public function __construct(Stream $stream, string $channel, callable $unlisten)
+    public function __construct(Pipeline $pipeline, string $channel, callable $unlisten)
     {
-        $this->stream = $stream;
+        $this->stream = $pipeline;
         $this->channel = $channel;
         $this->unlisten = $unlisten;
     }
@@ -50,22 +50,6 @@ final class ConnectionListener implements Listener
     {
         $this->stream->dispose();
         $this->unlisten();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function onDisposal(callable $onDisposal): void
-    {
-        $this->stream->onDisposal($onDisposal);
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function onCompletion(callable $onCompletion): void
-    {
-        $this->stream->onCompletion($onCompletion);
     }
 
     /**
