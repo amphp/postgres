@@ -3,24 +3,20 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Result;
 use Amp\Sql\Statement;
 
 final class PgSqlStatement implements Statement
 {
-    /** @var PgSqlHandle */
-    private $handle;
+    private PgSqlHandle $handle;
 
-    /** @var string */
-    private $name;
+    private string $name;
 
-    /** @var string */
-    private $sql;
+    private string $sql;
 
-    /** @var string[] */
-    private $params;
+    private array $params;
 
-    /** @var int */
-    private $lastUsedAt;
+    private int $lastUsedAt;
 
     /**
      * @param PgSqlHandle $handle
@@ -61,7 +57,7 @@ final class PgSqlStatement implements Statement
     }
 
     /** @inheritDoc */
-    public function execute(array $params = []): Promise
+    public function execute(array $params = []): Result
     {
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
     }

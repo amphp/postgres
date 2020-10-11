@@ -12,7 +12,7 @@ REGEX;
  * @internal
  *
  * @param string $sql SQL statement with named and unnamed placeholders.
- * @param array $names [Output] Array of parameter positions mapped to names and/or indexed locations.
+ * @param-out array $names Array of parameter positions mapped to names and/or indexed locations.
  *
  * @return string SQL statement with Postgres-style placeholders
  */

@@ -2,18 +2,20 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
+use Amp\Sql\ConnectionException;
+use Amp\Sql\FailureException;
+use Amp\Sql\QueryError;
 
 interface Receiver extends Executor
 {
     /**
      * @param string $channel Channel name.
      *
-     * @return Promise<Listener>
+     * @return Listener
      *
-     * @throws \Amp\Sql\FailureException If the operation fails due to unexpected condition.
-     * @throws \Amp\Sql\ConnectionException If the connection to the database is lost.
-     * @throws \Amp\Sql\QueryError If the operation fails due to an error in the query (such as a syntax error).
+     * @throws FailureException If the operation fails due to unexpected condition.
+     * @throws ConnectionException If the connection to the database is lost.
+     * @throws QueryError If the operation fails due to an error in the query (such as a syntax error).
      */
-    public function listen(string $channel): Promise;
+    public function listen(string $channel): Listener;
 }

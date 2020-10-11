@@ -4,7 +4,6 @@ namespace Amp\Postgres\Test;
 
 use Amp\CancellationToken;
 use Amp\Postgres\PqConnection;
-use Amp\Promise;
 use Amp\Sql\ConnectionConfig;
 
 /**
@@ -12,7 +11,7 @@ use Amp\Sql\ConnectionConfig;
  */
 class PqConnectTest extends AbstractConnectTest
 {
-    public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise
+    public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): PqConnection
     {
         return PqConnection::connect($connectionConfig, $token);
     }

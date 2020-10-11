@@ -17,11 +17,9 @@ final class ConnectionConfig extends SqlConnectionConfig
         'verify-full',
     ];
 
-    /** @var string|null */
-    private $sslMode = null;
+    private ?string $sslMode = null;
 
-    /** @var string|null */
-    private $string;
+    private ?string $connectionString = null;
 
     public static function fromString(string $connectionString): self
     {
@@ -58,7 +56,7 @@ final class ConnectionConfig extends SqlConnectionConfig
 
     public function __clone()
     {
-        $this->string = null;
+        $this->connectionString = null;
     }
 
     public function getSslMode(): ?string
@@ -89,8 +87,8 @@ final class ConnectionConfig extends SqlConnectionConfig
      */
     public function getConnectionString(): string
     {
-        if ($this->string !== null) {
-            return $this->string;
+        if ($this->connectionString !== null) {
+            return $this->connectionString;
         }
 
         $chunks = [
@@ -117,6 +115,6 @@ final class ConnectionConfig extends SqlConnectionConfig
             $chunks[] = "sslmode=" . $this->sslMode;
         }
 
-        return $this->string = \implode(" ", $chunks);
+        return $this->connectionString = \implode(" ", $chunks);
     }
 }

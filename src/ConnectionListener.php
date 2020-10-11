@@ -8,10 +8,10 @@ use Amp\Promise;
 final class ConnectionListener implements Listener
 {
     /** @var Pipeline */
-    private $stream;
+    private Pipeline $pipeline;
 
     /** @var string */
-    private $channel;
+    private string $channel;
 
     /** @var callable|null */
     private $unlisten;
@@ -23,7 +23,7 @@ final class ConnectionListener implements Listener
      */
     public function __construct(Pipeline $pipeline, string $channel, callable $unlisten)
     {
-        $this->stream = $pipeline;
+        $this->pipeline = $pipeline;
         $this->channel = $channel;
         $this->unlisten = $unlisten;
     }
@@ -38,17 +38,17 @@ final class ConnectionListener implements Listener
     /**
      * @inheritDoc
      */
-    public function continue(): Promise
+    public function continue(): ?Notification
     {
-        return $this->stream->continue();
+        return $this->pipeline->continue();
     }
 
     /**
      * @inheritDoc
      */
-    public function dispose()
+    public function dispose(): void
     {
-        $this->stream->dispose();
+        $this->pipeline->dispose();
         $this->unlisten();
     }
 
@@ -71,20 +71,16 @@ final class ConnectionListener implements Listener
     /**
      * Unlistens from the channel. No more values will be emitted from this listener.
      *
-     * @return Promise<void>
-     *
      * @throws \Error If this method was previously invoked.
      */
-    public function unlisten(): Promise
+    public function unlisten(): void
     {
         if (!$this->unlisten) {
             throw new \Error("Already unlistened on this channel");
         }
 
-        /** @var Promise $promise */
-        $promise = ($this->unlisten)($this->channel);
+        $unlisten = $this->unlisten;
         $this->unlisten = null;
-
-        return $promise;
+        $unlisten($this->channel);
     }
 }

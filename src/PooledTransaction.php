@@ -2,15 +2,14 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Common\PooledTransaction as SqlPooledTransaction;
+use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
 
 final class PooledTransaction extends SqlPooledTransaction implements Transaction
 {
-    /** @var Transaction|null */
-    private $transaction;
+    private Transaction $transaction;
 
     protected function createStatement(SqlStatement $statement, callable $release): SqlStatement
     {
@@ -27,7 +26,7 @@ final class PooledTransaction extends SqlPooledTransaction implements Transactio
         $this->transaction = $transaction;
     }
 
-    public function notify(string $channel, string $payload = ""): Promise
+    public function notify(string $channel, string $payload = ""): Result
     {
         return $this->transaction->notify($channel, $payload);
     }

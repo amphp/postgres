@@ -6,20 +6,18 @@ use Amp\AsyncGenerator;
 use Amp\Promise;
 use Amp\Sql\FailureException;
 use Amp\Sql\Result;
+use function Amp\await;
 
 final class PgSqlResultSet implements Result
 {
-    /** @var Internal\ArrayParser */
-    private static $parser;
+    private static Internal\ArrayParser $parser;
 
-    /** @var AsyncGenerator */
-    private $generator;
+    private AsyncGenerator $generator;
 
-    /** @var int */
-    private $rowCount;
+    private int $rowCount;
 
     /** @var Promise<Result|null> */
-    private $nextResult;
+    private Promise $nextResult;
 
     /**
      * @param resource $handle PostgreSQL result resource.
@@ -38,7 +36,7 @@ final class PgSqlResultSet implements Result
         $this->rowCount = \pg_num_rows($handle);
         $this->nextResult = $nextResult;
 
-        $this->generator = new AsyncGenerator(static function (callable $emit) use ($handle, $fieldNames, $fieldTypes): \Generator {
+        $this->generator = new AsyncGenerator(static function () use ($handle, $fieldNames, $fieldTypes): \Generator {
             $position = 0;
 
             try {
@@ -49,7 +47,7 @@ final class PgSqlResultSet implements Result
                         throw new FailureException(\pg_result_error($handle));
                     }
 
-                    yield $emit(self::processRow($fieldNames, $fieldTypes, $result));
+                    yield self::processRow($fieldNames, $fieldTypes, $result);
                 }
             } finally {
                 \pg_free_result($handle);
@@ -60,7 +58,7 @@ final class PgSqlResultSet implements Result
     /**
      * @inheritDoc
      */
-    public function continue(): Promise
+    public function continue(): ?array
     {
         return $this->generator->continue();
     }
@@ -76,9 +74,9 @@ final class PgSqlResultSet implements Result
     /**
      * @inheritDoc
      */
-    public function getNextResult(): Promise
+    public function getNextResult(): ?Result
     {
-        return $this->nextResult;
+        return await($this->nextResult);
     }
 
     /**

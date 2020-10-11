@@ -8,7 +8,6 @@ use Amp\CancelledException;
 use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\Connection;
 use Amp\Postgres\ConnectionConfig as PostgresConnectionConfig;
-use Amp\Promise;
 use Amp\Sql\ConnectionConfig;
 use Amp\Sql\FailureException;
 use Amp\TimeoutCancellationToken;
@@ -19,13 +18,13 @@ abstract class AbstractConnectTest extends AsyncTestCase
      * @param ConnectionConfig $connectionConfig
      * @param CancellationToken|null $token
      *
-     * @return Promise
+     * @return Connection
      */
-    abstract public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Promise;
+    abstract public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): Connection;
 
-    public function testConnect(): \Generator
+    public function testConnect()
     {
-        $connection = yield $this->connect(
+        $connection = $this->connect(
             PostgresConnectionConfig::fromString('host=localhost user=postgres'),
             new TimeoutCancellationToken(100)
         );
@@ -35,24 +34,24 @@ abstract class AbstractConnectTest extends AsyncTestCase
     /**
      * @depends testConnect
      */
-    public function testConnectCancellationBeforeConnect(): Promise
+    public function testConnectCancellationBeforeConnect()
     {
         $this->expectException(CancelledException::class);
 
         $source = new CancellationTokenSource;
         $token = $source->getToken();
         $source->cancel();
-        return $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $token);
+        $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $token);
     }
 
     /**
      * @depends testConnectCancellationBeforeConnect
      */
-    public function testConnectCancellationAfterConnect(): \Generator
+    public function testConnectCancellationAfterConnect()
     {
         $source = new CancellationTokenSource;
         $token = $source->getToken();
-        $connection = yield $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $token);
+        $connection = $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $token);
         $this->assertInstanceOf(Connection::class, $connection);
         $source->cancel();
     }
@@ -60,10 +59,10 @@ abstract class AbstractConnectTest extends AsyncTestCase
     /**
      * @depends testConnectCancellationBeforeConnect
      */
-    public function testConnectInvalidUser(): Promise
+    public function testConnectInvalidUser()
     {
         $this->expectException(FailureException::class);
 
-        return $this->connect(PostgresConnectionConfig::fromString('host=localhost user=invalid'), new TimeoutCancellationToken(100));
+        $this->connect(PostgresConnectionConfig::fromString('host=localhost user=invalid'), new TimeoutCancellationToken(100));
     }
 }

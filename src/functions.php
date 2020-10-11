@@ -3,10 +3,10 @@
 namespace Amp\Postgres;
 
 use Amp\Loop;
-use Amp\Promise;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
 use Amp\Sql\Connector;
+use Amp\Sql\FailureException;
 
 const LOOP_CONNECTOR_IDENTIFIER = Connector::class . "\\Postgres";
 
@@ -30,15 +30,15 @@ function connector(?Connector $connector = null): Connector
  *
  * @param SqlConnectionConfig $config
  *
- * @return Promise<Connection>
+ * @return Connection
  *
- * @throws \Amp\Sql\FailureException If connecting fails.
+ * @throws FailureException If connecting fails.
  *
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
  *
  * @codeCoverageIgnore
  */
-function connect(SqlConnectionConfig $config): Promise
+function connect(SqlConnectionConfig $config): Connection
 {
     return connector()->connect($config);
 }
@@ -71,7 +71,7 @@ function pool(
  *
  * @throws \Error If $value is an object without a __toString() method, a resource, or an unknown type.
  */
-function cast($value)
+function cast(mixed $value): string|int|float|null
 {
     switch ($type = \gettype($value)) {
         case "NULL":

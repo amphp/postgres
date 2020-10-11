@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
 use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
@@ -12,8 +11,7 @@ final class TimeoutConnector implements Connector
 {
     const DEFAULT_TIMEOUT = 5000;
 
-    /** @var int */
-    private $timeout;
+    private int $timeout;
 
     /**
      * @param int $timeout Milliseconds until connections attempts are cancelled.
@@ -30,7 +28,7 @@ final class TimeoutConnector implements Connector
      *
      * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
      */
-    public function connect(SqlConnectionConfig $connectionConfig): Promise
+    public function connect(SqlConnectionConfig $connectionConfig): Connection
     {
         if (!$connectionConfig instanceof ConnectionConfig) {
             throw new \TypeError(\sprintf("Must provide an instance of %s to Postgres connectors", ConnectionConfig::class));

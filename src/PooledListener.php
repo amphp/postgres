@@ -2,12 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
-
 final class PooledListener implements Listener
 {
     /** @var Listener */
-    private $listener;
+    private Listener $listener;
 
     /** @var callable|null */
     private $release;
@@ -30,7 +28,7 @@ final class PooledListener implements Listener
         }
     }
 
-    public function continue(): Promise
+    public function continue(): ?Notification
     {
         return $this->listener->continue();
     }
@@ -50,17 +48,19 @@ final class PooledListener implements Listener
         return $this->listener->isListening();
     }
 
-    public function unlisten(): Promise
+    public function unlisten(): void
     {
         if (!$this->release) {
             throw new \Error("Already unlistened on this channel");
         }
 
-        $promise = $this->listener->unlisten();
-        $promise->onResolve($this->release);
-
+        $release = $this->release;
         $this->release = null;
 
-        return $promise;
+        try {
+            $this->listener->unlisten();
+        } finally {
+            $release();
+        }
     }
 }

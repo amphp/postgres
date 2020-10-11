@@ -19,19 +19,21 @@
         }
     ],
     "require": {
-        "php": "^7.1",
-        "amphp/amp": "dev-streams as 2.6",
-        "amphp/sql": "dev-streams as 2",
-        "amphp/sql-common": "dev-streams as 2"
+        "php": ">=8",
+        "amphp/amp": "^3-dev",
+        "amphp/sql": "^2-dev",
+        "amphp/sql-common": "^2-dev"
     },
     "require-dev": {
         "ext-pgsql": "*",
         "ext-pq": "*",
-        "amphp/phpunit-util": "^1.1.2",
-        "phpunit/phpunit": "^8 | ^7",
+        "amphp/phpunit-util": "^2-dev",
+        "phpunit/phpunit": "^9",
         "amphp/php-cs-fixer-config": "dev-master",
-        "vimeo/psalm": "^3.11@dev"
+        "psalm/phar": "^3.11@dev"
     },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "Amp\\Postgres\\": "src"

@@ -7,22 +7,21 @@ use Amp\Deferred;
 use Amp\Failure;
 use Amp\Loop;
 use Amp\NullCancellationToken;
-use Amp\Promise;
 use Amp\Sql\ConnectionException;
 use pq;
+use function Amp\await;
 
 final class PqConnection extends Connection implements Link
 {
-    /** @var PqHandle */
-    private $handle;
+    private PqHandle $handle;
 
     /**
      * @param ConnectionConfig $connectionConfig
      * @param CancellationToken $token
      *
-     * @return Promise<PqConnection>
+     * @return PqConnection
      */
-    public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): Promise
+    public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): self
     {
         try {
             $connection = new pq\Connection($connectionConfig->getConnectionString(), pq\Connection::ASYNC);
@@ -36,6 +35,10 @@ final class PqConnection extends Connection implements Link
         $deferred = new Deferred;
 
         $callback = function () use ($connection, $deferred): void {
+            if ($deferred->isResolved()) {
+                return;
+            }
+
             switch ($connection->poll()) {
                 case pq\Connection::POLLING_READING: // Connection not ready, poll again.
                 case pq\Connection::POLLING_WRITING: // Still writing...
@@ -59,17 +62,17 @@ final class PqConnection extends Connection implements Link
         $token = $token ?? new NullCancellationToken;
         $id = $token->subscribe([$deferred, "fail"]);
 
-        $promise->onResolve(function () use ($poll, $await, $id, $token): void {
+        try {
+            return await($promise);
+        } finally {
             $token->unsubscribe($id);
             Loop::cancel($poll);
             Loop::cancel($await);
-        });
-
-        return $promise;
+        }
     }
 
     /**
-     * @param \pq\Connection $handle
+     * @param pq\Connection $handle
      */
     public function __construct(pq\Connection $handle)
     {

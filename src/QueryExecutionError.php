@@ -7,7 +7,7 @@ use Amp\Sql\QueryError;
 class QueryExecutionError extends QueryError
 {
     /** @var mixed[] */
-    private $diagnostics;
+    private array $diagnostics;
 
     public function __construct(string $message, array $diagnostics, string $query = '', \Throwable $previous = null)
     {

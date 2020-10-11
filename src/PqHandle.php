@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\Coroutine;
 use Amp\Deferred;
 use Amp\Loop;
 use Amp\PipelineSource;
@@ -12,41 +11,38 @@ use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
 use Amp\Sql\Result;
+use Amp\Sql\Statement;
 use Amp\Struct;
 use Amp\Success;
 use pq;
-use function Amp\call;
+use function Amp\async;
+use function Amp\asyncCallable;
+use function Amp\await;
 
 final class PqHandle implements Handle
 {
-    /** @var \pq\Connection PostgreSQL connection object. */
-    private $handle;
+    private ?pq\Connection $handle;
 
-    /** @var Deferred|null */
-    private $deferred;
+    private ?Deferred $deferred = null;
 
-    /** @var Deferred|null */
-    private $busy;
+    private ?Deferred $busy = null;
 
-    /** @var string */
-    private $poll;
+    private string $poll;
 
-    /** @var string */
-    private $await;
+    private string $await;
 
     /** @var PipelineSource[] */
-    private $listeners;
+    private array $listeners = [];
 
     /** @var object[] Anonymous class using Struct trait. */
-    private $statements = [];
+    private array $statements = [];
 
-    /** @var int */
-    private $lastUsedAt;
+    private int $lastUsedAt;
 
     /**
      * Connection constructor.
      *
-     * @param \pq\Connection $handle
+     * @param pq\Connection $handle
      */
     public function __construct(pq\Connection $handle)
     {
@@ -86,8 +82,9 @@ final class PqHandle implements Handle
             }
 
             $deferred->resolve($handle->getResult());
+            $deferred = null;
 
-            if (!$deferred && empty($listeners)) {
+            if (empty($listeners)) {
                 Loop::disable($watcher);
             }
         });
@@ -147,9 +144,8 @@ final class PqHandle implements Handle
     public function close(): void
     {
         if ($this->deferred) {
-            $deferred = $this->deferred;
+            $this->deferred->fail(new ConnectionException("The connection was closed"));
             $this->deferred = null;
-            $deferred->fail(new ConnectionException("The connection was closed"));
         }
 
         $this->handle = null;
@@ -168,15 +164,15 @@ final class PqHandle implements Handle
      * @param callable $method Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
-     * @return \Generator
+     * @return Result|pq\Statement
      *
      * @throws FailureException
      */
-    private function send(?string $sql, callable $method, ...$args): \Generator
+    private function send(?string $sql, callable $method, ...$args): Result|pq\Statement
     {
         while ($this->busy) {
             try {
-                yield $this->busy->promise();
+                await($this->busy->promise());
             } catch (\Throwable $exception) {
                 // Ignore failure from another operation.
             }
@@ -196,11 +192,11 @@ final class PqHandle implements Handle
                 Loop::enable($this->await);
             }
 
-            $result = yield $this->deferred->promise();
+            $result = await($this->deferred->promise());
         } catch (pq\Exception $exception) {
             throw new FailureException($this->handle->errorMessage, 0, $exception);
         } finally {
-            $this->deferred = $this->busy = null;
+            $this->busy = null;
         }
 
         if (!$result instanceof pq\Result) {
@@ -239,9 +235,7 @@ final class PqHandle implements Handle
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
                 return new PqUnbufferedResultSet(
-                    function () use ($sql): Promise {
-                        return new Coroutine($this->fetch($sql));
-                    },
+                    asyncCallable(fn() => $this->fetch($sql)),
                     $result,
                     $this->busy->promise()
                 );
@@ -274,7 +268,7 @@ final class PqHandle implements Handle
         return null;
     }
 
-    private function fetch(string $sql): \Generator
+    private function fetch(string $sql): ?pq\Result
     {
         if (!$this->handle) {
             throw new ConnectionException("Connection closed");
@@ -290,11 +284,7 @@ final class PqHandle implements Handle
                 Loop::enable($this->await);
             }
 
-            try {
-                $result = yield $this->deferred->promise();
-            } finally {
-                $this->deferred = null;
-            }
+            $result = await($this->deferred->promise());
         }
 
         if (!$result) {
@@ -328,10 +318,10 @@ final class PqHandle implements Handle
      * @param string $name
      * @param array $params
      *
-     * @return Promise
+     * @return Result
      * @throws FailureException
      */
-    public function statementExecute(string $name, array $params): Promise
+    public function statementExecute(string $name, array $params): Result
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
 
@@ -339,20 +329,18 @@ final class PqHandle implements Handle
 
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        return new Coroutine($this->send($storage->sql, [$storage->statement, "execAsync"], $params));
+        return $this->send($storage->sql, [$storage->statement, "execAsync"], $params);
     }
 
     /**
      * @param string $name
-     *
-     * @return Promise
-     *
+
      * @throws FailureException
      */
-    public function statementDeallocate(string $name): Promise
+    public function statementDeallocate(string $name): void
     {
         if (!$this->handle) {
-            return new Success; // Connection dead.
+            return; // Connection dead.
         }
 
         \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
@@ -360,32 +348,30 @@ final class PqHandle implements Handle
         $storage = $this->statements[$name];
 
         if (--$storage->refCount) {
-            return new Success;
+            return;
         }
 
         unset($this->statements[$name]);
 
-        \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
-
-        return new Coroutine($this->send(null, [$storage->statement, "deallocateAsync"]));
+        $this->send(null, [$storage->statement, "deallocateAsync"]);
     }
 
     /**
      * @inheritDoc
      */
-    public function query(string $sql): Promise
+    public function query(string $sql): Result
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
         }
 
-        return new Coroutine($this->send($sql, [$this->handle, "execAsync"], $sql));
+        return $this->send($sql, [$this->handle, "execAsync"], $sql);
     }
 
     /**
      * @inheritDoc
      */
-    public function execute(string $sql, array $params = []): Promise
+    public function execute(string $sql, array $params = []): Result
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
@@ -394,104 +380,100 @@ final class PqHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        return new Coroutine($this->send($sql, [$this->handle, "execParamsAsync"], $sql, $params));
+        return $this->send($sql, [$this->handle, "execParamsAsync"], $sql, $params);
     }
 
     /**
      * @inheritDoc
      */
-    public function prepare(string $sql): Promise
+    public function prepare(string $sql): Statement
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
         }
 
-        return call(function () use ($sql) {
-            $modifiedSql = Internal\parseNamedParams($sql, $names);
+        $modifiedSql = Internal\parseNamedParams($sql, $names);
 
-            $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
+        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
-            if (isset($this->statements[$name])) {
-                $storage = $this->statements[$name];
+        if (isset($this->statements[$name])) {
+            $storage = $this->statements[$name];
 
-                ++$storage->refCount;
+            ++$storage->refCount;
 
-                if ($storage->promise instanceof Promise) {
-                    // Do not return promised prepared statement object, as the $names array may differ.
-                    yield $storage->promise;
-                }
-
-                return new PqStatement($this, $name, $sql, $names);
-            }
-
-            $storage = new class {
-                use Struct;
-                public $refCount = 1;
-                public $promise;
-                public $statement;
-                public $sql;
-            };
-
-            $storage->sql = $sql;
-
-            $this->statements[$name] = $storage;
-
-            try {
-                $storage->statement = yield (
-                    $storage->promise = new Coroutine($this->send($sql, [$this->handle, "prepareAsync"], $name, $modifiedSql))
-                );
-            } catch (\Throwable $exception) {
-                unset($this->statements[$name]);
-                throw $exception;
-            } finally {
-                $storage->promise = null;
+            if ($storage->promise instanceof Promise) {
+                // Do not return promised prepared statement object, as the $names array may differ.
+                await($storage->promise);
             }
 
             return new PqStatement($this, $name, $sql, $names);
-        });
+        }
+
+        $storage = new class {
+            use Struct;
+            public int $refCount = 1;
+            public ?Promise $promise;
+            public pq\Statement $statement;
+            public string $sql;
+        };
+
+        $storage->sql = $sql;
+
+        $this->statements[$name] = $storage;
+
+        try {
+            $storage->statement = await(
+                $storage->promise = async(fn() => $this->send($sql, [$this->handle, "prepareAsync"], $name, $modifiedSql))
+            );
+        } catch (\Throwable $exception) {
+            unset($this->statements[$name]);
+            throw $exception;
+        } finally {
+            $storage->promise = null;
+        }
+
+        return new PqStatement($this, $name, $sql, $names);
     }
 
     /**
      * @inheritDoc
      */
-    public function notify(string $channel, string $payload = ""): Promise
+    public function notify(string $channel, string $payload = ""): Result
     {
-        return new Coroutine($this->send(null, [$this->handle, "notifyAsync"], $channel, $payload));
+        return $this->send(null, [$this->handle, "notifyAsync"], $channel, $payload);
     }
 
     /**
      * @inheritDoc
      */
-    public function listen(string $channel): Promise
+    public function listen(string $channel): Listener
     {
-        return call(function () use ($channel) {
-            if (isset($this->listeners[$channel])) {
-                throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
-            }
+        if (isset($this->listeners[$channel])) {
+            throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
+        }
 
-            $this->listeners[$channel] = $source = new PipelineSource;
+        $this->listeners[$channel] = $source = new PipelineSource;
 
-            try {
-                yield from $this->send(
-                    null,
-                    [$this->handle, "listenAsync"],
-                    $channel,
-                    static function (string $channel, string $message, int $pid) use ($source) {
-                        $notification = new Notification;
-                        $notification->channel = $channel;
-                        $notification->pid = $pid;
-                        $notification->payload = $message;
-                        $source->emit($notification);
-                    }
-                );
-            } catch (\Throwable $exception) {
-                unset($this->listeners[$channel]);
-                throw $exception;
-            }
+        try {
+            $this->send(
+                null,
+                [$this->handle, "listenAsync"],
+                $channel,
+                static function (string $channel, string $message, int $pid) use ($source): void {
+                    $notification = new Notification;
+                    $notification->channel = $channel;
+                    $notification->pid = $pid;
+                    $notification->payload = $message;
+                    $source->emit($notification);
+                }
+            );
+        } catch (\Throwable $exception) {
+            unset($this->listeners[$channel]);
+            throw $exception;
+        }
 
-            Loop::enable($this->poll);
-            return new ConnectionListener($source->pipe(), $channel, \Closure::fromCallable([$this, 'unlisten']));
-        });
+        Loop::enable($this->poll);
+        return new ConnectionListener($source->pipe(), $channel, \Closure::fromCallable([$this, 'unlisten']));
     }
 
     /**
@@ -501,7 +483,7 @@ final class PqHandle implements Handle
      *
      * @throws \Error
      */
-    private function unlisten(string $channel): Promise
+    private function unlisten(string $channel): void
     {
         \assert(isset($this->listeners[$channel]), "Not listening on that channel");
 
@@ -509,13 +491,16 @@ final class PqHandle implements Handle
         unset($this->listeners[$channel]);
 
         if (!$this->handle) {
-            $promise = new Success; // Connection already closed.
-        } else {
-            $promise = new Coroutine($this->send(null, [$this->handle, "unlistenAsync"], $channel));
+            $source->complete();
+            return; // Connection already closed.
         }
 
-        $promise->onResolve([$source, "complete"]);
-        return $promise;
+        try {
+            $this->send(null, [$this->handle, "unlistenAsync"], $channel);
+            $source->complete();
+        } catch (\Throwable $exception) {
+            $source->fail($exception);
+        }
     }
 
     /**
@@ -557,7 +542,7 @@ final class PqHandle implements Handle
     /**
      * Sets result sets to be fully buffered in local memory.
      */
-    public function shouldBufferResults()
+    public function shouldBufferResults(): void
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
@@ -569,7 +554,7 @@ final class PqHandle implements Handle
     /**
      * Sets result sets to be streamed from the database server.
      */
-    public function shouldNotBufferResults()
+    public function shouldNotBufferResults(): void
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");

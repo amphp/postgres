@@ -7,9 +7,7 @@ use Amp\Postgres\ConnectionConfig;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\Pool;
-use Amp\Promise;
 use Amp\Sql\Connector;
-use Amp\Success;
 
 /**
  * @requires extension pgsql
@@ -19,7 +17,7 @@ class PgSqlPoolTest extends AbstractLinkTest
     const POOL_SIZE = 3;
 
     /** @var resource[] PostgreSQL connection resources. */
-    protected $handles = [];
+    protected array $handles = [];
 
     public function createLink(string $connectionString): Link
     {
@@ -33,14 +31,14 @@ class PgSqlPoolTest extends AbstractLinkTest
 
         $connector = $this->createMock(Connector::class);
         $connector->method('connect')
-            ->will($this->returnCallback(function (): Promise {
+            ->will($this->returnCallback(function (): PgSqlConnection {
                 static $count = 0;
                 if (!isset($this->handles[$count])) {
                     $this->fail("createConnection called too many times");
                 }
                 $handle = $this->handles[$count];
                 ++$count;
-                return new Success(new PgSqlConnection($handle, \pg_socket($handle)));
+                return new PgSqlConnection($handle, \pg_socket($handle));
             }));
 
         $pool = new Pool(new ConnectionConfig('localhost'), \count($this->handles), Pool::DEFAULT_IDLE_TIMEOUT, true, $connector);

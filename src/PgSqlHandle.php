@@ -11,9 +11,11 @@ use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
 use Amp\Sql\Result;
+use Amp\Sql\Statement;
 use Amp\Struct;
 use Amp\Success;
-use function Amp\call;
+use function Amp\async;
+use function Amp\await;
 
 final class PgSqlHandle implements Handle
 {
@@ -35,23 +37,19 @@ final class PgSqlHandle implements Handle
     /** @var resource PostgreSQL connection handle. */
     private $handle;
 
-    /** @var Deferred|null */
-    private $deferred;
+    private ?Deferred $deferred = null;
 
-    /** @var string */
-    private $poll;
+    private string $poll;
 
-    /** @var string */
-    private $await;
+    private string $await;
 
     /** @var PipelineSource[] */
-    private $listeners = [];
+    private array $listeners = [];
 
     /** @var object[] Anonymous class using Struct trait. */
-    private $statements = [];
+    private array $statements = [];
 
-    /** @var int */
-    private $lastUsedAt;
+    private int $lastUsedAt;
 
     /**
      * Connection constructor.
@@ -113,8 +111,9 @@ final class PgSqlHandle implements Handle
             }
 
             $deferred->resolve(\pg_get_result($handle));
+            $deferred = null;
 
-            if (!$deferred && empty($listeners)) {
+            if (empty($listeners)) {
                 Loop::disable($watcher);
             }
         });
@@ -159,9 +158,8 @@ final class PgSqlHandle implements Handle
     public function close(): void
     {
         if ($this->deferred) {
-            $deferred = $this->deferred;
+            $this->deferred->fail(new ConnectionException("The connection was closed"));
             $this->deferred = null;
-            $deferred->fail(new ConnectionException("The connection was closed"));
         }
 
         $this->free();
@@ -199,17 +197,15 @@ final class PgSqlHandle implements Handle
      * @param callable $function Function name to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
-     * @return \Generator
-     *
-     * @resolve resource
+     * @return resource
      *
      * @throws FailureException
      */
-    private function send(callable $function, ...$args): \Generator
+    private function send(callable $function, ...$args)
     {
         while ($this->deferred) {
             try {
-                yield $this->deferred->promise();
+                await($this->deferred->promise());
             } catch (\Throwable $exception) {
                 // Ignore failure from another operation.
             }
@@ -232,13 +228,7 @@ final class PgSqlHandle implements Handle
             Loop::enable($this->await);
         }
 
-        try {
-            $result = yield $this->deferred->promise();
-        } finally {
-            $this->deferred = null;
-        }
-
-        return $result;
+        return await($this->deferred->promise());
     }
 
     /**
@@ -300,27 +290,23 @@ final class PgSqlHandle implements Handle
      * @param string $name
      * @param array $params
      *
-     * @return Promise
+     * @return Result
      */
-    public function statementExecute(string $name, array $params): Promise
+    public function statementExecute(string $name, array $params): Result
     {
-        return call(function () use ($name, $params) {
-            \assert(isset($this->statements[$name]), "Named statement not found when executing");
-            return $this->createResult(yield from $this->send("pg_send_execute", $name, $params), $this->statements[$name]->sql);
-        });
+        \assert(isset($this->statements[$name]), "Named statement not found when executing");
+        return $this->createResult($this->send("pg_send_execute", $name, $params), $this->statements[$name]->sql);
     }
 
     /**
      * @param string $name
      *
-     * @return Promise
-     *
      * @throws \Error
      */
-    public function statementDeallocate(string $name): Promise
+    public function statementDeallocate(string $name): void
     {
         if (!\is_resource($this->handle)) {
-            return new Success; // Connection closed, no need to deallocate.
+            return; // Connection closed, no need to deallocate.
         }
 
         \assert(isset($this->statements[$name]), "Named statement not found when deallocating");
@@ -328,32 +314,30 @@ final class PgSqlHandle implements Handle
         $storage = $this->statements[$name];
 
         if (--$storage->refCount) {
-            return new Success;
+            return;
         }
 
         unset($this->statements[$name]);
 
-        return $this->query(\sprintf("DEALLOCATE %s", $name));
+        $this->query(\sprintf("DEALLOCATE %s", $name));
     }
 
     /**
      * @inheritDoc
      */
-    public function query(string $sql): Promise
+    public function query(string $sql): Result
     {
         if (!\is_resource($this->handle)) {
             throw new \Error("The connection to the database has been closed");
         }
 
-        return call(function () use ($sql) {
-            return $this->createResult(yield from $this->send("pg_send_query", $sql), $sql);
-        });
+        return $this->createResult($this->send("pg_send_query", $sql), $sql);
     }
 
     /**
      * @inheritDoc
      */
-    public function execute(string $sql, array $params = []): Promise
+    public function execute(string $sql, array $params = []): Result
     {
         if (!\is_resource($this->handle)) {
             throw new \Error("The connection to the database has been closed");
@@ -362,89 +346,85 @@ final class PgSqlHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        return call(function () use ($sql, $params) {
-            return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params), $sql);
-        });
+        return $this->createResult($this->send("pg_send_query_params", $sql, $params), $sql);
     }
 
     /**
      * @inheritDoc
      */
-    public function prepare(string $sql): Promise
+    public function prepare(string $sql): Statement
     {
         if (!\is_resource($this->handle)) {
             throw new \Error("The connection to the database has been closed");
         }
 
-        return call(function () use ($sql) {
-            $modifiedSql = Internal\parseNamedParams($sql, $names);
+        $modifiedSql = Internal\parseNamedParams($sql, $names);
 
-            $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
+        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
-            if (isset($this->statements[$name])) {
-                $storage = $this->statements[$name];
+        if (isset($this->statements[$name])) {
+            $storage = $this->statements[$name];
 
-                ++$storage->refCount;
+            ++$storage->refCount;
 
-                if ($storage->promise instanceof Promise) {
-                    // Do not return promised prepared statement object, as the $names array may differ.
-                    yield $storage->promise;
-                }
-
-                return new PgSqlStatement($this, $name, $sql, $names);
-            }
-
-            $storage = new class {
-                use Struct;
-                public $refCount = 1;
-                public $promise;
-                public $sql;
-            };
-
-            $storage->sql = $sql;
-
-            $this->statements[$name] = $storage;
-
-            try {
-                yield ($storage->promise = call(function () use ($name, $modifiedSql, $sql) {
-                    $result = yield from $this->send("pg_send_prepare", $name, $modifiedSql);
-
-                    switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
-                        case \PGSQL_COMMAND_OK:
-                            return $name; // Statement created successfully.
-
-                        case \PGSQL_NONFATAL_ERROR:
-                        case \PGSQL_FATAL_ERROR:
-                            $diagnostics = [];
-                            foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
-                                $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
-                            }
-                            throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
-
-                        case \PGSQL_BAD_RESPONSE:
-                            throw new FailureException(\pg_result_error($result));
-
-                        default:
-                            // @codeCoverageIgnoreStart
-                            throw new FailureException("Unknown result status");
-                            // @codeCoverageIgnoreEnd
-                    }
-                }));
-            } catch (\Throwable $exception) {
-                unset($this->statements[$name]);
-                throw $exception;
-            } finally {
-                $storage->promise = null;
+            if ($storage->promise instanceof Promise) {
+                // Do not return promised prepared statement object, as the $names array may differ.
+                await($storage->promise);
             }
 
             return new PgSqlStatement($this, $name, $sql, $names);
-        });
+        }
+
+        $storage = new class {
+            use Struct;
+            public int $refCount = 1;
+            public ?Promise $promise;
+            public string $sql;
+        };
+
+        $storage->sql = $sql;
+
+        $this->statements[$name] = $storage;
+
+        try {
+            await($storage->promise = async(function () use ($name, $modifiedSql, $sql) {
+                $result = $this->send("pg_send_prepare", $name, $modifiedSql);
+
+                switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
+                    case \PGSQL_COMMAND_OK:
+                        return $name; // Statement created successfully.
+
+                    case \PGSQL_NONFATAL_ERROR:
+                    case \PGSQL_FATAL_ERROR:
+                        $diagnostics = [];
+                        foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
+                            $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
+                        }
+                        throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
+
+                    case \PGSQL_BAD_RESPONSE:
+                        throw new FailureException(\pg_result_error($result));
+
+                    default:
+                        // @codeCoverageIgnoreStart
+                        throw new FailureException("Unknown result status");
+                        // @codeCoverageIgnoreEnd
+                }
+            }));
+        } catch (\Throwable $exception) {
+            unset($this->statements[$name]);
+            throw $exception;
+        } finally {
+            $storage->promise = null;
+        }
+
+        return new PgSqlStatement($this, $name, $sql, $names);
     }
 
     /**
      * @inheritDoc
      */
-    public function notify(string $channel, string $payload = ""): Promise
+    public function notify(string $channel, string $payload = ""): Result
     {
         if ($payload === "") {
             return $this->query(\sprintf("NOTIFY %s", $this->quoteName($channel)));
@@ -456,35 +436,31 @@ final class PgSqlHandle implements Handle
     /**
      * @inheritDoc
      */
-    public function listen(string $channel): Promise
+    public function listen(string $channel): Listener
     {
-        return call(function () use ($channel) {
-            if (isset($this->listeners[$channel])) {
-                throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
-            }
+        if (isset($this->listeners[$channel])) {
+            throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
+        }
 
-            $this->listeners[$channel] = $source = new PipelineSource;
+        $this->listeners[$channel] = $source = new PipelineSource;
 
-            try {
-                yield $this->query(\sprintf("LISTEN %s", $this->quoteName($channel)));
-            } catch (\Throwable $exception) {
-                unset($this->listeners[$channel]);
-                throw $exception;
-            }
+        try {
+            $this->query(\sprintf("LISTEN %s", $this->quoteName($channel)));
+        } catch (\Throwable $exception) {
+            unset($this->listeners[$channel]);
+            throw $exception;
+        }
 
-            Loop::enable($this->poll);
-            return new ConnectionListener($source->pipe(), $channel, \Closure::fromCallable([$this, 'unlisten']));
-        });
+        Loop::enable($this->poll);
+        return new ConnectionListener($source->pipe(), $channel, \Closure::fromCallable([$this, 'unlisten']));
     }
 
     /**
      * @param string $channel
      *
-     * @return Promise
-     *
      * @throws \Error
      */
-    private function unlisten(string $channel): Promise
+    private function unlisten(string $channel): void
     {
         \assert(isset($this->listeners[$channel]), "Not listening on that channel");
 
@@ -492,13 +468,16 @@ final class PgSqlHandle implements Handle
         unset($this->listeners[$channel]);
 
         if (!\is_resource($this->handle)) {
-            $promise = new Success; // Connection already closed.
-        } else {
-            $promise = $this->query(\sprintf("UNLISTEN %s", $this->quoteName($channel)));
+            $source->complete();
+            return; // Connection already closed.
         }
 
-        $promise->onResolve([$source, "complete"]);
-        return $promise;
+        try {
+            $this->query(\sprintf("UNLISTEN %s", $this->quoteName($channel)));
+            $source->complete();
+        } catch (\Throwable $exception) {
+            $source->fail($exception);
+        }
     }
 
     /**

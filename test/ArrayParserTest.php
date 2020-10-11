@@ -8,8 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 class ArrayParserTest extends TestCase
 {
-    /** @var \Amp\Postgres\Internal\ArrayParser */
-    private $parser;
+    private ArrayParser $parser;
 
     public function setUp(): void
     {

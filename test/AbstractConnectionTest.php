@@ -6,6 +6,6 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
 {
     public function testIsAlive()
     {
-        $this->assertTrue($this->connection->isAlive());
+        $this->assertTrue($this->link->isAlive());
     }
 }

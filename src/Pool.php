@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\Coroutine;
 use Amp\Promise;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Common\PooledStatement;
@@ -10,20 +9,21 @@ use Amp\Sql\Common\StatementPool as SqlStatementPool;
 use Amp\Sql\ConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\Pool as SqlPool;
+use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
 use Amp\Sql\Transaction as SqlTransaction;
-use function Amp\call;
+use function Amp\async;
+use function Amp\await;
 
 final class Pool extends ConnectionPool implements Link
 {
     /** @var Connection|Promise|null Connection used for notification listening. */
-    private $listeningConnection;
+    private Connection|Promise|null $listeningConnection = null;
 
     /** @var int Number of listeners on listening connection. */
-    private $listenerCount = 0;
+    private int $listenerCount = 0;
 
-    /** @var bool */
-    private $resetConnections;
+    private bool $resetConnections;
 
     /**
      * @param ConnectionConfig $config
@@ -68,13 +68,12 @@ final class Pool extends ConnectionPool implements Link
         return new PooledTransaction($transaction, $release);
     }
 
-    protected function pop(): \Generator
+    protected function pop(): Connection
     {
-        $connection = yield from parent::pop();
-        \assert($connection instanceof Connection);
+        $connection = parent::pop();
 
         if ($this->resetConnections) {
-            yield $connection->query("RESET ALL");
+            $connection->query("RESET ALL");
         }
 
         return $connection;
@@ -83,57 +82,52 @@ final class Pool extends ConnectionPool implements Link
     /**
      * @inheritDoc
      */
-    public function notify(string $channel, string $payload = ""): Promise
+    public function notify(string $channel, string $payload = ""): Result
     {
-        return call(function () use ($channel, $payload) {
-            $connection = yield from $this->pop();
-            \assert($connection instanceof Connection);
+        $connection = $this->pop();
+        \assert($connection instanceof Connection);
 
-            try {
-                $result = yield $connection->notify($channel, $payload);
-            } finally {
-                $this->push($connection);
-            }
+        try {
+            $result = $connection->notify($channel, $payload);
+        } finally {
+            $this->push($connection);
+        }
 
-            return $result;
-        });
+        return $result;
     }
 
     /**
      * @inheritDoc
      */
-    public function listen(string $channel): Promise
+    public function listen(string $channel): Listener
     {
-        return call(function () use ($channel) {
-            ++$this->listenerCount;
+        ++$this->listenerCount;
 
-            if ($this->listeningConnection === null) {
-                $this->listeningConnection = new Coroutine($this->pop());
+        if ($this->listeningConnection === null) {
+            $this->listeningConnection = async(fn() => $this->pop());
+        }
+
+        if ($this->listeningConnection instanceof Promise) {
+            $this->listeningConnection = await($this->listeningConnection);
+        }
+
+        try {
+            $listener = $this->listeningConnection->listen($channel);
+        } catch (\Throwable $exception) {
+            if (--$this->listenerCount === 0) {
+                $connection = $this->listeningConnection;
+                $this->listeningConnection = null;
+                $this->push($connection);
             }
+            throw $exception;
+        }
 
-            if ($this->listeningConnection instanceof Promise) {
-                $this->listeningConnection = yield $this->listeningConnection;
+        return new PooledListener($listener, function (): void {
+            if (--$this->listenerCount === 0) {
+                $connection = $this->listeningConnection;
+                $this->listeningConnection = null;
+                $this->push($connection);
             }
-
-            try {
-                $listener = yield $this->listeningConnection->listen($channel);
-                \assert($listener instanceof Listener);
-            } catch (\Throwable $exception) {
-                if (--$this->listenerCount === 0) {
-                    $connection = $this->listeningConnection;
-                    $this->listeningConnection = null;
-                    $this->push($connection);
-                }
-                throw $exception;
-            }
-
-            return new PooledListener($listener, function () {
-                if (--$this->listenerCount === 0) {
-                    $connection = $this->listeningConnection;
-                    $this->listeningConnection = null;
-                    $this->push($connection);
-                }
-            });
         });
     }
 }

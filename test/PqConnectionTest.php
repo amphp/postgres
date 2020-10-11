@@ -49,44 +49,36 @@ class PqConnectionTest extends AbstractConnectionTest
 
     public function testBufferedResults()
     {
-        Loop::run(function () {
-            \assert($this->connection instanceof PqConnection);
-            $this->connection->shouldBufferResults();
+        $this->link->shouldBufferResults();
 
-            $this->assertTrue($this->connection->isBufferingResults());
+        $this->assertTrue($this->link->isBufferingResults());
 
-            $result = yield $this->connection->query("SELECT * FROM test");
-            \assert($result instanceof PqBufferedResultSet);
+        $result = $this->link->query("SELECT * FROM test");
+        \assert($result instanceof PqBufferedResultSet);
 
-            //$this->assertSame(2, $result->getFieldCount());
+        $data = $this->getData();
 
-            $data = $this->getData();
-
-            for ($i = 0; $row = yield $result->continue(); ++$i) {
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
-            }
-        });
+        for ($i = 0; $row = $result->continue(); ++$i) {
+            $this->assertSame($data[$i][0], $row['domain']);
+            $this->assertSame($data[$i][1], $row['tld']);
+        }
     }
 
     /**
      * @depends testBufferedResults
      */
-    public function testUnbufferedResults(): \Generator
+    public function testUnbufferedResults()
     {
-        \assert($this->connection instanceof PqConnection);
-        $this->connection->shouldNotBufferResults();
+        $this->link->shouldNotBufferResults();
 
-        $this->assertFalse($this->connection->isBufferingResults());
+        $this->assertFalse($this->link->isBufferingResults());
 
-        $result = yield $this->connection->query("SELECT * FROM test");
+        $result = $this->link->query("SELECT * FROM test");
         \assert($result instanceof PqUnbufferedResultSet);
-
-        //$this->assertSame(2, $result->getFieldCount());
 
         $data = $this->getData();
 
-        for ($i = 0; $row = yield $result->continue(); ++$i) {
+        for ($i = 0; $row = $result->continue(); ++$i) {
             $this->assertSame($data[$i][0], $row['domain']);
             $this->assertSame($data[$i][1], $row['tld']);
         }

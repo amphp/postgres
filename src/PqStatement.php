@@ -3,6 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Promise;
+use Amp\Sql\Result;
 use Amp\Sql\Statement;
 
 final class PqStatement implements Statement
@@ -61,7 +62,7 @@ final class PqStatement implements Statement
     }
 
     /** @inheritDoc */
-    public function execute(array $params = []): Promise
+    public function execute(array $params = []): Result
     {
         $this->lastUsedAt = \time();
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));

@@ -9,11 +9,11 @@ final class Notification
     use Struct;
 
     /** @var string Channel name. */
-    public $channel;
+    public string $channel;
 
     /** @var int PID of message source. */
-    public $pid;
+    public int $pid;
 
     /** @var string Message payload */
-    public $payload;
+    public string $payload;
 }

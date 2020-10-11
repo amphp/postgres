@@ -6,17 +6,16 @@ use Amp\AsyncGenerator;
 use Amp\Promise;
 use Amp\Sql\Result;
 use pq;
+use function Amp\await;
 
 final class PqBufferedResultSet implements Result
 {
-    /** @var AsyncGenerator */
-    private $generator;
+    private AsyncGenerator $generator;
 
-    /** @var int */
-    private $rowCount;
+    private int $rowCount;
 
     /** @var Promise<Result|null> */
-    private $nextResult;
+    private Promise $nextResult;
 
     /**
      * @param pq\Result $result PostgreSQL result object.
@@ -27,12 +26,12 @@ final class PqBufferedResultSet implements Result
         $this->rowCount = $result->numRows;
         $this->nextResult = $nextResult;
 
-        $this->generator = new AsyncGenerator(static function (callable $emit) use ($result): \Generator {
+        $this->generator = new AsyncGenerator(static function () use ($result): \Generator {
             $position = 0;
 
             while (++$position <= $result->numRows) {
                 $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
-                yield $emit($result->fetchRow(pq\Result::FETCH_ASSOC));
+                yield $result->fetchRow(pq\Result::FETCH_ASSOC);
             }
         });
     }
@@ -40,7 +39,7 @@ final class PqBufferedResultSet implements Result
     /**
      * @inheritDoc
      */
-    public function continue(): Promise
+    public function continue(): ?array
     {
         return $this->generator->continue();
     }
@@ -56,9 +55,9 @@ final class PqBufferedResultSet implements Result
     /**
      * @inheritDoc
      */
-    public function getNextResult(): Promise
+    public function getNextResult(): ?Result
     {
-        return $this->nextResult;
+        return await($this->nextResult);
     }
 
     /**

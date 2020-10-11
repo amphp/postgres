@@ -5,7 +5,6 @@ namespace Amp\Postgres\Test;
 use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\Connection;
 use Amp\Postgres\ConnectionConfig;
-use Amp\Promise;
 use Amp\Sql\FailureException;
 use function Amp\Postgres\connect;
 
@@ -20,16 +19,16 @@ class FunctionsTest extends AsyncTestCase
         }
     }
 
-    public function testConnect(): \Generator
+    public function testConnect()
     {
-        $connection = yield connect(ConnectionConfig::fromString('host=localhost user=postgres'));
+        $connection = connect(ConnectionConfig::fromString('host=localhost user=postgres'));
         $this->assertInstanceOf(Connection::class, $connection);
     }
 
-    public function testConnectInvalidUser(): Promise
+    public function testConnectInvalidUser()
     {
         $this->expectException(FailureException::class);
 
-        return connect(ConnectionConfig::fromString('host=localhost user=invalid'));
+        connect(ConnectionConfig::fromString('host=localhost user=invalid'));
     }
 }

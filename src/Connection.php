@@ -4,26 +4,26 @@ namespace Amp\Postgres;
 
 use Amp\CancellationToken;
 use Amp\Deferred;
-use Amp\Promise;
 use Amp\Sql\Link;
+use Amp\Sql\Result;
+use Amp\Sql\Statement;
 use Amp\Sql\Transaction;
-use function Amp\call;
 
 abstract class Connection implements Link, Handle
 {
     /** @var Handle */
-    private $handle;
+    private Handle $handle;
 
     /** @var Deferred|null Used to only allow one transaction at a time. */
-    private $busy;
+    private ?Deferred $busy = null;
 
     /**
      * @param ConnectionConfig $connectionConfig
-     * @param CancellationToken $token
+     * @param CancellationToken|null $token
      *
-     * @return Promise<Connection>
+     * @return self
      */
-    abstract public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): Promise;
+    abstract public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): self;
 
     /**
      * @param Handle $handle
@@ -62,18 +62,12 @@ abstract class Connection implements Link, Handle
      * @param string $methodName Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
-     * @return Promise
+     * @return Result|Statement|Listener
      */
-    private function send(string $methodName, ...$args): Promise
+    private function send(string $methodName, ...$args): Result|Statement|Listener
     {
-        if ($this->busy) {
-            return call(function () use ($methodName, $args) {
-                while ($this->busy) {
-                    yield $this->busy->promise();
-                }
-
-                return yield $this->handle->{$methodName}(...$args);
-            });
+        while ($this->busy) {
+            await($this->busy->promise());
         }
 
         return $this->handle->{$methodName}(...$args);
@@ -104,80 +98,98 @@ abstract class Connection implements Link, Handle
     /**
      * @inheritDoc
      */
-    final public function query(string $sql): Promise
+    final public function query(string $sql): Result
     {
-        return $this->send("query", $sql);
+        while ($this->busy) {
+            await($this->busy->promise());
+        }
+
+        return $this->handle->query($sql);
     }
 
     /**
      * @inheritDoc
      */
-    final public function execute(string $sql, array $params = []): Promise
+    final public function execute(string $sql, array $params = []): Result
     {
-        return $this->send("execute", $sql, $params);
+        while ($this->busy) {
+            await($this->busy->promise());
+        }
+
+        return $this->handle->execute($sql, $params);
     }
 
     /**
      * @inheritDoc
      */
-    final public function prepare(string $sql): Promise
+    final public function prepare(string $sql): Statement
     {
-        return $this->send("prepare", $sql);
+        while ($this->busy) {
+            await($this->busy->promise());
+        }
+
+        return $this->handle->prepare($sql);
     }
 
 
     /**
      * @inheritDoc
      */
-    final public function notify(string $channel, string $payload = ""): Promise
+    final public function notify(string $channel, string $payload = ""): Result
     {
-        return $this->send("notify", $channel, $payload);
+        while ($this->busy) {
+            await($this->busy->promise());
+        }
+
+        return $this->handle->notify($channel, $payload);
     }
 
     /**
      * @inheritDoc
      */
-    final public function listen(string $channel): Promise
+    final public function listen(string $channel): Listener
     {
-        return $this->send("listen", $channel);
+        while ($this->busy) {
+            await($this->busy->promise());
+        }
+
+        return $this->handle->listen($channel);
     }
 
     /**
      * @inheritDoc
      */
-    final public function beginTransaction(int $isolation = Transaction::ISOLATION_COMMITTED): Promise
+    final public function beginTransaction(int $isolation = Transaction::ISOLATION_COMMITTED): Transaction
     {
-        return call(function () use ($isolation) {
-            $this->reserve();
+        $this->reserve();
 
-            try {
-                switch ($isolation) {
-                    case Transaction::ISOLATION_UNCOMMITTED:
-                        yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
-                        break;
+        try {
+            switch ($isolation) {
+                case Transaction::ISOLATION_UNCOMMITTED:
+                    $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
+                    break;
 
-                    case Transaction::ISOLATION_COMMITTED:
-                        yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
-                        break;
+                case Transaction::ISOLATION_COMMITTED:
+                    $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
+                    break;
 
-                    case Transaction::ISOLATION_REPEATABLE:
-                        yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
-                        break;
+                case Transaction::ISOLATION_REPEATABLE:
+                    $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+                    break;
 
-                    case Transaction::ISOLATION_SERIALIZABLE:
-                        yield $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
-                        break;
+                case Transaction::ISOLATION_SERIALIZABLE:
+                    $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+                    break;
 
-                    default:
-                        throw new \Error("Invalid transaction type");
-                }
-            } catch (\Throwable $exception) {
-                $this->release();
-                throw $exception;
+                default:
+                    throw new \Error("Invalid transaction type");
             }
+        } catch (\Throwable $exception) {
+            $this->release();
+            throw $exception;
+        }
 
-            return new ConnectionTransaction($this->handle, \Closure::fromCallable([$this, 'release']), $isolation);
-        });
+        return new ConnectionTransaction($this->handle, \Closure::fromCallable([$this, 'release']), $isolation);
     }
 
     /**
