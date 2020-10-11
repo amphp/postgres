@@ -258,13 +258,17 @@ final class PgSqlHandle implements Handle
                 foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
                     $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                 }
-                throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
+                $message = \pg_result_error($result);
+                while (\pg_connection_busy($this->handle) && \pg_get_result($this->handle));
+                throw new QueryExecutionError($message, $diagnostics, $sql);
 
             case \PGSQL_BAD_RESPONSE:
+                $this->close();
                 throw new FailureException(\pg_result_error($result));
 
             default:
                 // @codeCoverageIgnoreStart
+                $this->close();
                 throw new FailureException("Unknown result status");
                 // @codeCoverageIgnoreEnd
         }

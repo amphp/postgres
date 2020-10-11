@@ -29,7 +29,7 @@ final class Pool extends ConnectionPool implements Link
      * @param ConnectionConfig $config
      * @param int              $maxConnections
      * @param int              $idleTimeout
-     * @param bool             $resetConnections True to automatically execute RESET ALL on a connection before use.
+     * @param bool             $resetConnections True to automatically execute DISCARD ALL on a connection before use.
      * @param Connector|null   $connector
      */
     public function __construct(
@@ -73,7 +73,7 @@ final class Pool extends ConnectionPool implements Link
         $connection = parent::pop();
 
         if ($this->resetConnections) {
-            $connection->query("RESET ALL");
+            $connection->query("DISCARD ALL");
         }
 
         return $connection;
