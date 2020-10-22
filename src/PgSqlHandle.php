@@ -151,13 +151,14 @@ final class PgSqlHandle implements Handle
         $this->close();
     }
 
-    private function escapeParams(array &$params): void
+    private function escapeParams(array $params): array
     {
-        foreach ($params as &$param) {
+        foreach ($params as $key => $param) {
             if ($param instanceof ByteA) {
-                $param = \pg_escape_bytea($this->handle, $param->getString());
+                $params[$key] = \pg_escape_bytea($this->handle, $param->getString());
             }
         }
+        return $params;
     }
 
     /**
@@ -300,7 +301,7 @@ final class PgSqlHandle implements Handle
      */
     public function statementExecute(string $name, array $params): Promise
     {
-        $this->escapeParams($params);
+        $params = $this->escapeParams($params);
         return call(function () use ($name, $params) {
             \assert(isset($this->statements[$name]), "Named statement not found when executing");
             return $this->createResult(yield from $this->send("pg_send_execute", $name, $params), $this->statements[$name]->sql);
@@ -359,7 +360,7 @@ final class PgSqlHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        $this->escapeParams($params);
+        $params = $this->escapeParams($params);
 
         return call(function () use ($sql, $params) {
             return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params), $sql);

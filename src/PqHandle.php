@@ -295,13 +295,14 @@ final class PqHandle implements Handle
         $deferred->resolve();
     }
 
-    private function escapeParams(array &$params): void
+    private function escapeParams(array $params): array
     {
-        foreach ($params as &$param) {
+        foreach ($params as $key => $param) {
             if ($param instanceof ByteA) {
-                $param = $this->handle->escapeByteA($param->getString());
+                $params[$key] = $this->handle->escapeByteA($param->getString());
             }
         }
+        return $params;
     }
     /**
      * Executes the named statement using the given parameters.
@@ -320,7 +321,7 @@ final class PqHandle implements Handle
 
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        $this->escapeParams($params);
+        $params = $this->escapeParams($params);
 
         return new Coroutine($this->send($storage->sql, [$storage->statement, "execAsync"], $params));
     }
@@ -377,7 +378,7 @@ final class PqHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        $this->escapeParams($params);
+        $params = $this->escapeParams($params);
 
         return new Coroutine($this->send($sql, [$this->handle, "execParamsAsync"], $sql, $params));
     }
