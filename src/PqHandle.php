@@ -236,6 +236,7 @@ final class PqHandle implements Handle
                 while ($this->handle->busy && $this->handle->getResult());
                 throw new QueryExecutionError($result->errorMessage, $result->diag, null, $sql ?? '');
 
+                // no break
             case pq\Result::BAD_RESPONSE:
                 $this->close();
                 throw new FailureException($result->errorMessage);
@@ -294,6 +295,14 @@ final class PqHandle implements Handle
         $deferred->resolve();
     }
 
+    private function escapeParams(array &$params): void
+    {
+        foreach ($params as &$param) {
+            if ($param instanceof ByteA) {
+                $param = $this->handle->escapeByteA($param->getString());
+            }
+        }
+    }
     /**
      * Executes the named statement using the given parameters.
      *
@@ -310,6 +319,8 @@ final class PqHandle implements Handle
         $storage = $this->statements[$name];
 
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
+
+        $this->escapeParams($params);
 
         return new Coroutine($this->send($storage->sql, [$storage->statement, "execAsync"], $params));
     }
@@ -365,6 +376,8 @@ final class PqHandle implements Handle
 
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
+
+        $this->escapeParams($params);
 
         return new Coroutine($this->send($sql, [$this->handle, "execParamsAsync"], $sql, $params));
     }
