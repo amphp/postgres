@@ -296,10 +296,10 @@ final class PqHandle implements Handle
     }
 
     /**
-     * Escape parameters (INTERNAL)
+     * Escape parameters (INTERNAL).
      *
      * @internal Only for internal use
-     * 
+     *
      * @param array $params
      * @return array
      */
@@ -308,7 +308,7 @@ final class PqHandle implements Handle
         foreach ($params as $key => $param) {
             if ($param instanceof ByteA) {
                 $params[$key] = $this->handle->escapeByteA($param->getString());
-            } elseif (is_array($param)) {
+            } elseif (\is_array($param)) {
                 $params[$key] = $this->escapeParams($param);
             }
         }

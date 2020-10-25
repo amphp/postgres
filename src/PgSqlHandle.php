@@ -152,10 +152,10 @@ final class PgSqlHandle implements Handle
     }
 
     /**
-     * Escape parameters (INTERNAL)
+     * Escape parameters (INTERNAL).
      *
      * @internal Only for internal use
-     * 
+     *
      * @param array $params
      * @return array
      */
@@ -164,7 +164,7 @@ final class PgSqlHandle implements Handle
         foreach ($params as $key => $param) {
             if ($param instanceof ByteA) {
                 $params[$key] = \pg_escape_bytea($this->handle, $param->getString());
-            } elseif (is_array($param)) {
+            } elseif (\is_array($param)) {
                 $params[$key] = $this->escapeParams($param);
             }
         }

@@ -149,13 +149,15 @@ final class PgSqlResultSet implements ResultSet
             case 1020: // box[] (semi-colon delimited)
                 return $this->parser->parse($value, null, ';');
 
+            case 1001: // bytea[]
+                return \pg_unescape_bytea($this->handle, $value);
+
             case 199:  // json[]
             case 629:  // line[]
             case 651:  // cidr[]
             case 719:  // circle[]
             case 775:  // macaddr8[]
             case 791:  // money[]
-            case 1001: // bytea[]
             case 1002: // char[]
             case 1003: // name[]
             case 1006: // int2vector[]
