@@ -63,6 +63,7 @@ final class PgSqlStatement implements Statement
     /** {@inheritdoc} */
     public function execute(array $params = []): Promise
     {
+        $params = $this->handle->escapeParams($params);
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
     }
 }

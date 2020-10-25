@@ -88,9 +88,6 @@ function cast($value)
 
         case "object":
             if (!\method_exists($value, "__toString")) {
-                if ($value instanceof ByteA) {
-                    return $value;
-                }
                 throw new \Error("Object without a __toString() method included in parameter values");
             }
 
@@ -119,9 +116,6 @@ function encode(array $array): string
 
             case "object":
                 if (!\method_exists($value, "__toString")) {
-                    if ($value instanceof ByteA) {
-                        return $value;
-                    }
                     throw new \Error("Object without a __toString() method in array");
                 }
 

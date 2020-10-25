@@ -295,11 +295,21 @@ final class PqHandle implements Handle
         $deferred->resolve();
     }
 
-    private function escapeParams(array $params): array
+    /**
+     * Escape parameters (INTERNAL)
+     *
+     * @internal Only for internal use
+     * 
+     * @param array $params
+     * @return array
+     */
+    public function escapeParams(array $params): array
     {
         foreach ($params as $key => $param) {
             if ($param instanceof ByteA) {
                 $params[$key] = $this->handle->escapeByteA($param->getString());
+            } elseif (is_array($param)) {
+                $params[$key] = $this->escapeParams($param);
             }
         }
         return $params;
@@ -375,10 +385,10 @@ final class PqHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
+        $params = $this->escapeParams($params);
+
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
-
-        $params = $this->escapeParams($params);
 
         return new Coroutine($this->send($sql, [$this->handle, "execParamsAsync"], $sql, $params));
     }

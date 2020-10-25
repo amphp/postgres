@@ -151,11 +151,21 @@ final class PgSqlHandle implements Handle
         $this->close();
     }
 
-    private function escapeParams(array $params): array
+    /**
+     * Escape parameters (INTERNAL)
+     *
+     * @internal Only for internal use
+     * 
+     * @param array $params
+     * @return array
+     */
+    public function escapeParams(array $params): array
     {
         foreach ($params as $key => $param) {
             if ($param instanceof ByteA) {
                 $params[$key] = \pg_escape_bytea($this->handle, $param->getString());
+            } elseif (is_array($param)) {
+                $params[$key] = $this->escapeParams($param);
             }
         }
         return $params;
@@ -357,10 +367,10 @@ final class PgSqlHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
+        $params = $this->escapeParams($params);
+
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
-
-        $params = $this->escapeParams($params);
 
         return call(function () use ($sql, $params) {
             return $this->createResult(yield from $this->send("pg_send_query_params", $sql, $params), $sql);

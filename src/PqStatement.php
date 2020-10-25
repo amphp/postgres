@@ -64,6 +64,7 @@ final class PqStatement implements Statement
     public function execute(array $params = []): Promise
     {
         $this->lastUsedAt = \time();
+        $params = $this->handle->escapeParams($params);
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
     }
 }
