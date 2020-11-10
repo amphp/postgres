@@ -8,7 +8,7 @@ use Amp\Sql\FailureException;
 use Amp\Sql\Result;
 use function Amp\await;
 
-final class PgSqlResultSet implements Result
+final class PgSqlResultSet implements Result, \IteratorAggregate
 {
     private static Internal\ArrayParser $parser;
 
@@ -69,6 +69,14 @@ final class PgSqlResultSet implements Result
     public function dispose(): void
     {
         $this->generator->dispose();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getIterator(): \Iterator
+    {
+        return $this->generator->getIterator();
     }
 
     /**

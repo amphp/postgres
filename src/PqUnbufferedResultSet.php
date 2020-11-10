@@ -8,7 +8,7 @@ use Amp\Sql\Result;
 use pq;
 use function Amp\await;
 
-final class PqUnbufferedResultSet implements Result
+final class PqUnbufferedResultSet implements Result, \IteratorAggregate
 {
     /** @var AsyncGenerator<array<string, mixed>, null, null> */
     private AsyncGenerator $generator;
@@ -60,6 +60,14 @@ final class PqUnbufferedResultSet implements Result
     public function dispose(): void
     {
         $this->generator->dispose();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getIterator(): \Iterator
+    {
+        return $this->generator->getIterator();
     }
 
     /**

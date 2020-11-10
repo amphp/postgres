@@ -3,9 +3,8 @@
 namespace Amp\Postgres;
 
 use Amp\Pipeline;
-use Amp\Promise;
 
-final class ConnectionListener implements Listener
+final class ConnectionListener implements Listener, \IteratorAggregate
 {
     /** @var Pipeline */
     private Pipeline $pipeline;
@@ -50,6 +49,11 @@ final class ConnectionListener implements Listener
     {
         $this->pipeline->dispose();
         $this->unlisten();
+    }
+
+    public function getIterator(): \Iterator
+    {
+        yield from $this->pipeline;
     }
 
     /**

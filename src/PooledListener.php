@@ -2,9 +2,8 @@
 
 namespace Amp\Postgres;
 
-final class PooledListener implements Listener
+final class PooledListener implements Listener, \IteratorAggregate
 {
-    /** @var Listener */
     private Listener $listener;
 
     /** @var callable|null */
@@ -36,6 +35,12 @@ final class PooledListener implements Listener
     public function dispose(): void
     {
         $this->listener->dispose();
+    }
+
+    public function getIterator(): \Iterator
+    {
+        // Using a Generator to keep a reference to $this.
+        yield from $this->listener;
     }
 
     public function getChannel(): string
