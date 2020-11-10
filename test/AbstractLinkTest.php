@@ -46,7 +46,14 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function setUp(): void
     {
         parent::setUp();
+        $this->ignoreLoopWatchers();
         $this->link = $this->createLink('host=localhost user=postgres');
+    }
+
+    public function cleanup(): void
+    {
+        parent::cleanup();
+        $this->link->close();
     }
 
     public function testQueryWithTupleResult()
@@ -304,7 +311,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $query = "SELECT * FROM test WHERE invalid=\$1";
 
-        $this->link->prepare($query);
+        $statement = $this->link->prepare($query);
+
+        $statement->execute(['param']);
     }
 
     /**

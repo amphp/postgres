@@ -150,11 +150,6 @@ final class PqHandle implements Handle
 
         $this->handle = null;
 
-        $this->free();
-    }
-
-    private function free(): void
-    {
         Loop::cancel($this->poll);
         Loop::cancel($this->await);
     }

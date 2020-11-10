@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 

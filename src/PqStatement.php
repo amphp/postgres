@@ -2,26 +2,20 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 
 final class PqStatement implements Statement
 {
-    /** @var PqHandle */
-    private $handle;
+    private PqHandle $handle;
 
-    /** @var string */
-    private $name;
+    private string $name;
 
-    /** @var string */
-    private $sql;
+    private string $sql;
 
-    /** @var array */
-    private $params;
+    private array $params;
 
-    /** @var int */
-    private $lastUsedAt;
+    private int $lastUsedAt;
 
     /**
      * @param PqHandle $handle

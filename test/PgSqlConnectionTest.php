@@ -42,11 +42,13 @@ class PgSqlConnectionTest extends AbstractConnectionTest
         return new PgSqlConnection($this->handle, $socket);
     }
 
-    public function tearDown(): void
+    public function cleanup(): void
     {
         \pg_get_result($this->handle); // Consume any leftover results from test.
         \pg_query($this->handle, "ROLLBACK");
         \pg_query($this->handle, "DROP TABLE test");
         \pg_close($this->handle);
+
+        parent::cleanup();
     }
 }

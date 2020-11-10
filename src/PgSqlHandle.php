@@ -162,19 +162,14 @@ final class PgSqlHandle implements Handle
             $this->deferred = null;
         }
 
-        $this->free();
-
-        $this->handle = null;
-    }
-
-    private function free(): void
-    {
         if (\is_resource($this->handle)) {
             \pg_close($this->handle);
         }
 
         Loop::cancel($this->poll);
         Loop::cancel($this->await);
+
+        $this->handle = null;
     }
 
     /**
@@ -211,7 +206,7 @@ final class PgSqlHandle implements Handle
             }
         }
 
-        if (!\is_resource($this->handle)) {
+        if ($this->handle === null) {
             throw new ConnectionException("The connection to the database has been closed");
         }
 
@@ -331,7 +326,7 @@ final class PgSqlHandle implements Handle
      */
     public function query(string $sql): Result
     {
-        if (!\is_resource($this->handle)) {
+        if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
         }
 
@@ -343,7 +338,7 @@ final class PgSqlHandle implements Handle
      */
     public function execute(string $sql, array $params = []): Result
     {
-        if (!\is_resource($this->handle)) {
+        if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
         }
 
@@ -358,7 +353,7 @@ final class PgSqlHandle implements Handle
      */
     public function prepare(string $sql): Statement
     {
-        if (!\is_resource($this->handle)) {
+        if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
         }
 
@@ -471,7 +466,7 @@ final class PgSqlHandle implements Handle
         $source = $this->listeners[$channel];
         unset($this->listeners[$channel]);
 
-        if (!\is_resource($this->handle)) {
+        if ($this->handle === null) {
             $source->complete();
             return; // Connection already closed.
         }
@@ -489,7 +484,7 @@ final class PgSqlHandle implements Handle
      */
     public function quoteString(string $data): string
     {
-        if (!\is_resource($this->handle)) {
+        if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
         }
 
@@ -501,7 +496,7 @@ final class PgSqlHandle implements Handle
      */
     public function quoteName(string $name): string
     {
-        if (!\is_resource($this->handle)) {
+        if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
         }
 

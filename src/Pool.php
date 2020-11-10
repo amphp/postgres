@@ -57,9 +57,9 @@ final class Pool extends ConnectionPool implements Link
         return new PooledStatement($statement, $release);
     }
 
-    protected function createStatementPool(SqlPool $pool, SqlStatement $statement, callable $prepare): SqlStatementPool
+    protected function createStatementPool(SqlPool $pool, string $sql, callable $prepare): SqlStatementPool
     {
-        return new StatementPool($pool, $statement, $prepare);
+        return new StatementPool($pool, $sql, $prepare);
     }
 
     protected function createTransaction(SqlTransaction $transaction, callable $release): SqlTransaction

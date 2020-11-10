@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Loop;
 use Amp\Postgres\Link;
 use Amp\Postgres\PqBufferedResultSet;
 use Amp\Postgres\PqConnection;
@@ -41,10 +40,12 @@ class PqConnectionTest extends AbstractConnectionTest
         return new PqConnection($this->handle);
     }
 
-    public function tearDown(): void
+    public function cleanup(): void
     {
         $this->handle->exec("ROLLBACK");
         $this->handle->exec("DROP TABLE test");
+
+        parent::cleanup();
     }
 
     public function testBufferedResults()
