@@ -3,41 +3,41 @@
 
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
-use Amp\Loop;
 use Amp\Postgres;
-use Amp\Postgres\Listener;
+use function Amp\defer;
+use function Amp\delay;
 
-Loop::run(function () {
-    $config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
+$config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
 
-    $pool = Postgres\pool($config);
+$pool = Postgres\pool($config);
 
-    $channel = "test";
+$channel = "test";
 
-    /** @var Listener $listener */
-    $listener = yield $pool->listen($channel);
+$listener = $pool->listen($channel);
 
-    \printf("Listening on channel '%s'\n", $listener->getChannel());
+\printf("Listening on channel '%s'\n", $listener->getChannel());
 
-    Loop::delay(3000, function () use ($listener) { // Unlisten in 3 seconds.
-        \printf("Unlistening from channel '%s'\n", $listener->getChannel());
-        return $listener->unlisten();
-    });
+defer(function () use ($pool, $channel, $listener): void {
+    delay(1000);
 
-    Loop::delay(1000, function () use ($pool, $channel) {
-        return $pool->notify($channel, "Data 1"); // Send first notification.
-    });
+    $pool->notify($channel, "Data 1"); // Send first notification.
 
-    Loop::delay(2000, function () use ($pool, $channel) {
-        return $pool->notify($channel, "Data 2"); // Send second notification.
-    });
+    delay(1000);
 
-    while ($notification = yield $listener->continue()) {
-        \printf(
-            "Received notification from PID %d on channel '%s' with payload: %s\n",
-            $notification->pid,
-            $notification->channel,
-            $notification->payload
-        );
-    }
+    $pool->notify($channel, "Data 2"); // Send second notification.
+
+    delay(1000);
+
+    $listener->unlisten();
 });
+
+foreach ($listener as $notification) {
+    \printf(
+        "Received notification from PID %d on channel '%s' with payload: %s\n",
+        $notification->pid,
+        $notification->channel,
+        $notification->payload
+    );
+}
+
+$pool->close();

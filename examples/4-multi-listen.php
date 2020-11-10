@@ -3,63 +3,61 @@
 
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
-use Amp\Loop;
 use Amp\Postgres;
-use Amp\Postgres\Listener;
-use Amp\Stream;
+use Amp\Pipeline;
+use function Amp\defer;
+use function Amp\delay;
 
-Loop::run(function () {
-    $config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
+$config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
 
-    $pool = Postgres\pool($config);
+$pool = Postgres\pool($config);
 
-    $channel1 = "test1";
-    $channel2 = "test2";
+$channel1 = "test1";
+$channel2 = "test2";
 
-    /** @var Listener $listener1 */
-    $listener1 = yield $pool->listen($channel1);
+$listener1 = $pool->listen($channel1);
 
-    \printf("Listening on channel '%s'\n", $listener1->getChannel());
+\printf("Listening on channel '%s'\n", $listener1->getChannel());
 
-    /** @var Listener $listener2 */
-    $listener2 = yield $pool->listen($channel2);
+$listener2 = $pool->listen($channel2);
 
-    \printf("Listening on channel '%s'\n", $listener2->getChannel());
+\printf("Listening on channel '%s'\n", $listener2->getChannel());
 
-    Loop::delay(6000, function () use ($listener1) { // Unlisten in 6 seconds.
-        \printf("Unlistening from channel '%s'\n", $listener1->getChannel());
-        return $listener1->unlisten();
-    });
+defer(function () use ($pool, $listener1, $listener2, $channel1, $channel2): void {
+    $pool->notify($channel1, "Data 1.1");
 
-    Loop::delay(4000, function () use ($listener2) { // Unlisten in 4 seconds.
-        \printf("Unlistening from channel '%s'\n", $listener2->getChannel());
-        return $listener2->unlisten();
-    });
+    delay(500);
 
-    Loop::delay(1000, function () use ($pool, $channel1) {
-        return $pool->notify($channel1, "Data 1.1");
-    });
+    $pool->notify($channel2, "Data 2.1");
 
-    Loop::delay(2000, function () use ($pool, $channel2) {
-        return $pool->notify($channel2, "Data 2.1");
-    });
+    delay(500);
 
-    Loop::delay(3000, function () use ($pool, $channel2) {
-        return $pool->notify($channel2, "Data 2.2");
-    });
+    $pool->notify($channel2, "Data 2.2");
 
-    Loop::delay(5000, function () use ($pool, $channel1) {
-        return $pool->notify($channel1, "Data 1.2");
-    });
+    delay(500);
 
-    $stream = Stream\merge([$listener1, $listener2]); // Merge both listeners into single iterator.
+    \printf("Unlistening from channel '%s'\n", $listener2->getChannel());
+    $listener2->unlisten();
 
-    while ($notification = yield $stream->continue()) {
-        \printf(
-            "Received notification from PID %d on channel '%s' with payload: %s\n",
-            $notification->pid,
-            $notification->channel,
-            $notification->payload
-        );
-    }
+    delay(500);
+
+    $pool->notify($channel1, "Data 1.2");
+
+    delay(500);
+
+    \printf("Unlistening from channel '%s'\n", $listener1->getChannel());
+    $listener1->unlisten();
 });
+
+$listener = Pipeline\merge([$listener1, $listener2]); // Merge both listeners into single pipeline.
+
+foreach ($listener as $notification) {
+    \printf(
+        "Received notification from PID %d on channel '%s' with payload: %s\n",
+        $notification->pid,
+        $notification->channel,
+        $notification->payload
+    );
+}
+
+$pool->close();
