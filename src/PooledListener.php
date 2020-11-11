@@ -37,7 +37,7 @@ final class PooledListener implements Listener, \IteratorAggregate
         $this->listener->dispose();
     }
 
-    public function getIterator(): \Iterator
+    public function getIterator(): \Traversable
     {
         // Using a Generator to keep a reference to $this.
         yield from $this->listener;

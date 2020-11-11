@@ -51,7 +51,7 @@ final class ConnectionListener implements Listener, \IteratorAggregate
         $this->unlisten();
     }
 
-    public function getIterator(): \Iterator
+    public function getIterator(): \Traversable
     {
         yield from $this->pipeline;
     }

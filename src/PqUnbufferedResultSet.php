@@ -65,7 +65,7 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
     /**
      * @inheritDoc
      */
-    public function getIterator(): \Iterator
+    public function getIterator(): \Traversable
     {
         return $this->generator->getIterator();
     }
