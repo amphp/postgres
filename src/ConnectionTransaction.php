@@ -7,7 +7,6 @@ use Amp\Sql\Common\PooledResult;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
-use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
 
 final class ConnectionTransaction implements Transaction
@@ -28,13 +27,13 @@ final class ConnectionTransaction implements Transaction
      *
      * @throws \Error If the isolation level is invalid.
      */
-    public function __construct(Handle $handle, callable $release, int $isolation = SqlTransaction::ISOLATION_COMMITTED)
+    public function __construct(Handle $handle, callable $release, int $isolation = Transaction::ISOLATION_COMMITTED)
     {
         switch ($isolation) {
-            case SqlTransaction::ISOLATION_UNCOMMITTED:
-            case SqlTransaction::ISOLATION_COMMITTED:
-            case SqlTransaction::ISOLATION_REPEATABLE:
-            case SqlTransaction::ISOLATION_SERIALIZABLE:
+            case Transaction::ISOLATION_UNCOMMITTED:
+            case Transaction::ISOLATION_COMMITTED:
+            case Transaction::ISOLATION_REPEATABLE:
+            case Transaction::ISOLATION_SERIALIZABLE:
                 $this->isolation = $isolation;
                 break;
 

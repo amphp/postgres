@@ -7,7 +7,7 @@ use Amp\Deferred;
 use Amp\Sql\Link;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
-use Amp\Sql\Transaction;
+use function Amp\await;
 
 abstract class Connection implements Link, Handle
 {

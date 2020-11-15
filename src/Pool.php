@@ -5,7 +5,6 @@ namespace Amp\Postgres;
 use Amp\Promise;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Common\PooledStatement;
-use Amp\Sql\Common\StatementPool as SqlStatementPool;
 use Amp\Sql\ConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\Pool as SqlPool;
@@ -57,15 +56,25 @@ final class Pool extends ConnectionPool implements Link
         return new PooledStatement($statement, $release);
     }
 
-    protected function createStatementPool(SqlPool $pool, string $sql, callable $prepare): SqlStatementPool
+    protected function createStatementPool(SqlPool $pool, string $sql, callable $prepare): StatementPool
     {
         return new StatementPool($pool, $sql, $prepare);
     }
 
-    protected function createTransaction(SqlTransaction $transaction, callable $release): SqlTransaction
+    protected function createTransaction(SqlTransaction $transaction, callable $release): Transaction
     {
         \assert($transaction instanceof Transaction);
         return new PooledTransaction($transaction, $release);
+    }
+
+    /**
+     * Changes return type to this library's Transaction type.
+     *
+     * @inheritDoc
+     */
+    public function beginTransaction(int $isolation = Transaction::ISOLATION_COMMITTED): Transaction
+    {
+        return parent::beginTransaction($isolation);
     }
 
     protected function pop(): Connection
