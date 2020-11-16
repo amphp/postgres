@@ -48,7 +48,10 @@ final class ConnectionListener implements Listener, \IteratorAggregate
     public function dispose(): void
     {
         $this->pipeline->dispose();
-        $this->unlisten();
+
+        if ($this->unlisten) {
+            $this->unlisten();
+        }
     }
 
     public function getIterator(): \Traversable
