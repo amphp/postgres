@@ -14,7 +14,7 @@ class PgSqlConnectTest extends AbstractConnectTest
 {
     public function connect(ConnectionConfig $connectionConfig, CancellationToken $token = null): PgSqlConnection
     {
-        if (Loop::get()->getHandle() instanceof \EvLoop) {
+        if (Loop::getDriver()->getHandle() instanceof \EvLoop) {
             $this->markTestSkipped("ext-pgsql is not compatible with pecl-ev");
         }
 

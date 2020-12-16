@@ -23,7 +23,7 @@ final class PgSqlConnection extends Connection implements Link
     {
         // @codeCoverageIgnoreStart
         /** @psalm-suppress UndefinedClass */
-        if (Loop::get()->getHandle() instanceof \EvLoop) {
+        if (Loop::getDriver()->getHandle() instanceof \EvLoop) {
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
         } // @codeCoverageIgnoreEnd
 

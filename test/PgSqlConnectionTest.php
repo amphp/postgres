@@ -16,7 +16,7 @@ class PgSqlConnectionTest extends AbstractConnectionTest
 
     public function createLink(string $connectionString): Link
     {
-        if (Loop::get()->getHandle() instanceof \EvLoop) {
+        if (Loop::getDriver()->getHandle() instanceof \EvLoop) {
             $this->markTestSkipped("ext-pgsql is not compatible with pecl-ev");
         }
 
