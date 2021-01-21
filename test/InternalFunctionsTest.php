@@ -9,16 +9,53 @@ use function Amp\Postgres\Internal\parseNamedParams;
 final class InternalFunctionsTest extends TestCase
 {
     /**
-     * Tests that the JSONB `@?` operator is not substituted by the parameter parser.
+     * Tests that unnamed parameters are substituted correctly.
+     *
+     * @see parseNamedParams
+     * @dataProvider provideUnnamedParams
+     */
+    public function testParseUnnamedParams(string $sqlIn, string $sqlOut): void
+    {
+        self::assertSame($sqlOut, parseNamedParams($sqlIn, $dummy));
+    }
+
+    public function provideUnnamedParams(): iterable
+    {
+        return [
+            'Bare' => ['SELECT ?', 'SELECT $1'],
+            'Parenthesized' => ['SELECT (?)', 'SELECT ($1)'],
+            'Row constructor' => ['SELECT (?, ?)', 'SELECT ($1, $2)'],
+        ];
+    }
+
+    /**
+     * Tests that operators containing the question mark character, that could be confused with unnamed parameters,
+     * are parsed correctly.
      *
      * @see parseNamedParams
      * @see https://github.com/amphp/postgres/issues/39
+     * @dataProvider provideProblematicOperators
      */
-    public function testParseJsonbOperator(): void
+    public function testParseProblematicOperators(string $sql): void
     {
-        self::assertSame(
-            $sql = "SELECT * FROM foo WHERE bar::jsonb @? '$[*] ? (@.baz > 0)'",
-            parseNamedParams($sql, $names)
-        );
+        self::assertSame($sql, parseNamedParams($sql, $dummy));
+    }
+
+    public function provideProblematicOperators(): iterable
+    {
+        return [
+            // JSONB operators. https://postgresql.org/docs/12/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
+            // Bare question mark currently unsupported. ?| can be used instead.
+            #'?' => ["SELECT WHERE '{\"foo\":null}'::jsonb ? 'foo'"],
+            '?|' => ["SELECT WHERE '{\"foo\":null}'::jsonb ?| array['foo']"],
+            '?&' => ["SELECT WHERE '{\"foo\":null}'::jsonb ?& array['foo']"],
+            '@?' => ["SELECT WHERE '{\"foo\":1}'::jsonb @? '$ ? (@.foo > 0)'"],
+
+            // Geometric operators. https://postgresql.org/docs/12/functions-geometry.html#FUNCTIONS-GEOMETRY-OP-TABLE
+            '?- unary' => ["SELECT WHERE ?- lseg '((-1,0),(1,0))'"],
+            '?-' => ["SELECT WHERE point '(1,0)' ?- point '(0,0)'"],
+            '?-|' => ["SELECT WHERE lseg '((0,0),(0,1))' ?-| lseg '((0,0),(1,0))'"],
+            '?||' => ["SELECT WHERE lseg '((-1,0),(1,0))' ?|| lseg '((-1,2),(1,2))'"],
+        ];
     }
 }
