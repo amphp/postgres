@@ -25,6 +25,8 @@ final class InternalFunctionsTest extends TestCase
             'Bare' => ['SELECT ?', 'SELECT $1'],
             'Parenthesized' => ['SELECT (?)', 'SELECT ($1)'],
             'Row constructor' => ['SELECT (?, ?)', 'SELECT ($1, $2)'],
+            // Special-case exclude the =? operator to permit the following usage.
+            '=? operator' => ['UPDATE foo SET bar=?', 'UPDATE foo SET bar=$1']
         ];
     }
 

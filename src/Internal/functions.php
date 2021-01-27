@@ -11,16 +11,16 @@ const STATEMENT_PARAM_REGEX = <<<'REGEX'
     |
     # Unnamed parameters.
     (
-        \$(?:\d+)
+        \$(\d+)
         |
         # Match all question marks except those surrounded by "operator"-class characters on either side.
-        (?<!(?<operators>[-+\\*/<>=~!@#%^&|`?]))
+        (?<!(?<operators>[-+\\*/<>~!@#%^&|`?]))
         \?
-        (?!\g<operators>)
+        (?!\g<operators>|=)
     )
     |
     # Named parameters.
-    (?<!:):(?:[a-zA-Z_][a-zA-Z0-9_]*)
+    (?<!:):([a-zA-Z_][a-zA-Z0-9_]*)
 ]msxS
 REGEX;
 
@@ -37,7 +37,7 @@ function parseNamedParams(string $sql, ?array &$names): string
         static $index = 0, $unnamed = 0, $numbered = 1;
 
         if (isset($matches[4])) {
-            $names[$index] = $matches[4];
+            $names[$index] = $matches[5];
         } elseif ($matches[2] === '?') {
             $names[$index] = $unnamed++;
         } else {
