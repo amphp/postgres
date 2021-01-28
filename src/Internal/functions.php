@@ -10,17 +10,19 @@ const STATEMENT_PARAM_REGEX = <<<'REGEX'
     (['"])(?:\\(?:\\|\1)|(?!\1).)*+\1(*SKIP)(*FAIL)
     |
     # Unnamed parameters.
-    (
-        \$(\d+)
+    (?<unnamed>
+        \$(?<numbered>\d+)
         |
         # Match all question marks except those surrounded by "operator"-class characters on either side.
         (?<!(?<operators>[-+\\*/<>~!@#%^&|`?]))
         \?
         (?!\g<operators>|=)
+        |
+        :\?
     )
     |
     # Named parameters.
-    (?<!:):([a-zA-Z_][a-zA-Z0-9_]*)
+    (?<!:):(?<named>[a-zA-Z_][a-zA-Z0-9_]*)
 ]msxS
 REGEX;
 
@@ -36,17 +38,22 @@ function parseNamedParams(string $sql, ?array &$names): string
     return \preg_replace_callback(STATEMENT_PARAM_REGEX, function (array $matches) use (&$names): string {
         static $index = 0, $unnamed = 0, $numbered = 1;
 
-        if (isset($matches[4])) {
-            $names[$index] = $matches[5];
-        } elseif ($matches[2] === '?') {
+        if (isset($matches['named'])) {
+            $names[$index] = $matches['named'];
+        } elseif (!isset($matches['numbered'])) {
             $names[$index] = $unnamed++;
         } else {
-            $position = (int) $matches[3];
-            if ($numbered++ !== $position) {
+            if ($unnamed > 0) {
+                throw new \Error("Cannot mix unnamed (? placeholders) with numbered parameters");
+            }
+
+            $position = (int) $matches['numbered'];
+            if ($position <= 0 || $position > $numbered + 1) {
                 throw new \Error("Numbered placeholders must be sequential starting at 1");
             }
 
-            $names[$index] = $unnamed++;
+            $numbered = \max($position, $numbered);
+            $names[$index] = $position - 1;
         }
 
         return '$' . ++$index;

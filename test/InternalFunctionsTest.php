@@ -26,7 +26,8 @@ final class InternalFunctionsTest extends TestCase
             'Parenthesized' => ['SELECT (?)', 'SELECT ($1)'],
             'Row constructor' => ['SELECT (?, ?)', 'SELECT ($1, $2)'],
             // Special-case exclude the =? operator to permit the following usage.
-            '=? operator' => ['UPDATE foo SET bar=?', 'UPDATE foo SET bar=$1']
+            '=? operator' => ['UPDATE foo SET bar=?', 'UPDATE foo SET bar=$1'],
+            '= ? operator' => ['UPDATE foo SET bar = ?', 'UPDATE foo SET bar = $1'],
         ];
     }
 
@@ -58,6 +59,25 @@ final class InternalFunctionsTest extends TestCase
             '?-' => ["SELECT WHERE point '(1,0)' ?- point '(0,0)'"],
             '?-|' => ["SELECT WHERE lseg '((0,0),(0,1))' ?-| lseg '((0,0),(1,0))'"],
             '?||' => ["SELECT WHERE lseg '((-1,0),(1,0))' ?|| lseg '((-1,2),(1,2))'"],
+        ];
+    }
+
+    /**
+     * @dataProvider provideRepeatedNumberedParams
+     */
+    public function testRepeatedNumberedParams(string $sql, array $expectedNames): void
+    {
+        parseNamedParams($sql, $names);
+        self::assertSame($expectedNames, $names);
+    }
+
+    public function provideRepeatedNumberedParams(): iterable
+    {
+        return [
+            ['SELECT * FROM table WHERE x=$1 AND y=$1', [0, 0]],
+            ['SELECT * FROM table WHERE x=$1 AND y=$2 AND z=$1', [0, 1, 0]],
+            ['SELECT * FROM table WHERE x=$1 AND y=$1 AND z=$2', [0, 0, 1]],
+            ['SELECT * FROM table WHERE x=$1 AND y=:y AND z=$1', [0, 'y', 0]],
         ];
     }
 }
