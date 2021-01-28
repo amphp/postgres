@@ -5,12 +5,28 @@ namespace Amp\Postgres\Internal;
 use function Amp\Postgres\cast;
 
 const STATEMENT_PARAM_REGEX = <<<'REGEX'
-~(["'`])(?:\\(?:\\|\1)|(?!\1).)*+\1(*SKIP)(*FAIL)|(\$(\d+)|\?)|(?<!:):([a-zA-Z_][a-zA-Z0-9_]*)~ms
+[
+    # Skip all quoted groups.
+    (['"])(?:\\(?:\\|\1)|(?!\1).)*+\1(*SKIP)(*FAIL)
+    |
+    # Unnamed parameters.
+    (
+        \$(\d+)
+        |
+        # Match all question marks except those surrounded by "operator"-class characters on either side.
+        (?<!(?<operators>[-+\\*/<>~!@#%^&|`?]))
+        \?
+        (?!\g<operators>|=)
+    )
+    |
+    # Named parameters.
+    (?<!:):([a-zA-Z_][a-zA-Z0-9_]*)
+]msxS
 REGEX;
 
 /**
  * @param string $sql SQL statement with named and unnamed placeholders.
- * @param array $names [Output] Array of parameter positions mapped to names and/or indexed locations.
+ * @param array|null $names [Output] Array of parameter positions mapped to names and/or indexed locations.
  *
  * @return string SQL statement with Postgres-style placeholders
  */
@@ -21,7 +37,7 @@ function parseNamedParams(string $sql, ?array &$names): string
         static $index = 0, $unnamed = 0, $numbered = 1;
 
         if (isset($matches[4])) {
-            $names[$index] = $matches[4];
+            $names[$index] = $matches[5];
         } elseif ($matches[2] === '?') {
             $names[$index] = $unnamed++;
         } else {
