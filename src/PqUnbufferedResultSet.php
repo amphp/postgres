@@ -7,6 +7,7 @@ use Amp\Promise;
 use Amp\Sql\Result;
 use pq;
 use function Amp\await;
+use function Amp\defer;
 
 final class PqUnbufferedResultSet implements Result, \IteratorAggregate
 {
@@ -33,10 +34,20 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
                     $result = await($promise);
                 } while ($result instanceof pq\Result);
             } finally {
-                // Discard remaining rows in the result set.
-                while (($result = await($promise)) instanceof pq\Result) {
-                    $promise = $fetch();
+                if ($result === null) {
+                    return; // Result fully consumed.
                 }
+
+                defer(static function () use ($promise, $fetch): void {
+                    try {
+                        // Discard remaining rows in the result set.
+                        while (($result = await($promise)) instanceof pq\Result) {
+                            $promise = $fetch();
+                        }
+                    } catch (\Throwable $exception) {
+                        // Ignore errors while discarding result.
+                    }
+                });
             }
         });
     }
