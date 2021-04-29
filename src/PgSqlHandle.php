@@ -71,6 +71,14 @@ final class PgSqlHandle implements Handle
         $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle): void {
             $lastUsedAt = \time();
 
+            if (\pg_connection_status($handle) === \PGSQL_CONNECTION_BAD) {
+                $handle = null;
+
+                if ($deferred) {
+                    $deferred->fail(new ConnectionException("The connection closed during the operation"));
+                }
+            }
+
             if (!\pg_consume_input($handle)) {
                 $handle = null; // Marks connection as dead.
                 Loop::disable($watcher);
