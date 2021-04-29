@@ -121,7 +121,7 @@ final class PgSqlHandle implements Handle
             $deferred->resolve(\pg_get_result($handle));
 
             if (!$deferred && empty($listeners)) {
-                Loop::disable($watcher);
+                Loop::unreference($watcher);
             }
         });
 
@@ -147,7 +147,8 @@ final class PgSqlHandle implements Handle
             }
         });
 
-        Loop::disable($this->poll);
+        //Loop::disable($this->poll);
+        Loop::unreference($this->poll);
         Loop::disable($this->await);
     }
 
@@ -233,7 +234,7 @@ final class PgSqlHandle implements Handle
 
         $this->deferred = new Deferred;
 
-        Loop::enable($this->poll);
+        Loop::reference($this->poll);
         if (0 === $result) {
             Loop::enable($this->await);
         }
@@ -466,7 +467,7 @@ final class PgSqlHandle implements Handle
                 throw $exception;
             }
 
-            Loop::enable($this->poll);
+            //Loop::enable($this->poll);
             return new ConnectionListener($emitter->iterate(), $channel, \Closure::fromCallable([$this, 'unlisten']));
         });
     }

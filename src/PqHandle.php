@@ -87,7 +87,7 @@ final class PqHandle implements Handle
             $deferred->resolve($handle->getResult());
 
             if (!$deferred && empty($listeners)) {
-                Loop::disable($watcher);
+                Loop::unreference($watcher);
             }
         });
 
@@ -112,7 +112,7 @@ final class PqHandle implements Handle
             Loop::disable($watcher);
         });
 
-        Loop::disable($this->poll);
+        Loop::unreference($this->poll);
         Loop::disable($this->await);
     }
 
@@ -192,7 +192,7 @@ final class PqHandle implements Handle
 
             $handle = $method(...$args);
 
-            Loop::enable($this->poll);
+            Loop::reference($this->poll);
             if (!$this->handle->flush()) {
                 Loop::enable($this->await);
             }
@@ -253,7 +253,7 @@ final class PqHandle implements Handle
         } else {
             $this->deferred = new Deferred;
 
-            Loop::enable($this->poll);
+            Loop::reference($this->poll);
             if (!$this->handle->flush()) {
                 Loop::enable($this->await);
             }
@@ -461,7 +461,7 @@ final class PqHandle implements Handle
                 throw $exception;
             }
 
-            Loop::enable($this->poll);
+            Loop::reference($this->poll);
             return new ConnectionListener($emitter->iterate(), $channel, \Closure::fromCallable([$this, 'unlisten']));
         });
     }
