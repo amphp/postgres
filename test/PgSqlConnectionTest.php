@@ -23,16 +23,17 @@ class PgSqlConnectionTest extends AbstractConnectionTest
         $this->handle = \pg_connect($connectionString);
         $socket = \pg_socket($this->handle);
 
-        \pg_query($this->handle, "DROP TABLE IF EXISTS test");
+        \pg_query($this->handle, self::DROP_QUERY);
 
-        $result = \pg_query($this->handle, "CREATE TABLE test (domain VARCHAR(63), tld VARCHAR(63), PRIMARY KEY (domain, tld))");
+        $result = \pg_query($this->handle, self::CREATE_QUERY);
 
         if (!$result) {
             $this->fail('Could not create test table.');
         }
 
         foreach ($this->getData() as $row) {
-            $result = \pg_query_params($this->handle, "INSERT INTO test VALUES (\$1, \$2)", $row);
+
+            $result = \pg_query_params($this->handle, self::INSERT_QUERY, \array_map('Amp\\Postgres\\cast', $row));
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -46,7 +47,7 @@ class PgSqlConnectionTest extends AbstractConnectionTest
     {
         \pg_get_result($this->handle); // Consume any leftover results from test.
         \pg_query($this->handle, "ROLLBACK");
-        \pg_query($this->handle, "DROP TABLE test");
+        \pg_query($this->handle, self::DROP_QUERY);
         \pg_close($this->handle);
     }
 }

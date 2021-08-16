@@ -44,16 +44,16 @@ class PqPoolTest extends AbstractLinkTest
 
         $handle = \reset($this->handles);
 
-        $handle->exec("DROP TABLE IF EXISTS test");
+        $handle->exec(self::DROP_QUERY);
 
-        $result = $handle->exec("CREATE TABLE test (domain VARCHAR(63), tld VARCHAR(63), PRIMARY KEY (domain, tld))");
+        $result = $handle->exec(self::CREATE_QUERY);
 
         if (!$result) {
             $this->fail('Could not create test table.');
         }
 
         foreach ($this->getData() as $row) {
-            $result = $handle->execParams("INSERT INTO test VALUES (\$1, \$2)", $row);
+            $result = $handle->execParams(self::INSERT_QUERY, \array_map('Amp\\Postgres\\cast', $row));
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -66,6 +66,6 @@ class PqPoolTest extends AbstractLinkTest
     public function tearDown(): void
     {
         $this->handles[0]->exec("ROLLBACK");
-        $this->handles[0]->exec("DROP TABLE test");
+        $this->handles[0]->exec(self::DROP_QUERY);
     }
 }
