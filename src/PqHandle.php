@@ -224,12 +224,11 @@ final class PqHandle implements Handle
 
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
-                $result = new PqUnbufferedResultSet(
+                return new PqUnbufferedResultSet(
                     coroutine(\Closure::fromCallable([$this, 'fetch'])),
                     $result,
                     \Closure::fromCallable([$this, 'release'])
                 );
-                return $result;
 
             case pq\Result::NONFATAL_ERROR:
             case pq\Result::FATAL_ERROR:
@@ -288,6 +287,8 @@ final class PqHandle implements Handle
             $this->busy instanceof Deferred && $this->busy !== $this->deferred,
             "Connection in invalid state when releasing"
         );
+
+        while ($this->handle->busy && $this->handle->getResult());
 
         $deferred = $this->busy;
         $this->busy = null;
