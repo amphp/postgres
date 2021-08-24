@@ -168,7 +168,7 @@ final class PgSqlHandle implements Handle
 
     private function fetchTypes(string $id): Promise
     {
-        if (isset(self::$typeCache)) {
+        if (isset(self::$typeCache[$id])) {
             return self::$typeCache[$id];
         }
 
