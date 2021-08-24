@@ -51,7 +51,7 @@ final class PgSqlHandle implements Handle
     /** @var Emitter[] */
     private $listeners = [];
 
-    /** @var Struct[] */
+    /** @var array<string, object{refCount: int, promise: Promise<string>, sql: string}> */
     private $statements = [];
 
     /** @var int */
@@ -359,9 +359,10 @@ final class PgSqlHandle implements Handle
             return new Success;
         }
 
-        unset($this->statements[$name]);
-
-        return $this->query(\sprintf("DEALLOCATE %s", $name));
+        return $storage->promise = call(function () use ($storage, $name) {
+            yield $this->query(\sprintf("DEALLOCATE %s", $name));
+            unset($this->statements[$name]);
+        });
     }
 
     /**
@@ -413,14 +414,17 @@ final class PgSqlHandle implements Handle
 
             $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
-            if (isset($this->statements[$name])) {
+            while (isset($this->statements[$name])) {
                 $storage = $this->statements[$name];
 
                 ++$storage->refCount;
 
+                // Statement may be being allocated or deallocated. Wait to finish, then check for existence again.
                 if ($storage->promise instanceof Promise) {
                     // Do not return promised prepared statement object, as the $names array may differ.
                     yield $storage->promise;
+                    --$storage->refCount;
+                    continue;
                 }
 
                 return new PgSqlStatement($this, $name, $sql, $names);
@@ -429,7 +433,9 @@ final class PgSqlHandle implements Handle
             $storage = new class {
                 use Struct;
                 public $refCount = 1;
+                /** @var Promise<string> */
                 public $promise;
+                /** @var string */
                 public $sql;
             };
 

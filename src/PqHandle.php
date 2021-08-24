@@ -18,13 +18,13 @@ use function Amp\coroutine;
 
 final class PqHandle implements Handle
 {
-    /** @var \pq\Connection PostgreSQL connection object. */
+    /** @var pq\Connection PostgreSQL connection object. */
     private $handle;
 
-    /** @var \Amp\Deferred|null */
+    /** @var Deferred|null */
     private $deferred;
 
-    /** @var \Amp\Deferred|null */
+    /** @var Deferred|null */
     private $busy;
 
     /** @var string */
@@ -33,10 +33,10 @@ final class PqHandle implements Handle
     /** @var string */
     private $await;
 
-    /** @var \Amp\Emitter[] */
+    /** @var Emitter[] */
     private $listeners;
 
-    /** @var Struct[] */
+    /** @var array<string, object{refCount: int, promise: Promise<string>, statement: pq\Statement, sql: string}> */
     private $statements = [];
 
     /** @var int */
@@ -45,7 +45,7 @@ final class PqHandle implements Handle
     /**
      * Connection constructor.
      *
-     * @param \pq\Connection $handle
+     * @param pq\Connection $handle
      */
     public function __construct(pq\Connection $handle)
     {
@@ -336,11 +336,12 @@ final class PqHandle implements Handle
             return new Success;
         }
 
-        unset($this->statements[$name]);
-
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        return new Coroutine($this->send(null, [$storage->statement, "deallocateAsync"]));
+        return $storage->promise = call(function () use ($storage, $name) {
+            yield from $this->send(null, [$storage->statement, "deallocateAsync"]);
+            unset($this->statements[$name]);
+        });
     }
 
     /**
@@ -384,14 +385,17 @@ final class PqHandle implements Handle
 
             $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
-            if (isset($this->statements[$name])) {
+            while (isset($this->statements[$name])) {
                 $storage = $this->statements[$name];
 
                 ++$storage->refCount;
 
+                // Statement may be being allocated or deallocated. Wait to finish, then check for existence again.
                 if ($storage->promise instanceof Promise) {
                     // Do not return promised prepared statement object, as the $names array may differ.
                     yield $storage->promise;
+                    --$storage->refCount;
+                    continue;
                 }
 
                 return new PqStatement($this, $name, $sql, $names);
@@ -400,8 +404,11 @@ final class PqHandle implements Handle
             $storage = new class {
                 use Struct;
                 public $refCount = 1;
+                /** @var Promise<string> */
                 public $promise;
+                /** @var pq\Statement */
                 public $statement;
+                /** @var string */
                 public $sql;
             };
 
