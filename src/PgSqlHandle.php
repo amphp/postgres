@@ -255,6 +255,10 @@ final class PgSqlHandle implements Handle
             throw new ConnectionException("The connection to the database has been closed");
         }
 
+        while ($result = \pg_get_result($this->handle)) {
+            \pg_free_result($result);
+        }
+
         $result = $function($this->handle, ...$args);
 
         if ($result === false) {
@@ -510,7 +514,6 @@ final class PgSqlHandle implements Handle
                 throw $exception;
             }
 
-            //Loop::enable($this->poll);
             return new ConnectionListener($emitter->iterate(), $channel, \Closure::fromCallable([$this, 'unlisten']));
         });
     }
