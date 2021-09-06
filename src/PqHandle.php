@@ -34,7 +34,7 @@ final class PqHandle implements Handle
     private $await;
 
     /** @var Emitter[] */
-    private $listeners;
+    private $listeners = [];
 
     /** @var array<string, object{refCount: int, promise: Promise<string>, statement: pq\Statement, sql: string}> */
     private $statements = [];
