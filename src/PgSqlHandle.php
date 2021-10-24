@@ -34,8 +34,14 @@ final class PgSqlHandle implements Handle
         \PGSQL_DIAG_SOURCE_FUNCTION => "source_function",
     ];
 
+    /** @var array<string, Promise<array<int, array{string, string}>>> */
+    private static $typeCache;
+
     /** @var resource PostgreSQL connection handle. */
     private $handle;
+
+    /** @var Promise<array<int, array{string, string}>> */
+    private $types;
 
     private ?Deferred $deferred = null;
 
@@ -52,12 +58,11 @@ final class PgSqlHandle implements Handle
     private int $lastUsedAt;
 
     /**
-     * Connection constructor.
-     *
      * @param resource $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
+     * @param string $id Connection identifier for determining which cached type table to use.
      */
-    public function __construct($handle, $socket)
+    public function __construct($handle, $socket, string $id = '')
     {
         $this->handle = $handle;
 
@@ -70,6 +75,14 @@ final class PgSqlHandle implements Handle
 
         $this->poll = Loop::onReadable($socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle): void {
             $lastUsedAt = \time();
+
+            if (\pg_connection_status($handle) === \PGSQL_CONNECTION_BAD) {
+                $handle = null;
+
+                if ($deferred) {
+                    $deferred->fail(new ConnectionException("The connection closed during the operation"));
+                }
+            }
 
             if (!\pg_consume_input($handle)) {
                 $handle = null; // Marks connection as dead.
@@ -111,10 +124,9 @@ final class PgSqlHandle implements Handle
             }
 
             $deferred->resolve(\pg_get_result($handle));
-            $deferred = null;
 
-            if (empty($listeners)) {
-                Loop::disable($watcher);
+            if (!$deferred && empty($listeners)) {
+                Loop::unreference($watcher);
             }
         });
 
@@ -140,8 +152,10 @@ final class PgSqlHandle implements Handle
             }
         });
 
-        Loop::disable($this->poll);
+        Loop::unreference($this->poll);
         Loop::disable($this->await);
+
+        $this->types = $this->fetchTypes($id);
     }
 
     /**
@@ -150,6 +164,29 @@ final class PgSqlHandle implements Handle
     public function __destruct()
     {
         $this->close();
+    }
+
+    private function fetchTypes(string $id): Promise
+    {
+        if (isset(self::$typeCache[$id])) {
+            return self::$typeCache[$id];
+        }
+
+        return self::$typeCache[$id] = call(function (): \Generator {
+            $result = yield from $this->send(
+                "pg_send_query",
+                "SELECT t.oid, t.typcategory, t.typdelim, t.typelem
+                 FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON t.typnamespace=n.oid
+                 WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public')"
+            );
+
+            $types = [];
+            while ($row = \pg_fetch_array($result, null, \PGSQL_NUM)) {
+                [$oid, $type, $delimiter, $element] = $row;
+                $types[(int) $oid] = [$type, $delimiter, (int) $element];
+            }
+            return $types;
+        });
     }
 
     /**
@@ -210,6 +247,10 @@ final class PgSqlHandle implements Handle
             throw new ConnectionException("The connection to the database has been closed");
         }
 
+        while ($result = \pg_get_result($this->handle)) {
+            \pg_free_result($result);
+        }
+
         $result = $function($this->handle, ...$args);
 
         if ($result === false) {
@@ -218,7 +259,7 @@ final class PgSqlHandle implements Handle
 
         $this->deferred = new Deferred;
 
-        Loop::enable($this->poll);
+        Loop::reference($this->poll);
         if (0 === $result) {
             Loop::enable($this->await);
         }
@@ -235,7 +276,7 @@ final class PgSqlHandle implements Handle
      * @throws FailureException
      * @throws QueryError
      */
-    private function createResult($result, string $sql): Result
+    private function createResult($result, string $sql, array $types)
     {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:
@@ -245,7 +286,7 @@ final class PgSqlHandle implements Handle
                 return new CommandResult(\pg_affected_rows($result), new Success($this->fetchNextResult($sql)));
 
             case \PGSQL_TUPLES_OK:
-                return new PgSqlResultSet($result, new Success($this->fetchNextResult($sql)));
+                return new PgSqlResultSet($result, $types, new Success($this->fetchNextResult($sql)));
 
             case \PGSQL_NONFATAL_ERROR:
             case \PGSQL_FATAL_ERROR:
@@ -294,7 +335,7 @@ final class PgSqlHandle implements Handle
     public function statementExecute(string $name, array $params): Result
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
-        return $this->createResult($this->send("pg_send_execute", $name, $params), $this->statements[$name]->sql);
+        return $this->createResult($this->send("pg_send_execute", $name, $params), $this->statements[$name]->sql, await($this->types));
     }
 
     /**
@@ -316,9 +357,10 @@ final class PgSqlHandle implements Handle
             return;
         }
 
-        unset($this->statements[$name]);
-
-        $this->query(\sprintf("DEALLOCATE %s", $name));
+        return $storage->promise = call(function () use ($storage, $name) {
+            yield $this->query(\sprintf("DEALLOCATE %s", $name));
+            unset($this->statements[$name]);
+        });
     }
 
     /**
@@ -330,7 +372,9 @@ final class PgSqlHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
-        return $this->createResult($this->send("pg_send_query", $sql), $sql);
+        return call(function () use ($sql) {
+            return $this->createResult(yield from $this->send("pg_send_query", $sql), $sql, yield $this->types);
+        });
     }
 
     /**
@@ -345,7 +389,13 @@ final class PgSqlHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        return $this->createResult($this->send("pg_send_query_params", $sql, $params), $sql);
+        return call(function () use ($sql, $params) {
+            return $this->createResult(
+                yield from $this->send("pg_send_query_params", $sql, $params),
+                $sql,
+                yield $this->types
+            );
+        });
     }
 
     /**

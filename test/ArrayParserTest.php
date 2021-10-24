@@ -15,12 +15,19 @@ class ArrayParserTest extends TestCase
         $this->parser = new ArrayParser;
     }
 
+    protected function getDefaultCastFunction(): callable
+    {
+        return function (string $value) {
+            return $value;
+        };
+    }
+
     public function testSingleDimensionalArray(): void
     {
         $array = ["one", "two", "three"];
         $string = '{' . \implode(',', $array) . '}';
 
-        $this->assertSame($array, $this->parser->parse($string));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction()));
     }
 
     public function testMultiDimensionalArray(): void
@@ -28,7 +35,7 @@ class ArrayParserTest extends TestCase
         $array = ["one", "two", ["three", "four"], "five"];
         $string = '{one, two, {three, four}, five}';
 
-        $this->assertSame($array, $this->parser->parse($string));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction()));
     }
 
     public function testQuotedStrings(): void
@@ -36,7 +43,7 @@ class ArrayParserTest extends TestCase
         $array = ["one", "two", ["three", "four"], "five"];
         $string = '{"one", "two", {"three", "four"}, "five"}';
 
-        $this->assertSame($array, $this->parser->parse($string));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction()));
     }
 
     public function testAlternateDelimiter(): void
@@ -44,7 +51,7 @@ class ArrayParserTest extends TestCase
         $array = ["1,2,3", "3,4,5"];
         $string = '{1,2,3;3,4,5}';
 
-        $this->assertSame($array, $this->parser->parse($string, null, ';'));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction(), ';'));
     }
 
     public function testEscapedQuoteDelimiter(): void
@@ -52,7 +59,7 @@ class ArrayParserTest extends TestCase
         $array = ['va"lue1', 'value"2'];
         $string = '{"va\\"lue1", "value\\"2"}';
 
-        $this->assertSame($array, $this->parser->parse($string, null, ','));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction(), ','));
     }
 
     public function testNullValue(): void
@@ -60,7 +67,7 @@ class ArrayParserTest extends TestCase
         $array = ["one", null, "three"];
         $string = '{one, NULL, three}';
 
-        $this->assertSame($array, $this->parser->parse($string));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction()));
     }
 
     public function testQuotedNullValue(): void
@@ -68,7 +75,7 @@ class ArrayParserTest extends TestCase
         $array = ["one", "NULL", "three"];
         $string = '{one, "NULL", three}';
 
-        $this->assertSame($array, $this->parser->parse($string));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction()));
     }
 
     public function testCast(): void
@@ -124,7 +131,7 @@ class ArrayParserTest extends TestCase
         $array = ["test\\ing", "esca\\ped\\"];
         $string = '{"test\\\\ing", "esca\\\\ped\\\\"}';
 
-        $this->assertSame($array, $this->parser->parse($string));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction()));
     }
 
     public function testEmptyArray(): void
@@ -132,7 +139,7 @@ class ArrayParserTest extends TestCase
         $array = [];
         $string = '{}';
 
-        $this->assertSame($array, $this->parser->parse($string));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction()));
     }
 
     public function testArrayContainingEmptyArray(): void
@@ -152,7 +159,7 @@ class ArrayParserTest extends TestCase
         $array = [''];
         $string = '{""}';
 
-        $this->assertSame($array, $this->parser->parse($string));
+        $this->assertSame($array, $this->parser->parse($string, $this->getDefaultCastFunction()));
     }
 
     public function testMalformedNestedArray(): void
@@ -161,7 +168,7 @@ class ArrayParserTest extends TestCase
         $this->expectExceptionMessage('Unexpected end of data');
 
         $string = '{{}';
-        $this->parser->parse($string);
+        $this->parser->parse($string, $this->getDefaultCastFunction());
     }
 
     public function testEmptyString(): void
@@ -170,7 +177,7 @@ class ArrayParserTest extends TestCase
         $this->expectExceptionMessage('Unexpected end of data');
 
         $string = ' ';
-        $this->parser->parse($string);
+        $this->parser->parse($string, $this->getDefaultCastFunction());
     }
 
     public function testNoOpeningBracket(): void
@@ -179,7 +186,7 @@ class ArrayParserTest extends TestCase
         $this->expectExceptionMessage('Missing opening bracket');
 
         $string = '"one", "two"}';
-        $this->parser->parse($string);
+        $this->parser->parse($string, $this->getDefaultCastFunction());
     }
 
     public function testNoClosingBracket(): void
@@ -188,7 +195,7 @@ class ArrayParserTest extends TestCase
         $this->expectExceptionMessage('Unexpected end of data');
 
         $string = '{"one", "two"';
-        $this->parser->parse($string);
+        $this->parser->parse($string, $this->getDefaultCastFunction());
     }
 
     public function testExtraClosingBracket(): void
@@ -197,7 +204,7 @@ class ArrayParserTest extends TestCase
         $this->expectExceptionMessage('Data left in buffer after parsing');
 
         $string = '{"one", "two"}}';
-        $this->parser->parse($string);
+        $this->parser->parse($string, $this->getDefaultCastFunction());
     }
 
     public function testTrailingData(): void
@@ -206,7 +213,7 @@ class ArrayParserTest extends TestCase
         $this->expectExceptionMessage('Data left in buffer after parsing');
 
         $string = '{"one", "two"} data}';
-        $this->parser->parse($string);
+        $this->parser->parse($string, $this->getDefaultCastFunction());
     }
 
     public function testMissingQuote(): void
@@ -215,7 +222,7 @@ class ArrayParserTest extends TestCase
         $this->expectExceptionMessage('Could not find matching quote in quoted value');
 
         $string = '{"one", "two}';
-        $this->parser->parse($string);
+        $this->parser->parse($string, $this->getDefaultCastFunction());
     }
 
     public function testInvalidDelimiter(): void
@@ -224,6 +231,6 @@ class ArrayParserTest extends TestCase
         $this->expectExceptionMessage('Invalid delimiter');
 
         $string = '{"one"; "two"}';
-        $this->parser->parse($string);
+        $this->parser->parse($string, $this->getDefaultCastFunction());
     }
 }

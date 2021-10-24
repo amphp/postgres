@@ -45,16 +45,16 @@ class PgSqlPoolTest extends AbstractLinkTest
 
         $handle = \reset($this->handles);
 
-        \pg_query($handle, "DROP TABLE IF EXISTS test");
+        \pg_query($handle, self::DROP_QUERY);
 
-        $result = \pg_query($handle, "CREATE TABLE test (domain VARCHAR(63), tld VARCHAR(63), PRIMARY KEY (domain, tld))");
+        $result = \pg_query($handle, self::CREATE_QUERY);
 
         if (!$result) {
             $this->fail('Could not create test table.');
         }
 
         foreach ($this->getData() as $row) {
-            $result = \pg_query_params($handle, "INSERT INTO test VALUES (\$1, \$2)", $row);
+            $result = \pg_query_params($handle, self::INSERT_QUERY, \array_map('Amp\\Postgres\\cast', $row));
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -71,7 +71,7 @@ class PgSqlPoolTest extends AbstractLinkTest
         }
 
         \pg_query($this->handles[0], "ROLLBACK");
-        \pg_query($this->handles[0], "DROP TABLE test");
+        \pg_query($this->handles[0], self::DROP_QUERY);
 
         foreach ($this->handles as $handle) {
             \pg_close($handle);

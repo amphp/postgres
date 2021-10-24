@@ -11,14 +11,14 @@ final class ArrayParser
 {
     /**
      * @param string $data String representation of PostgreSQL array.
-     * @param callable|null $cast Callback to cast parsed values.
+     * @param callable $cast Callback to cast parsed values.
      * @param string $delimiter Delimiter used to separate values.
      *
      * @return array Parsed column data.
      *
      * @throws ParseException
      */
-    public function parse(string $data, callable $cast = null, string $delimiter = ','): array
+    public function parse(string $data, callable $cast, string $delimiter = ','): array
     {
         $data = \trim($data);
 
@@ -36,14 +36,14 @@ final class ArrayParser
      * Recursive generator parser yielding array values.
      *
      * @param string $data Remaining buffer data.
-     * @param callable|null $cast Callback to cast parsed values.
+     * @param callable $cast Callback to cast parsed values.
      * @param string $delimiter Delimiter used to separate values.
      *
      * @return \Generator
      *
      * @throws ParseException
      */
-    private function parser(string $data, callable $cast = null, string $delimiter = ','): \Generator
+    private function parser(string $data, callable $cast, string $delimiter = ','): \Generator
     {
         if ($data === '') {
             throw new ParseException("Unexpected end of data");
@@ -107,7 +107,7 @@ final class ArrayParser
                 }
             }
 
-            yield $cast ? $cast($yield) : $yield;
+            yield $cast($yield);
         } while ($end !== '}');
 
         return $data;

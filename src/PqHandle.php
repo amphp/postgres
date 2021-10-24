@@ -82,10 +82,9 @@ final class PqHandle implements Handle
             }
 
             $deferred->resolve($handle->getResult());
-            $deferred = null;
 
-            if (empty($listeners)) {
-                Loop::disable($watcher);
+            if (!$deferred && empty($listeners)) {
+                Loop::unreference($watcher);
             }
         });
 
@@ -110,7 +109,7 @@ final class PqHandle implements Handle
             Loop::disable($watcher);
         });
 
-        Loop::disable($this->poll);
+        Loop::unreference($this->poll);
         Loop::disable($this->await);
     }
 
@@ -182,7 +181,7 @@ final class PqHandle implements Handle
 
             $handle = $method(...$args);
 
-            Loop::enable($this->poll);
+            Loop::reference($this->poll);
             if (!$this->handle->flush()) {
                 Loop::enable($this->await);
             }
@@ -277,7 +276,7 @@ final class PqHandle implements Handle
         } else {
             $this->deferred = new Deferred;
 
-            Loop::enable($this->poll);
+            Loop::reference($this->poll);
             if (!$this->handle->flush()) {
                 Loop::enable($this->await);
             }
@@ -309,6 +308,20 @@ final class PqHandle implements Handle
                 $this->close();
                 throw new FailureException($result->errorMessage);
         }
+    }
+
+    private function release(): void
+    {
+        \assert(
+            $this->busy instanceof Deferred && $this->busy !== $this->deferred,
+            "Connection in invalid state when releasing"
+        );
+
+        while ($this->handle->busy && $this->handle->getResult());
+
+        $deferred = $this->busy;
+        $this->busy = null;
+        $deferred->resolve();
     }
 
     /**
@@ -350,9 +363,12 @@ final class PqHandle implements Handle
             return;
         }
 
-        unset($this->statements[$name]);
+        \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        $this->send(null, [$storage->statement, "deallocateAsync"]);
+        return $storage->promise = call(function () use ($storage, $name) {
+            yield from $this->send(null, [$storage->statement, "deallocateAsync"]);
+            unset($this->statements[$name]);
+        });
     }
 
     /**

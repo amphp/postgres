@@ -40,12 +40,9 @@ final class PgSqlConnection extends Connection implements Link
         }
 
         $deferred = new Deferred;
+        $id = \sha1($connectionConfig->getHost() . $connectionConfig->getPort() . $connectionConfig->getUser());
 
-        $callback = function (string $watcher, $resource) use ($connection, $deferred): void {
-            if ($deferred->isResolved()) {
-                return;
-            }
-
+        $callback = function ($watcher, $resource) use ($connection, $deferred, $id): void {
             switch (\pg_connect_poll($connection)) {
                 case \PGSQL_POLLING_READING: // Connection not ready, poll again.
                 case \PGSQL_POLLING_WRITING: // Still writing...
@@ -56,7 +53,7 @@ final class PgSqlConnection extends Connection implements Link
                     return;
 
                 case \PGSQL_POLLING_OK:
-                    $deferred->resolve(new self($connection, $resource));
+                    $deferred->resolve(new self($connection, $resource, $id));
                     return;
             }
         };
@@ -84,9 +81,10 @@ final class PgSqlConnection extends Connection implements Link
     /**
      * @param resource $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
+     * @param string $id Connection identifier for determining which cached type table to use.
      */
-    public function __construct($handle, $socket)
+    public function __construct($handle, $socket, string $id = '')
     {
-        parent::__construct(new PgSqlHandle($handle, $socket));
+        parent::__construct(new PgSqlHandle($handle, $socket, $id));
     }
 }
