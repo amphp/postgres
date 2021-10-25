@@ -4,12 +4,10 @@ namespace Amp\Postgres;
 
 use Amp\CancellationToken;
 use Amp\Deferred;
-use Amp\Failure;
-use Amp\Loop;
 use Amp\NullCancellationToken;
 use Amp\Sql\ConnectionException;
 use pq;
-use function Amp\await;
+use Revolt\EventLoop;
 
 final class PqConnection extends Connection implements Link
 {
@@ -26,7 +24,7 @@ final class PqConnection extends Connection implements Link
         try {
             $connection = new pq\Connection($connectionConfig->getConnectionString(), pq\Connection::ASYNC);
         } catch (pq\Exception $exception) {
-            return new Failure(new ConnectionException("Could not connect to PostgreSQL server", 0, $exception));
+            throw new ConnectionException("Could not connect to PostgreSQL server", 0, $exception);
         }
 
         $connection->nonblocking = true;
@@ -35,7 +33,7 @@ final class PqConnection extends Connection implements Link
         $deferred = new Deferred;
 
         $callback = function () use ($connection, $deferred): void {
-            if ($deferred->isResolved()) {
+            if ($deferred->isComplete()) {
                 return;
             }
 
@@ -45,29 +43,29 @@ final class PqConnection extends Connection implements Link
                     return;
 
                 case pq\Connection::POLLING_FAILED:
-                    $deferred->fail(new ConnectionException($connection->errorMessage));
+                    $deferred->error(new ConnectionException($connection->errorMessage));
                     return;
 
                 case pq\Connection::POLLING_OK:
-                    $deferred->resolve(new self($connection));
+                    $deferred->complete(new self($connection));
                     return;
             }
         };
 
-        $poll = Loop::onReadable($connection->socket, $callback);
-        $await = Loop::onWritable($connection->socket, $callback);
+        $poll = EventLoop::onReadable($connection->socket, $callback);
+        $await = EventLoop::onWritable($connection->socket, $callback);
 
-        $promise = $deferred->promise();
+        $future = $deferred->getFuture();
 
         $token = $token ?? new NullCancellationToken;
-        $id = $token->subscribe([$deferred, "fail"]);
+        $id = $token->subscribe([$deferred, "error"]);
 
         try {
-            return await($promise);
+            return $future->await();
         } finally {
             $token->unsubscribe($id);
-            Loop::cancel($poll);
-            Loop::cancel($await);
+            EventLoop::cancel($poll);
+            EventLoop::cancel($await);
         }
     }
 

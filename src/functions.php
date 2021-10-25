@@ -2,27 +2,23 @@
 
 namespace Amp\Postgres;
 
-use Amp\Loop;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
-
-const LOOP_CONNECTOR_IDENTIFIER = Connector::class . "\\Postgres";
+use Revolt\EventLoop;
 
 function connector(?Connector $connector = null): Connector
 {
-    if ($connector === null) {
-        $connector = Loop::getState(LOOP_CONNECTOR_IDENTIFIER);
-        if ($connector) {
-            return $connector;
-        }
+    static $map;
+    $map ??= new \WeakMap();
+    $driver = EventLoop::getDriver();
 
-        $connector = new TimeoutConnector;
+    if ($connector) {
+        return $map[$driver] = $connector;
     }
 
-    Loop::setState(LOOP_CONNECTOR_IDENTIFIER, $connector);
-    return $connector;
+    return $map[$driver] ??= new TimeoutConnector;
 }
 
 /**

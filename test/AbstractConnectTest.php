@@ -26,7 +26,7 @@ abstract class AbstractConnectTest extends AsyncTestCase
     {
         $connection = $this->connect(
             PostgresConnectionConfig::fromString('host=localhost user=postgres'),
-            new TimeoutCancellationToken(100)
+            new TimeoutCancellationToken(1)
         );
         $this->assertInstanceOf(Connection::class, $connection);
     }

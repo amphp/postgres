@@ -27,16 +27,6 @@ final class PooledListener implements Listener, \IteratorAggregate
         }
     }
 
-    public function continue(): ?Notification
-    {
-        return $this->listener->continue();
-    }
-
-    public function dispose(): void
-    {
-        $this->listener->dispose();
-    }
-
     public function getIterator(): \Traversable
     {
         // Using a Generator to keep a reference to $this.

@@ -2,8 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Delayed;
-use Amp\Loop;
+use Amp\Future;
 use Amp\PHPUnit\AsyncTestCase;
 use Amp\Pipeline;
 use Amp\Postgres\Link;
@@ -15,9 +14,8 @@ use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
-use function Amp\async;
-use function Amp\asyncCallable;
-use function Amp\await;
+use Revolt\EventLoop;
+use function Amp\coroutine;
 
 abstract class AbstractLinkTest extends AsyncTestCase
 {
@@ -32,8 +30,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     protected const INSERT_QUERY = 'INSERT INTO test VALUES ($1, $2, $3, $4, $5, $6)';
     protected const FIELD_COUNT = 6;
 
-    /** @var \Amp\Postgres\Connection */
-    protected $connection;
+    protected Link $link;
 
     /**
      * @return array Start test data for database.
@@ -48,18 +45,19 @@ abstract class AbstractLinkTest extends AsyncTestCase
         ];
     }
 
-    protected function verifyResult(ResultSet $result, array $data): \Generator
+    protected function verifyResult(Result $result, array $data): void
     {
-        $this->assertSame(self::FIELD_COUNT, $result->getFieldCount());
+        //$this->assertSame(self::FIELD_COUNT, $result->getFieldCount());
 
-        for ($i = 0; (yield $result->advance()) && isset($data[$i]); ++$i) {
-            $row = $result->getCurrent();
+        $i = 0;
+        foreach ($result as $row) {
             $this->assertSame($data[$i][0], $row['domain']);
             $this->assertSame($data[$i][1], $row['tld']);
             $this->assertSame($data[$i][2], $row['keys']);
             $this->assertSame($data[$i][3], $row['enabled']);
             $this->assertIsFloat($data[$i][4], $row['number']);
             $this->assertNull($row['nullable']);
+            ++$i;
         }
     }
 
@@ -73,13 +71,12 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->ignoreLoopWatchers();
         $this->link = $this->createLink('host=localhost user=postgres');
     }
 
-    public function cleanup(): void
+    public function tearDown(): void
     {
-        parent::cleanup();
+        parent::tearDown();
         $this->link->close();
     }
 
@@ -89,10 +86,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData();
 
-        for ($i = 0; $row = $result->continue(); ++$i) {
-            $this->assertSame($data[$i][0], $row['domain']);
-            $this->assertSame($data[$i][1], $row['tld']);
-        }
+        $this->verifyResult($result, $data);
 
         $this->assertNull($result->getNextResult());
     }
@@ -103,28 +97,20 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData();
 
-        for ($i = 0; $row = $result->continue(); ++$i) {
-            $this->assertSame($data[$i][0], $row['domain']);
-            $this->assertSame($data[$i][1], $row['tld']);
-        }
+        $this->verifyResult($result, $data);
 
         $result = $result->getNextResult();
 
         $this->assertInstanceOf(Result::class, $result);
 
-        for ($i = 0; $row = $result->continue(); ++$i) {
-            $this->assertSame($data[$i][0], $row['domain']);
-            $this->assertSame($data[$i][1], $row['tld']);
-        }
+        $this->verifyResult($result, $data);
 
         $this->assertNull($result->getNextResult());
     }
 
     public function testMultipleQueryWithCommandResultFirst()
     {
-        $result = $this->link->query("INSERT INTO test (domain, tld) VALUES ('gitlab', 'com'); SELECT * FROM test");
-
-        $this->assertNull($result->continue());
+        $result = $this->link->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2); SELECT * FROM test");
 
         $this->assertSame(1, $result->getRowCount());
 
@@ -133,30 +119,22 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->assertInstanceOf(Result::class, $result);
 
         $data = $this->getData();
-        $data[] = ['gitlab', 'com']; // Add inserted row to expected data.
+        $data[] = ['canon', 'jp', [1], true, 4.2]; // Add inserted row to expected data.
 
-        for ($i = 0; $row = $result->continue(); ++$i) {
-            $this->assertSame($data[$i][0], $row['domain']);
-            $this->assertSame($data[$i][1], $row['tld']);
-        }
+        $this->verifyResult($result, $data);
 
         $this->assertNull($result->getNextResult());
     }
 
     public function testMultipleQueryWithCommandResultSecond()
     {
-        $result = $this->link->query("SELECT * FROM test; INSERT INTO test (domain, tld) VALUES ('gitlab', 'com')");
+        $result = $this->link->query("SELECT * FROM test; INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2)");
 
         $data = $this->getData();
 
-        for ($i = 0; $row = $result->continue(); ++$i) {
-            $this->assertSame($data[$i][0], $row['domain']);
-            $this->assertSame($data[$i][1], $row['tld']);
-        }
+        $this->verifyResult($result, $data);
 
         $result = $result->getNextResult();
-
-        $this->assertNull($result->continue());
 
         $this->assertSame(1, $result->getRowCount());
 
@@ -171,29 +149,25 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         unset($result); // Force destruction of result object.
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $this->connection->query("SELECT * FROM test");
+        $result = $this->link->query("SELECT * FROM test");
 
-        $this->assertInstanceOf(ResultSet::class, $result);
+        $this->assertInstanceOf(Result::class, $result);
 
         $data = $this->getData();
 
-        yield from $this->verifyResult($result, $data);
+        $this->verifyResult($result, $data);
     }
 
-    public function testQueryWithCommandResult(): \Generator
+    public function testQueryWithCommandResult(): void
     {
-        /** @var CommandResult $result */
-        $result = yield $this->connection->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2)");
+        $result = $this->link->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2)");
 
-        $this->assertInstanceOf(CommandResult::class, $result);
-        $this->assertSame(1, $result->getAffectedRowCount());
+        $this->assertSame(1, $result->getRowCount());
     }
 
-    public function testQueryWithEmptyQuery(): Promise
+    public function testQueryWithEmptyQuery(): void
     {
         $this->expectException(QueryError::class);
-
         $this->link->query('');
     }
 
@@ -213,19 +187,15 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $query = "SELECT * FROM test WHERE domain=\$1";
 
-        /** @var Statement $statement */
         $statement = $this->link->prepare($query);
 
         $this->assertSame($query, $statement->getQuery());
 
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $statement->execute([$data[0]]);
+        $result = $statement->execute([$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
     }
 
     /**
@@ -241,12 +211,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame($query, $statement->getQuery());
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $statement->execute(['domain' => $data[0], 'tld' => $data[1]]);
+        $result = $statement->execute(['domain' => $data[0], 'tld' => $data[1]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
     }
 
     /**
@@ -262,12 +229,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame($query, $statement->getQuery());
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $statement->execute([$data[0], $data[1]]);
+        $result = $statement->execute([$data[0], $data[1]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
     }
 
     /**
@@ -283,12 +247,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame($query, $statement->getQuery());
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $statement->execute(['domain' => $data[0]]);
+        $result = $statement->execute(['domain' => $data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
     }
 
     /**
@@ -324,12 +285,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $statement2->execute([$data[0]]);
+        $result = $statement2->execute([$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
     }
 
     /**
@@ -339,37 +297,31 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $sql = "SELECT * FROM test WHERE domain=\$1";
 
-        $statement1 = async(fn() => $this->link->prepare($sql));
-        $statement2 = async(fn() => $this->link->prepare($sql));
+        $statement1 = coroutine(fn() => $this->link->prepare($sql));
+        $statement2 = coroutine(fn() => $this->link->prepare($sql));
 
-        [$statement1, $statement2] = await([$statement1, $statement2]);
+        [$statement1, $statement2] = Future\all([$statement1, $statement2]);
 
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $statement1->execute([$data[0]]);
+        $result = $statement1->execute([$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
 
         unset($statement1);
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $statement2->execute([$data[0]]);
+        $result = $statement2->execute([$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
     }
 
     public function testPrepareSimilarQueryReturnsDifferentStatements()
     {
-        $statement1 = async(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=\$1"));
+        $statement1 = coroutine(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=\$1"));
 
-        $statement2 = async(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=:domain"));
+        $statement2 = coroutine(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=:domain"));
 
-        [$statement1, $statement2] = await([$statement1, $statement2]);
+        [$statement1, $statement2] = Future\all([$statement1, $statement2]);
 
         $this->assertInstanceOf(Statement::class, $statement1);
         $this->assertInstanceOf(Statement::class, $statement2);
@@ -380,8 +332,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $results = [];
 
-        $results[] = Pipeline\toArray($statement1->execute([$data[0]]));
-        $results[] = Pipeline\toArray($statement2->execute(['domain' => $data[0]]));
+        $results[] = \iterator_to_array($statement1->execute([$data[0]]));
+        $results[] = \iterator_to_array($statement2->execute(['domain' => $data[0]]));
 
         foreach ($results as $result) {
             /** @var Result $result */
@@ -404,19 +356,16 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData();
 
-        yield from $this->verifyResult($result, $data);
+        $this->verifyResult($result, $data);
     }
 
     public function testExecute()
     {
         $data = $this->getData()[0];
 
-        /** @var \Amp\Postgres\ResultSet $result */
-        $result = yield $this->connection->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
+        $result = $this->link->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
     }
 
     /**
@@ -431,9 +380,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             ['domain' => $data[0]]
         );
 
-        $this->assertInstanceOf(ResultSet::class, $result);
-
-        yield from $this->verifyResult($result, [$data]);
+        $this->verifyResult($result, [$data]);
     }
 
     /**
@@ -463,19 +410,15 @@ abstract class AbstractLinkTest extends AsyncTestCase
      */
     public function testSimultaneousQuery()
     {
-        $callback = asyncCallable(function ($value) {
+        $callback = fn (int $value) => coroutine(function () use ($value): void {
             $result = $this->link->query("SELECT {$value} as value");
 
-            if ($value) {
-                new Delayed(100);
-            }
-
-            while ($row = $result->continue()) {
+            foreach ($result as $row) {
                 $this->assertEquals($value, $row['value']);
             }
         });
 
-        await([$callback(0), $callback(1)]);
+        Future\all([$callback(0), $callback(1)]);
     }
 
     /**
@@ -483,14 +426,16 @@ abstract class AbstractLinkTest extends AsyncTestCase
      */
     public function testSimultaneousQueryWithOneFailing()
     {
-        $callback = asyncCallable(function ($query) {
+        $callback = fn (string $query) => coroutine(function () use ($query): Result {
             $result = $this->link->query($query);
 
             $data = $this->getData();
 
-            for ($i = 0; $row = $result->continue(); ++$i) {
+            $i = 0;
+            foreach ($result as $row) {
                 $this->assertSame($data[$i][0], $row['domain']);
                 $this->assertSame($data[$i][1], $row['tld']);
+                ++$i;
             }
 
             return $result;
@@ -502,8 +447,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $successful = $callback("SELECT * FROM test");
             $failing = $callback("SELECT & FROM test");
 
-            $result = await($successful);
-            await($failing);
+            $result = $successful->await();
+            $failing->await();
         } catch (QueryError $exception) {
             $this->assertInstanceOf(Result::class, $result);
             return;
@@ -515,60 +460,38 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function testSimultaneousQueryAndPrepare()
     {
         $promises = [];
-        $promises[] = async(function () {
+        $promises[] = coroutine(function () {
             $result = $this->link->query("SELECT * FROM test");
-
             $data = $this->getData();
-
-            for ($i = 0; $row = $result->continue(); ++$i) {
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
-            }
+            $this->verifyResult($result, $data);
         });
 
-        $promises[] = async(function () {
+        $promises[] = coroutine(function () {
             $statement = ($this->link->prepare("SELECT * FROM test"));
-
             $result = $statement->execute();
-
             $data = $this->getData();
-
-            for ($i = 0; $row = $result->continue(); ++$i) {
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
-            }
+            $this->verifyResult($result, $data);
         });
 
-        await($promises);
+        Future\all($promises);
     }
 
     public function testSimultaneousPrepareAndExecute()
     {
-        $promises[] = async(function () {
+        $promises[] = coroutine(function () {
             $statement = $this->link->prepare("SELECT * FROM test");
-
             $result = $statement->execute();
-
             $data = $this->getData();
-
-            for ($i = 0; $row = $result->continue(); ++$i) {
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
-            }
+            $this->verifyResult($result, $data);
         });
 
-        $promises[] = async(function () {
+        $promises[] = coroutine(function () {
             $result = $this->link->execute("SELECT * FROM test");
-
             $data = $this->getData();
-
-            for ($i = 0; $row = $result->continue(); ++$i) {
-                $this->assertSame($data[$i][0], $row['domain']);
-                $this->assertSame($data[$i][1], $row['tld']);
-            }
+            $this->verifyResult($result, $data);
         });
 
-        await($promises);
+        Future\all($promises);
     }
 
     public function testTransaction()
@@ -590,13 +513,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $statement = $transaction->prepare("SELECT * FROM test WHERE domain=:domain");
         $result = $statement->execute(['domain' => $data[0]]);
 
-        $this->assertInstanceOf(Result::class, $result);
-
         unset($result); // Force destruction of result object.
 
         $result = $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
-
-        $this->assertInstanceOf(Result::class, $result);
 
         unset($result); // Force destruction of result object.
 
@@ -623,17 +542,15 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->assertInstanceOf(Listener::class, $listener);
         $this->assertSame($channel, $listener->getChannel());
 
-        Loop::delay(100, asyncCallable(function () use ($channel) {
+        EventLoop::delay(0.1, function () use ($channel): void {
             $this->link->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
             $this->link->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
-        }));
+        });
 
         $count = 0;
-        Loop::delay(200, asyncCallable(function () use ($listener) {
-            $listener->unlisten();
-        }));
+        EventLoop::delay(0.2, fn () => $listener->unlisten());
 
-        while ($notification = $listener->continue()) {
+        foreach ($listener as $notification) {
             $this->assertSame($notification->payload, (string) $count++);
         }
 
@@ -648,17 +565,15 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $channel = "test";
         $listener = $this->link->listen($channel);
 
-        Loop::delay(100, asyncCallable(function () use ($channel) {
+        EventLoop::delay(0.1, function () use ($channel) {
             $this->link->notify($channel, '0');
             $this->link->notify($channel, '1');
-        }));
+        });
 
         $count = 0;
-        Loop::delay(200, asyncCallable(function () use ($listener) {
-            $listener->unlisten();
-        }));
+        EventLoop::delay(0.2, fn () => $listener->unlisten());
 
-        while ($notification = $listener->continue()) {
+        foreach ($listener as $notification) {
             $this->assertSame($notification->payload, (string) $count++);
         }
 
@@ -674,19 +589,18 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->expectExceptionMessage('Already listening on channel');
 
         $channel = "test";
-        await([$this->link->listen($channel), $this->link->listen($channel)]);
+        Future\all([$this->link->listen($channel), $this->link->listen($channel)]);
     }
 
     public function testQueryAfterErroredQuery()
     {
         try {
-            $result = yield $this->connection->query("INSERT INTO test VALUES ('github', 'com', '{1, 2, 3}', true, 4.2)");
+            $result = $this->link->query("INSERT INTO test VALUES ('github', 'com', '{1, 2, 3}', true, 4.2)");
         } catch (QueryExecutionError $exception) {
             // Expected exception due to duplicate key.
         }
 
-        /** @var CommandResult $result */
-        $result = yield $this->connection->query("INSERT INTO test VALUES ('gitlab', 'com', '{1, 2, 3}', true, 4.2)");
+        $result = $this->link->query("INSERT INTO test VALUES ('gitlab', 'com', '{1, 2, 3}', true, 4.2)");
 
         $this->assertSame(1, $result->getRowCount());
     }

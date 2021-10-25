@@ -6,10 +6,9 @@ use Amp\Sql\QueryError;
 
 class QueryExecutionError extends QueryError
 {
-    /** @var mixed[] */
     private array $diagnostics;
 
-    public function __construct(string $message, array $diagnostics, string $query = '', \Throwable $previous = null)
+    public function __construct(string $message, array $diagnostics, string $query, \Throwable $previous = null)
     {
         parent::__construct($message, $query, $previous);
         $this->diagnostics = $diagnostics;

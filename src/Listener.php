@@ -2,15 +2,8 @@
 
 namespace Amp\Postgres;
 
-use Amp\Pipeline;
-
-interface Listener extends Pipeline
+interface Listener extends \Traversable
 {
-    /**
-     * @return Notification|null
-     */
-    public function continue(): ?Notification;
-
     /**
      * @return string Channel name.
      */

@@ -7,7 +7,6 @@ use Amp\Deferred;
 use Amp\Sql\Link;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
-use function Amp\await;
 
 abstract class Connection implements Link, Handle
 {
@@ -66,11 +65,15 @@ abstract class Connection implements Link, Handle
      */
     private function send(string $methodName, ...$args): Result|Statement|Listener
     {
-        while ($this->busy) {
-            await($this->busy->promise());
-        }
-
+        $this->awaitPending();
         return $this->handle->{$methodName}(...$args);
+    }
+
+    private function awaitPending(): void
+    {
+        while ($this->busy) {
+            $this->busy->getFuture()->await();
+        }
     }
 
     /**
@@ -79,7 +82,6 @@ abstract class Connection implements Link, Handle
     private function reserve(): void
     {
         \assert($this->busy === null);
-
         $this->busy = new Deferred;
     }
 
@@ -90,9 +92,8 @@ abstract class Connection implements Link, Handle
     {
         \assert($this->busy !== null);
 
-        $deferred = $this->busy;
+        $this->busy->complete(null);
         $this->busy = null;
-        $deferred->resolve();
     }
 
     /**
@@ -100,10 +101,7 @@ abstract class Connection implements Link, Handle
      */
     final public function query(string $sql): Result
     {
-        while ($this->busy) {
-            await($this->busy->promise());
-        }
-
+        $this->awaitPending();
         return $this->handle->query($sql);
     }
 
@@ -112,10 +110,7 @@ abstract class Connection implements Link, Handle
      */
     final public function execute(string $sql, array $params = []): Result
     {
-        while ($this->busy) {
-            await($this->busy->promise());
-        }
-
+        $this->awaitPending();
         return $this->handle->execute($sql, $params);
     }
 
@@ -124,10 +119,7 @@ abstract class Connection implements Link, Handle
      */
     final public function prepare(string $sql): Statement
     {
-        while ($this->busy) {
-            await($this->busy->promise());
-        }
-
+        $this->awaitPending();
         return $this->handle->prepare($sql);
     }
 
@@ -137,10 +129,7 @@ abstract class Connection implements Link, Handle
      */
     final public function notify(string $channel, string $payload = ""): Result
     {
-        while ($this->busy) {
-            await($this->busy->promise());
-        }
-
+        $this->awaitPending();
         return $this->handle->notify($channel, $payload);
     }
 
@@ -149,10 +138,7 @@ abstract class Connection implements Link, Handle
      */
     final public function listen(string $channel): Listener
     {
-        while ($this->busy) {
-            await($this->busy->promise());
-        }
-
+        $this->awaitPending();
         return $this->handle->listen($channel);
     }
 

@@ -2,12 +2,13 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
 use Amp\Sql\Common\PooledResult;
 use Amp\Sql\Common\PooledStatement;
+use Amp\Sql\FailureException;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\TransactionError;
+use Revolt\EventLoop;
 
 final class ConnectionTransaction implements Transaction
 {
@@ -54,7 +55,14 @@ final class ConnectionTransaction implements Transaction
     public function __destruct()
     {
         if ($this->handle && $this->handle->isAlive()) {
-            $this->rollback(); // Invokes $this->release callback.
+            $handle = $this->handle;
+            EventLoop::queue(static function () use ($handle): void {
+                try {
+                    $this->handle->isAlive() && $handle->query('ROLLBACK');
+                } catch (FailureException) {
+                    // Ignore failure if connection closes during query.
+                }
+            });
         }
     }
 
@@ -117,7 +125,7 @@ final class ConnectionTransaction implements Transaction
         try {
             $result = $this->handle->query($sql);
         } finally {
-            ($this->release)();
+            EventLoop::queue($this->release);
         }
 
         ++$this->refCount;
@@ -139,7 +147,7 @@ final class ConnectionTransaction implements Transaction
         try {
             $statement = $this->handle->prepare($sql);
         } catch (\Throwable $exception) {
-            ($this->release)();
+            EventLoop::queue($this->release);
             throw $exception;
         }
 
@@ -161,7 +169,7 @@ final class ConnectionTransaction implements Transaction
         try {
             $result = $this->handle->execute($sql, $params);
         } finally {
-            ($this->release)();
+            EventLoop::queue($this->release);
         }
 
         ++$this->refCount;
@@ -219,8 +227,6 @@ final class ConnectionTransaction implements Transaction
      * Creates a savepoint with the given identifier.
      *
      * @param string $identifier Savepoint identifier.
-     *
-     * @return Promise<Result>
      *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */

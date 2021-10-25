@@ -10,7 +10,7 @@
         "asynchronous",
         "async"
     ],
-    "homepage": "http://amphp.org",
+    "homepage": "https://amphp.org",
     "license": "MIT",
     "authors": [
         {
@@ -21,6 +21,7 @@
     "require": {
         "php": ">=8",
         "amphp/amp": "^3-dev",
+        "amphp/pipeline": "^1-dev",
         "amphp/sql": "^2-dev",
         "amphp/sql-common": "^2-dev"
     },
@@ -30,7 +31,7 @@
         "amphp/phpunit-util": "^2-dev",
         "phpunit/phpunit": "^9",
         "amphp/php-cs-fixer-config": "dev-master",
-        "psalm/phar": "^3.11@dev"
+        "psalm/phar": "^4.10"
     },
     "minimum-stability": "dev",
     "prefer-stable": true,

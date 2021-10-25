@@ -3,11 +3,11 @@
 namespace Amp\Postgres;
 
 use Amp\CancellationToken;
+use Amp\CancelledException;
 use Amp\Deferred;
-use Amp\Loop;
 use Amp\NullCancellationToken;
 use Amp\Sql\ConnectionException;
-use function Amp\await;
+use Revolt\EventLoop;
 
 final class PgSqlConnection extends Connection implements Link
 {
@@ -23,7 +23,7 @@ final class PgSqlConnection extends Connection implements Link
     {
         // @codeCoverageIgnoreStart
         /** @psalm-suppress UndefinedClass */
-        if (Loop::getDriver()->getHandle() instanceof \EvLoop) {
+        if (EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
         } // @codeCoverageIgnoreEnd
 
@@ -43,38 +43,46 @@ final class PgSqlConnection extends Connection implements Link
         $id = \sha1($connectionConfig->getHost() . $connectionConfig->getPort() . $connectionConfig->getUser());
 
         $callback = function ($watcher, $resource) use ($connection, $deferred, $id): void {
+            if ($deferred->isComplete()) {
+                return;
+            }
+
             switch (\pg_connect_poll($connection)) {
                 case \PGSQL_POLLING_READING: // Connection not ready, poll again.
                 case \PGSQL_POLLING_WRITING: // Still writing...
                     return;
 
                 case \PGSQL_POLLING_FAILED:
-                    $deferred->fail(new ConnectionException(\pg_last_error($connection)));
+                    $deferred->error(new ConnectionException(\pg_last_error($connection)));
                     return;
 
                 case \PGSQL_POLLING_OK:
-                    $deferred->resolve(new self($connection, $resource, $id));
+                    $deferred->complete(new self($connection, $resource, $id));
                     return;
             }
         };
 
-        $poll = Loop::onReadable($socket, $callback);
-        $await = Loop::onWritable($socket, $callback);
+        $poll = EventLoop::onReadable($socket, $callback);
+        $await = EventLoop::onWritable($socket, $callback);
 
-        $promise = $deferred->promise();
+        $future = $deferred->getFuture();
 
         $token = $token ?? new NullCancellationToken;
-        $id = $token->subscribe([$deferred, "fail"]);
+        $id = $token->subscribe(function (CancelledException $exception) use ($deferred): void {
+            if (!$deferred->isComplete()) {
+                $deferred->error($exception);
+            }
+        });
 
         try {
-            return await($promise);
+            return $future->await();
         } catch (\Throwable $exception) {
             \pg_close($connection);
             throw $exception;
         } finally {
             $token->unsubscribe($id);
-            Loop::cancel($poll);
-            Loop::cancel($await);
+            EventLoop::cancel($poll);
+            EventLoop::cancel($await);
         }
     }
 

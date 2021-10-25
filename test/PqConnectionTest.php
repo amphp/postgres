@@ -40,33 +40,34 @@ class PqConnectionTest extends AbstractConnectionTest
         return new PqConnection($this->handle);
     }
 
-    public function cleanup(): void
+    public function tearDown(): void
     {
         $this->handle->exec("ROLLBACK");
         $this->handle->exec(self::DROP_QUERY);
+
+        parent::tearDown();
     }
 
-    public function testBufferedResults()
+    public function testBufferedResults(): void
     {
-        Loop::run(function () {
-            \assert($this->connection instanceof PqConnection);
-            $this->connection->shouldBufferResults();
+        \assert($this->link instanceof PqConnection);
+        $this->link->shouldBufferResults();
 
-            $this->assertTrue($this->connection->isBufferingResults());
+        $this->assertTrue($this->link->isBufferingResults());
 
-            $result = yield $this->connection->query("SELECT * FROM test");
-            \assert($result instanceof PqBufferedResultSet);
+        $result = $this->link->query("SELECT * FROM test");
+        \assert($result instanceof PqBufferedResultSet);
 
-            $data = $this->getData();
-            yield from $this->verifyResult($result, $data);
-        });
+        $data = $this->getData();
+        $this->verifyResult($result, $data);
     }
 
     /**
      * @depends testBufferedResults
      */
-    public function testUnbufferedResults()
+    public function testUnbufferedResults(): void
     {
+        \assert($this->link instanceof PqConnection);
         $this->link->shouldNotBufferResults();
 
         $this->assertFalse($this->link->isBufferingResults());
@@ -75,6 +76,6 @@ class PqConnectionTest extends AbstractConnectionTest
         \assert($result instanceof PqUnbufferedResultSet);
 
         $data = $this->getData();
-        yield from $this->verifyResult($result, $data);
+        $this->verifyResult($result, $data);
     }
 }

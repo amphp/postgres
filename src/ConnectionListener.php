@@ -2,14 +2,12 @@
 
 namespace Amp\Postgres;
 
-use Amp\Pipeline;
+use Amp\Pipeline\Pipeline;
 
 final class ConnectionListener implements Listener, \IteratorAggregate
 {
-    /** @var Pipeline */
     private Pipeline $pipeline;
 
-    /** @var string */
     private string $channel;
 
     /** @var callable|null */
@@ -35,25 +33,8 @@ final class ConnectionListener implements Listener, \IteratorAggregate
     }
 
     /**
-     * @inheritDoc
+     * @return \Traversable<int, Notification>
      */
-    public function continue(): ?Notification
-    {
-        return $this->pipeline->continue();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function dispose(): void
-    {
-        $this->pipeline->dispose();
-
-        if ($this->unlisten) {
-            $this->unlisten();
-        }
-    }
-
     public function getIterator(): \Traversable
     {
         yield from $this->pipeline;

@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Promise;
+use Amp\Future;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\ConnectionConfig;
@@ -11,13 +11,12 @@ use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
 use Amp\Sql\Transaction as SqlTransaction;
-use function Amp\async;
-use function Amp\await;
+use function Amp\coroutine;
 
 final class Pool extends ConnectionPool implements Link
 {
-    /** @var Connection|Promise|null Connection used for notification listening. */
-    private Connection|Promise|null $listeningConnection = null;
+    /** @var Connection|Future|null Connection used for notification listening. */
+    private Connection|Future|null $listeningConnection = null;
 
     /** @var int Number of listeners on listening connection. */
     private int $listenerCount = 0;
@@ -80,6 +79,7 @@ final class Pool extends ConnectionPool implements Link
     protected function pop(): Connection
     {
         $connection = parent::pop();
+		\assert($connection instanceof Connection);
 
         if ($this->resetConnections) {
             $connection->query("DISCARD ALL");
@@ -113,11 +113,11 @@ final class Pool extends ConnectionPool implements Link
         ++$this->listenerCount;
 
         if ($this->listeningConnection === null) {
-            $this->listeningConnection = async(fn() => $this->pop());
+            $this->listeningConnection = coroutine(fn() => $this->pop());
         }
 
-        if ($this->listeningConnection instanceof Promise) {
-            $this->listeningConnection = await($this->listeningConnection);
+        if ($this->listeningConnection instanceof Future) {
+            $this->listeningConnection = $this->listeningConnection->await();
         }
 
         try {

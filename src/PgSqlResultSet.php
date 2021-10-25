@@ -2,11 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\AsyncGenerator;
-use Amp\Promise;
+use Amp\Future;
+use Amp\Pipeline\AsyncGenerator;
 use Amp\Sql\FailureException;
 use Amp\Sql\Result;
-use function Amp\await;
 
 final class PgSqlResultSet implements Result, \IteratorAggregate
 {
@@ -16,22 +15,23 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 
     private int $rowCount;
 
-    /** @var array<int, array{string, string}> */
-    private $types;
-
-    /** @var Promise<Result|null> */
-    private Promise $nextResult;
+    /** @var Future<Result|null> */
+    private Future $nextResult;
 
     /**
      * @param resource $handle PostgreSQL result resource.
      * @param array<int, array{string, string}> $types
+     * @param Future<Result|null> $nextResult
      */
-    public function __construct($handle, Promise $nextResult)
+    public function __construct($handle, array $types, Future $nextResult)
     {
-        $this->handle = $handle;
-        $this->types = $types;
+        if (!isset(self::$parser)) {
+            self::$parser = new Internal\ArrayParser;
+        }
 
-        $numFields = \pg_num_fields($this->handle);
+        $fieldNames = [];
+        $fieldTypes = [];
+        $numFields = \pg_num_fields($handle);
         for ($i = 0; $i < $numFields; ++$i) {
             $fieldNames[] = \pg_field_name($handle, $i);
             $fieldTypes[] = \pg_field_type_oid($handle, $i);
@@ -40,7 +40,12 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
         $this->rowCount = \pg_num_rows($handle);
         $this->nextResult = $nextResult;
 
-        $this->generator = new AsyncGenerator(static function () use ($handle, $fieldNames, $fieldTypes): \Generator {
+        $this->generator = new AsyncGenerator(static function () use (
+            $handle,
+            $types,
+            $fieldNames,
+            $fieldTypes
+        ): \Generator {
             $position = 0;
 
             try {
@@ -51,28 +56,12 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
                         throw new FailureException(\pg_result_error($handle));
                     }
 
-                    yield self::processRow($fieldNames, $fieldTypes, $result);
+                    yield self::processRow($types, $fieldNames, $fieldTypes, $result);
                 }
             } finally {
                 \pg_free_result($handle);
             }
         });
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function continue(): ?array
-    {
-        return $this->generator->continue();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function dispose(): void
-    {
-        $this->generator->dispose();
     }
 
     /**
@@ -88,7 +77,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
      */
     public function getNextResult(): ?Result
     {
-        return await($this->nextResult);
+        return $this->nextResult->await();
     }
 
     /**
@@ -100,6 +89,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
     }
 
     /**
+     * @param array<int, array{string, string}> $types
      * @param array<int, string> $fieldNames
      * @param array<int, int> $fieldTypes
      * @param array<int, mixed> $result
@@ -107,7 +97,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
      * @return array<string, mixed>
      * @throws ParseException
      */
-    private static function processRow(array $fieldNames, array $fieldTypes, array $result): array
+    private static function processRow(array $types, array $fieldNames, array $fieldTypes, array $result): array
     {
         $columnCount = \count($result);
         for ($column = 0; $column < $columnCount; ++$column) {
@@ -115,7 +105,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
                 continue;
             }
 
-            $result[$column] = self::cast($fieldTypes, $column, $result[$column]);
+            $result[$column] = self::cast($types, $fieldTypes[$column], $result[$column]);
         }
 
         return \array_combine($fieldNames, $result);
@@ -125,6 +115,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
      * @see https://github.com/postgres/postgres/blob/REL_14_STABLE/src/include/catalog/pg_type.dat for OID types.
      * @see https://www.postgresql.org/docs/14/catalog-pg-type.html for pg_type catalog docs.
      *
+     * @param array<int, array{string, string}> $types
      * @param int $oid
      * @param string $value
      *
@@ -132,37 +123,22 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
      *
      * @throws ParseException
      */
-    private static function cast(array $fieldTypes, int $column, string $value)
+    private static function cast(array $types, int $oid, string $value): mixed
     {
-        [$type, $delimiter, $element] = $this->types[$oid] ?? ['S', ',', 0];
+        [$type, $delimiter, $element] = $types[$oid] ?? ['S', ',', 0];
 
-        switch ($type) {
-            case 'A': // Arrays
-                return $this->parser->parse($value, function (string $data) use ($element) {
-                    return $this->cast($element, $data);
-                }, $delimiter);
-
-            case 'B': // Binary
-                return $value === 't';
-
-            case 'N': // Numeric
-                switch ($oid) {
-                    case 700: // float4
-                    case 701: // float8
-                    case 790: // money
-                    case 1700: // numeric
-                        return (float) $value;
-
-                    default: // Cast all other numeric types to an integer.
-                        return (int) $value;
-                }
-
-            default: // Return all other types as strings.
-                return $value;
-        }
+        return match ($type) {
+            'A' => self::$parser->parse( // Array
+                $value,
+                static fn (string $data) => self::cast($types, $element, $data),
+                $delimiter,
+            ),
+            'B' => $value === 't', // Boolean
+            'N' => match ($oid) { // Numeric
+                700, 701, 790, 1700 => (float) $value, // float4, float8, money, and numeric to float
+                default => (int) $value, // All other numeric types cast to an integer
+            },
+            default => $value, // Return a string for all other types
+        };
     }
 }
-
-(function () {
-    self::$parser = new Internal\ArrayParser;
-})->bindTo(null, PgSqlResultSet::class)();

@@ -9,7 +9,7 @@ use Amp\TimeoutCancellationToken;
 
 final class TimeoutConnector implements Connector
 {
-    const DEFAULT_TIMEOUT = 5000;
+    const DEFAULT_TIMEOUT = 5;
 
     private int $timeout;
 

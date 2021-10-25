@@ -2,11 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\AsyncGenerator;
-use Amp\Promise;
+use Amp\Future;
+use Amp\Pipeline\AsyncGenerator;
 use Amp\Sql\Result;
 use pq;
-use function Amp\await;
 
 final class PqBufferedResultSet implements Result, \IteratorAggregate
 {
@@ -14,14 +13,14 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
 
     private int $rowCount;
 
-    /** @var Promise<Result|null> */
-    private Promise $nextResult;
+    /** @var Future<Result|null> */
+    private Future $nextResult;
 
     /**
      * @param pq\Result $result PostgreSQL result object.
-     * @param Promise<Result|null> $nextResult Promise for next result set.
+     * @param Future<Result|null> $nextResult Promise for next result set.
      */
-    public function __construct(pq\Result $result, Promise $nextResult)
+    public function __construct(pq\Result $result, Future $nextResult)
     {
         $this->rowCount = $result->numRows;
         $this->nextResult = $nextResult;
@@ -39,22 +38,6 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
     /**
      * @inheritDoc
      */
-    public function continue(): ?array
-    {
-        return $this->generator->continue();
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function dispose(): void
-    {
-        $this->generator->dispose();
-    }
-
-    /**
-     * @inheritDoc
-     */
     public function getIterator(): \Traversable
     {
         return $this->generator->getIterator();
@@ -65,7 +48,7 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
      */
     public function getNextResult(): ?Result
     {
-        return await($this->nextResult);
+        return $this->nextResult->await();
     }
 
     /**

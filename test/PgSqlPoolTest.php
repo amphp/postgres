@@ -2,12 +2,12 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Loop;
 use Amp\Postgres\ConnectionConfig;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\Pool;
 use Amp\Sql\Connector;
+use Revolt\EventLoop;
 
 /**
  * @requires extension pgsql
@@ -21,7 +21,7 @@ class PgSqlPoolTest extends AbstractLinkTest
 
     public function createLink(string $connectionString): Link
     {
-        if (Loop::getDriver()->getHandle() instanceof \EvLoop) {
+        if (EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
             $this->markTestSkipped("ext-pgsql is not compatible with pecl-ev");
         }
 
@@ -64,7 +64,7 @@ class PgSqlPoolTest extends AbstractLinkTest
         return $pool;
     }
 
-    public function cleanup(): void
+    public function tearDown(): void
     {
         foreach ($this->handles as $handle) {
             \pg_get_result($handle); // Consume any leftover results from test.
@@ -77,6 +77,6 @@ class PgSqlPoolTest extends AbstractLinkTest
             \pg_close($handle);
         }
 
-        parent::cleanup();
+        parent::tearDown();
     }
 }
