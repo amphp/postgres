@@ -16,6 +16,8 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
     /** @var Future<Result|null> */
     private Future $nextResult;
 
+    private int $columnCount;
+
     /**
      * @param callable():Future<\pq\Result|null> $fetch Function to fetch next result row.
      * @param \pq\Result $result Initial pq\Result result object.
@@ -24,6 +26,8 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
     public function __construct(callable $fetch, pq\Result $result, Future $nextResult)
     {
         $this->nextResult = $nextResult;
+        $this->columnCount = $result->numCols;
+
         $this->generator = new AsyncGenerator(static function () use ($result, $fetch): \Generator {
             try {
                 do {
@@ -70,5 +74,13 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
     public function getRowCount(): ?int
     {
         return null; // Unbuffered result sets do not have a total row count.
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getColumnCount(): int
+    {
+        return $this->columnCount;
     }
 }

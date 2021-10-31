@@ -13,6 +13,8 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
 
     private int $rowCount;
 
+    private int $columnCount;
+
     /** @var Future<Result|null> */
     private Future $nextResult;
 
@@ -23,6 +25,7 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
     public function __construct(pq\Result $result, Future $nextResult)
     {
         $this->rowCount = $result->numRows;
+        $this->columnCount = $result->numCols;
         $this->nextResult = $nextResult;
 
         $this->generator = new AsyncGenerator(static function () use ($result): \Generator {
@@ -57,5 +60,13 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
     public function getRowCount(): int
     {
         return $this->rowCount;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getColumnCount(): int
+    {
+        return $this->columnCount;
     }
 }

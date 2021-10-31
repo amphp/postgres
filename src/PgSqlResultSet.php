@@ -15,6 +15,8 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 
     private int $rowCount;
 
+    private int $columnCount;
+
     /** @var Future<Result|null> */
     private Future $nextResult;
 
@@ -38,6 +40,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
         }
 
         $this->rowCount = \pg_num_rows($handle);
+        $this->columnCount = \pg_num_fields($handle);
         $this->nextResult = $nextResult;
 
         $this->generator = new AsyncGenerator(static function () use (
@@ -86,6 +89,14 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
     public function getRowCount(): int
     {
         return $this->rowCount;
+    }
+
+    /**
+     * @return int Number of columns returned.
+     */
+    public function getColumnCount(): int
+    {
+        return $this->columnCount;
     }
 
     /**
