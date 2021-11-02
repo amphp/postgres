@@ -484,7 +484,9 @@ final class PqHandle implements Handle
      */
     private function unlisten(string $channel): void
     {
-        \assert(isset($this->listeners[$channel]), "Not listening on that channel");
+        if (!isset($this->listeners[$channel])) {
+            return;
+        }
 
         $source = $this->listeners[$channel];
         unset($this->listeners[$channel]);

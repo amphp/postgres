@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres;
 
+use Revolt\EventLoop;
+
 final class PooledListener implements Listener, \IteratorAggregate
 {
     private Listener $listener;
@@ -22,8 +24,16 @@ final class PooledListener implements Listener, \IteratorAggregate
 
     public function __destruct()
     {
-        if ($this->listener->isListening()) {
-            $this->unlisten(); // Invokes $this->release callback.
+        if ($this->listener->isListening() && $this->release) {
+            $listener = $this->listener;
+            $release = $this->release;
+            EventLoop::queue(static function () use ($listener, $release): void {
+                try {
+                    $listener->unlisten();
+                } finally {
+                    $release();
+                }
+            });
         }
     }
 
@@ -46,7 +56,7 @@ final class PooledListener implements Listener, \IteratorAggregate
     public function unlisten(): void
     {
         if (!$this->release) {
-            throw new \Error("Already unlistened on this channel");
+            return;
         }
 
         $release = $this->release;

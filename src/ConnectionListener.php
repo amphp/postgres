@@ -2,11 +2,11 @@
 
 namespace Amp\Postgres;
 
-use Amp\Pipeline\Pipeline;
+use Revolt\EventLoop;
 
 final class ConnectionListener implements Listener, \IteratorAggregate
 {
-    private Pipeline $pipeline;
+    private \Traversable $source;
 
     private string $channel;
 
@@ -14,13 +14,13 @@ final class ConnectionListener implements Listener, \IteratorAggregate
     private $unlisten;
 
     /**
-     * @param Pipeline $pipeline Pipeline emitting notificatons on the channel.
+     * @param \Traversable $source Traversable of notificatons on the channel.
      * @param string $channel Channel name.
-     * @param callable(string $channel):  $unlisten Function invoked to unlisten from the channel.
+     * @param callable(string):void $unlisten Function invoked to unlisten from the channel.
      */
-    public function __construct(Pipeline $pipeline, string $channel, callable $unlisten)
+    public function __construct(\Traversable $source, string $channel, callable $unlisten)
     {
-        $this->pipeline = $pipeline;
+        $this->source = $source;
         $this->channel = $channel;
         $this->unlisten = $unlisten;
     }
@@ -28,7 +28,7 @@ final class ConnectionListener implements Listener, \IteratorAggregate
     public function __destruct()
     {
         if ($this->unlisten) {
-            $this->unlisten(); // Invokes $this->queue->complete().
+            EventLoop::queue($this->unlisten, $this->channel);
         }
     }
 
@@ -37,7 +37,7 @@ final class ConnectionListener implements Listener, \IteratorAggregate
      */
     public function getIterator(): \Traversable
     {
-        yield from $this->pipeline;
+        return $this->source;
     }
 
     /**
@@ -64,7 +64,7 @@ final class ConnectionListener implements Listener, \IteratorAggregate
     public function unlisten(): void
     {
         if (!$this->unlisten) {
-            throw new \Error("Already unlistened on this channel");
+            return;
         }
 
         $unlisten = $this->unlisten;
