@@ -31,23 +31,20 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
         $this->generator = new AsyncGenerator(static function () use ($result, $fetch): \Generator {
             try {
                 do {
-                    $future = $fetch();
                     $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
                     yield $result->fetchRow(pq\Result::FETCH_ASSOC);
-                    $result = $future->await();
+                    $result = $fetch();
                 } while ($result instanceof pq\Result);
             } finally {
                 if ($result === null) {
                     return; // Result fully consumed.
                 }
 
-                EventLoop::queue(static function () use ($future, $fetch): void {
+                EventLoop::queue(static function () use ($fetch): void {
                     try {
                         // Discard remaining rows in the result set.
-                        while (($result = $future->await()) instanceof pq\Result) {
-                            $future = $fetch();
-                        }
-                    } catch (\Throwable $exception) {
+                        while ($fetch() instanceof pq\Result) ;
+                    } catch (\Throwable) {
                         // Ignore errors while discarding result.
                     }
                 });

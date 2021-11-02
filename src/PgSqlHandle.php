@@ -78,18 +78,17 @@ final class PgSqlHandle implements Handle
         ): void {
             $lastUsedAt = \time();
 
-            if (\pg_connection_status($handle) === \PGSQL_CONNECTION_BAD) {
-                $handle = null;
+            try {
+                if (\pg_connection_status($handle) !== \PGSQL_CONNECTION_OK) {
+                    throw new ConnectionException("The connection closed during the operation");
+                }
 
-                $deferred?->error(new ConnectionException("The connection closed during the operation"));
-                $deferred = null;
-            }
-
-            if (!\pg_consume_input($handle)) {
+                if (!\pg_consume_input($handle)) {
+                    throw new ConnectionException(\pg_last_error($handle));
+                }
+            } catch (ConnectionException $exception) {
                 $handle = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
-
-                $exception = new ConnectionException(\pg_last_error($handle));
 
                 foreach ($listeners as $listener) {
                     $listener->error($exception);

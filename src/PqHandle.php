@@ -50,11 +50,20 @@ final class PqHandle implements Handle
         $deferred = &$this->deferred;
         $listeners = &$this->listeners;
 
-        $this->poll = EventLoop::onReadable($this->handle->socket, static function ($watcher) use (&$deferred, &$lastUsedAt, &$listeners, &$handle): void {
+        $this->poll = EventLoop::onReadable($this->handle->socket, static function ($watcher) use (
+            &$deferred, &$lastUsedAt, &$listeners, &$handle
+        ): void {
             $lastUsedAt = \time();
 
-            if ($handle->poll() === pq\Connection::POLLING_FAILED) {
-                $exception = new ConnectionException($handle->errorMessage);
+            try {
+                if ($handle->status !== pq\Connection::OK) {
+                    throw new ConnectionException("The connection closed during the operation");
+                }
+
+                if ($handle->poll() === pq\Connection::POLLING_FAILED) {
+                    throw new ConnectionException($handle->errorMessage);
+                }
+            } catch (ConnectionException $exception) {
                 $handle = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
@@ -160,7 +169,7 @@ final class PqHandle implements Handle
         while ($this->busy) {
             try {
                 $this->busy->getFuture()->await();
-            } catch (\Throwable $exception) {
+            } catch (\Throwable) {
                 // Ignore failure from another operation.
             }
         }
@@ -222,7 +231,7 @@ final class PqHandle implements Handle
             case pq\Result::SINGLE_TUPLE:
                 $this->busy = new Deferred;
                 return new PqUnbufferedResultSet(
-                    fn () => coroutine(fn () => $this->fetch($sql)),
+                    fn () => $this->fetch($sql),
                     $result,
                     $this->busy->getFuture()
                 );
@@ -301,19 +310,6 @@ final class PqHandle implements Handle
                 $this->close();
                 throw new FailureException($result->errorMessage);
         }
-    }
-
-    private function release(): void
-    {
-        \assert(
-            $this->busy instanceof Deferred && $this->busy !== $this->deferred,
-            "Connection in invalid state when releasing"
-        );
-
-        while ($this->handle->busy && $this->handle->getResult()) ;
-
-        $this->busy->complete(null);
-        $this->busy = null;
     }
 
     /**
