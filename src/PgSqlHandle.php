@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Deferred;
 use Amp\Future;
-use Amp\Pipeline\Subject;
+use Amp\Pipeline\Emitter;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
@@ -12,7 +12,7 @@ use Amp\Sql\QueryError;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Revolt\EventLoop;
-use function Amp\coroutine;
+use function Amp\launch;
 
 final class PgSqlHandle implements Handle
 {
@@ -46,7 +46,7 @@ final class PgSqlHandle implements Handle
 
     private string $await;
 
-    /** @var Subject[] */
+    /** @var Emitter[] */
     private array $listeners = [];
 
     /** @var object[] Anonymous class using Struct trait. */
@@ -350,7 +350,7 @@ final class PgSqlHandle implements Handle
             return;
         }
 
-        $storage->future = coroutine(function () use ($storage, $name): void {
+        $storage->future = launch(function () use ($storage, $name): void {
             $this->query(\sprintf("DEALLOCATE %s", $name));
             unset($this->statements[$name]);
         });
@@ -421,7 +421,7 @@ final class PgSqlHandle implements Handle
         $this->statements[$name] = $storage;
 
         try {
-            ($storage->future = coroutine(function () use ($name, $modifiedSql, $sql) {
+            ($storage->future = launch(function () use ($name, $modifiedSql, $sql) {
                 $result = $this->send("pg_send_prepare", $name, $modifiedSql);
 
                 switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
@@ -476,7 +476,7 @@ final class PgSqlHandle implements Handle
             throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
         }
 
-        $this->listeners[$channel] = $source = new Subject;
+        $this->listeners[$channel] = $source = new Emitter;
 
         try {
             $this->query(\sprintf("LISTEN %s", $this->quoteName($channel)));

@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Deferred;
 use Amp\Future;
-use Amp\Pipeline\Subject;
+use Amp\Pipeline\Emitter;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
@@ -13,7 +13,7 @@ use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use pq;
 use Revolt\EventLoop;
-use function Amp\coroutine;
+use function Amp\launch;
 
 final class PqHandle implements Handle
 {
@@ -27,7 +27,7 @@ final class PqHandle implements Handle
 
     private string $await;
 
-    /** @var Subject[] */
+    /** @var Emitter[] */
     private array $listeners = [];
 
     /** @var object[] Anonymous class using Struct trait. */
@@ -352,7 +352,7 @@ final class PqHandle implements Handle
 
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        $storage->future = coroutine(function () use ($storage, $name): void {
+        $storage->future = launch(function () use ($storage, $name): void {
             $this->send(null, [$storage->statement, "deallocateAsync"]);
             unset($this->statements[$name]);
         });
@@ -423,7 +423,7 @@ final class PqHandle implements Handle
         $this->statements[$name] = $storage;
 
         try {
-            $storage->statement = ($storage->future = coroutine(
+            $storage->statement = ($storage->future = launch(
                 fn () => $this->send($sql, [$this->handle, "prepareAsync"], $name, $modifiedSql)
             ))->await();
         } catch (\Throwable $exception) {
@@ -453,7 +453,7 @@ final class PqHandle implements Handle
             throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
         }
 
-        $this->listeners[$channel] = $source = new Subject;
+        $this->listeners[$channel] = $source = new Emitter;
 
         try {
             $this->send(

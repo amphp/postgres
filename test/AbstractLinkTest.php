@@ -4,7 +4,6 @@ namespace Amp\Postgres\Test;
 
 use Amp\Future;
 use Amp\PHPUnit\AsyncTestCase;
-use Amp\Pipeline;
 use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryExecutionError;
@@ -15,7 +14,7 @@ use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
 use Revolt\EventLoop;
-use function Amp\coroutine;
+use function Amp\launch;
 
 abstract class AbstractLinkTest extends AsyncTestCase
 {
@@ -297,8 +296,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $sql = "SELECT * FROM test WHERE domain=\$1";
 
-        $statement1 = coroutine(fn() => $this->link->prepare($sql));
-        $statement2 = coroutine(fn() => $this->link->prepare($sql));
+        $statement1 = launch(fn() => $this->link->prepare($sql));
+        $statement2 = launch(fn() => $this->link->prepare($sql));
 
         [$statement1, $statement2] = Future\all([$statement1, $statement2]);
 
@@ -317,9 +316,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testPrepareSimilarQueryReturnsDifferentStatements()
     {
-        $statement1 = coroutine(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=\$1"));
+        $statement1 = launch(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=\$1"));
 
-        $statement2 = coroutine(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=:domain"));
+        $statement2 = launch(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=:domain"));
 
         [$statement1, $statement2] = Future\all([$statement1, $statement2]);
 
@@ -410,7 +409,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
      */
     public function testSimultaneousQuery()
     {
-        $callback = fn (int $value) => coroutine(function () use ($value): void {
+        $callback = fn (int $value) => launch(function () use ($value): void {
             $result = $this->link->query("SELECT {$value} as value");
 
             foreach ($result as $row) {
@@ -426,7 +425,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
      */
     public function testSimultaneousQueryWithOneFailing()
     {
-        $callback = fn (string $query) => coroutine(function () use ($query): Result {
+        $callback = fn (string $query) => launch(function () use ($query): Result {
             $result = $this->link->query($query);
 
             $data = $this->getData();
@@ -460,13 +459,13 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function testSimultaneousQueryAndPrepare()
     {
         $promises = [];
-        $promises[] = coroutine(function () {
+        $promises[] = launch(function () {
             $result = $this->link->query("SELECT * FROM test");
             $data = $this->getData();
             $this->verifyResult($result, $data);
         });
 
-        $promises[] = coroutine(function () {
+        $promises[] = launch(function () {
             $statement = ($this->link->prepare("SELECT * FROM test"));
             $result = $statement->execute();
             $data = $this->getData();
@@ -478,14 +477,14 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testSimultaneousPrepareAndExecute()
     {
-        $promises[] = coroutine(function () {
+        $promises[] = launch(function () {
             $statement = $this->link->prepare("SELECT * FROM test");
             $result = $statement->execute();
             $data = $this->getData();
             $this->verifyResult($result, $data);
         });
 
-        $promises[] = coroutine(function () {
+        $promises[] = launch(function () {
             $result = $this->link->execute("SELECT * FROM test");
             $data = $this->getData();
             $this->verifyResult($result, $data);
