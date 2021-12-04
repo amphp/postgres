@@ -166,7 +166,7 @@ final class PgSqlHandle implements Handle
      */
     public function __destruct()
     {
-        $this->close();
+        $this->free();
     }
 
     private function fetchTypes(): array
@@ -189,17 +189,21 @@ final class PgSqlHandle implements Handle
      */
     public function close(): void
     {
+        if ($this->handle instanceof \PgSql\Connection || \is_resource($this->handle)) {
+            \pg_close($this->handle);
+            $this->handle = null;
+        }
+
+        $this->free();
+    }
+
+    private function free(): void
+    {
         $this->deferred?->error(new ConnectionException("The connection was closed"));
         $this->deferred = null;
 
-        if ($this->handle instanceof \PgSql\Connection || \is_resource($this->handle)) {
-            //\pg_close($this->handle);
-        }
-
         EventLoop::cancel($this->poll);
         EventLoop::cancel($this->await);
-
-        $this->handle = null;
     }
 
     /**
