@@ -11,7 +11,7 @@ use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
 use Amp\Sql\Transaction as SqlTransaction;
-use function Amp\launch;
+use function Amp\async;
 
 final class Pool extends ConnectionPool implements Link
 {
@@ -113,7 +113,7 @@ final class Pool extends ConnectionPool implements Link
         ++$this->listenerCount;
 
         if ($this->listeningConnection === null) {
-            $this->listeningConnection = launch(fn() => $this->pop());
+            $this->listeningConnection = async(fn() => $this->pop());
         }
 
         if ($this->listeningConnection instanceof Future) {

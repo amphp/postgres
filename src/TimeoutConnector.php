@@ -5,7 +5,7 @@ namespace Amp\Postgres;
 use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
 use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
-use Amp\TimeoutCancellationToken;
+use Amp\TimeoutCancellation;
 
 final class TimeoutConnector implements Connector
 {
@@ -28,20 +28,20 @@ final class TimeoutConnector implements Connector
      *
      * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
      */
-    public function connect(SqlConnectionConfig $connectionConfig): Connection
+    public function connect(SqlConnectionConfig $config): Connection
     {
-        if (!$connectionConfig instanceof ConnectionConfig) {
+        if (!$config instanceof ConnectionConfig) {
             throw new \TypeError(\sprintf("Must provide an instance of %s to Postgres connectors", ConnectionConfig::class));
         }
 
-        $token = new TimeoutCancellationToken($this->timeout, "Connecting to the Postgres database timed out");
+        $cancellation = new TimeoutCancellation($this->timeout, "Connecting to the Postgres database timed out");
 
         if (\extension_loaded("pq")) {
-            return PqConnection::connect($connectionConfig, $token);
+            return PqConnection::connect($config, $cancellation);
         }
 
         if (\extension_loaded("pgsql")) {
-            return PgSqlConnection::connect($connectionConfig, $token);
+            return PgSqlConnection::connect($config, $cancellation);
         }
 
         throw new \Error("amphp/postgres requires either pecl-pq or ext-pgsql");

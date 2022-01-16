@@ -2,9 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\CancellationToken;
-use Amp\Deferred;
-use Amp\NullCancellationToken;
+use Amp\Cancellation;
+use Amp\CancelledException;
+use Amp\DeferredFuture;
+use Amp\NullCancellation;
 use Amp\Sql\ConnectionException;
 use pq;
 use Revolt\EventLoop;
@@ -15,11 +16,11 @@ final class PqConnection extends Connection implements Link
 
     /**
      * @param ConnectionConfig $connectionConfig
-     * @param CancellationToken $token
+     * @param Cancellation|null $cancellation
      *
      * @return PqConnection
      */
-    public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): self
+    public static function connect(ConnectionConfig $connectionConfig, ?Cancellation $cancellation = null): self
     {
         try {
             $connection = new pq\Connection($connectionConfig->getConnectionString(), pq\Connection::ASYNC);
@@ -30,7 +31,7 @@ final class PqConnection extends Connection implements Link
         $connection->nonblocking = true;
         $connection->unbuffered = true;
 
-        $deferred = new Deferred;
+        $deferred = new DeferredFuture;
 
         $callback = function () use ($connection, $deferred): void {
             if ($deferred->isComplete()) {
@@ -57,13 +58,17 @@ final class PqConnection extends Connection implements Link
 
         $future = $deferred->getFuture();
 
-        $token = $token ?? new NullCancellationToken;
-        $id = $token->subscribe([$deferred, "error"]);
+        $cancellation = $cancellation ?? new NullCancellation;
+        $id = $cancellation->subscribe(static function (CancelledException $exception) use ($deferred): void {
+            if (!$deferred->isComplete()) {
+                $deferred->error($exception);
+            }
+        });
 
         try {
             return $future->await();
         } finally {
-            $token->unsubscribe($id);
+            $cancellation->unsubscribe($id);
             EventLoop::cancel($poll);
             EventLoop::cancel($await);
         }

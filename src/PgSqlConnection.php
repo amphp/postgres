@@ -2,10 +2,10 @@
 
 namespace Amp\Postgres;
 
-use Amp\CancellationToken;
+use Amp\Cancellation;
 use Amp\CancelledException;
-use Amp\Deferred;
-use Amp\NullCancellationToken;
+use Amp\DeferredFuture;
+use Amp\NullCancellation;
 use Amp\Sql\ConnectionException;
 use Revolt\EventLoop;
 
@@ -13,13 +13,13 @@ final class PgSqlConnection extends Connection implements Link
 {
     /**
      * @param ConnectionConfig $connectionConfig
-     * @param CancellationToken $token
+     * @param Cancellation|null $cancellation
      *
      * @return PgSqlConnection
      *
      * @throws \Error If pecl-ev is used as a loop extension.
      */
-    public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): self
+    public static function connect(ConnectionConfig $connectionConfig, ?Cancellation $cancellation = null): self
     {
         // @codeCoverageIgnoreStart
         /** @psalm-suppress UndefinedClass */
@@ -39,7 +39,7 @@ final class PgSqlConnection extends Connection implements Link
             throw new ConnectionException("Failed to access connection socket");
         }
 
-        $deferred = new Deferred;
+        $deferred = new DeferredFuture;
         $id = \sha1($connectionConfig->getHost() . $connectionConfig->getPort() . $connectionConfig->getUser());
 
         $callback = function ($watcher, $resource) use ($connection, $deferred, $id): void {
@@ -67,8 +67,8 @@ final class PgSqlConnection extends Connection implements Link
 
         $future = $deferred->getFuture();
 
-        $token = $token ?? new NullCancellationToken;
-        $id = $token->subscribe(function (CancelledException $exception) use ($deferred): void {
+        $cancellation = $cancellation ?? new NullCancellation;
+        $id = $cancellation->subscribe(static function (CancelledException $exception) use ($deferred): void {
             if (!$deferred->isComplete()) {
                 $deferred->error($exception);
             }
@@ -80,7 +80,7 @@ final class PgSqlConnection extends Connection implements Link
             \pg_close($connection);
             throw $exception;
         } finally {
-            $token->unsubscribe($id);
+            $cancellation->unsubscribe($id);
             EventLoop::cancel($poll);
             EventLoop::cancel($await);
         }

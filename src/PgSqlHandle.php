@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Deferred;
+use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Pipeline\Emitter;
 use Amp\Sql\Common\CommandResult;
@@ -12,7 +12,7 @@ use Amp\Sql\QueryError;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Revolt\EventLoop;
-use function Amp\launch;
+use function Amp\async;
 
 final class PgSqlHandle implements Handle
 {
@@ -40,7 +40,7 @@ final class PgSqlHandle implements Handle
     /** @var array<int, array{string, string}> */
     private array $types;
 
-    private ?Deferred $deferred = null;
+    private ?DeferredFuture $deferred = null;
 
     private string $poll;
 
@@ -166,7 +166,7 @@ final class PgSqlHandle implements Handle
      */
     public function __destruct()
     {
-        $this->free();
+        $this->close();
     }
 
     private function fetchTypes(): array
@@ -189,16 +189,8 @@ final class PgSqlHandle implements Handle
      */
     public function close(): void
     {
-        if ($this->handle instanceof \PgSql\Connection || \is_resource($this->handle)) {
-            \pg_close($this->handle);
-            $this->handle = null;
-        }
+        $this->handle = null;
 
-        $this->free();
-    }
-
-    private function free(): void
-    {
         $this->deferred?->error(new ConnectionException("The connection was closed"));
         $this->deferred = null;
 
@@ -254,7 +246,7 @@ final class PgSqlHandle implements Handle
             throw new FailureException(\pg_last_error($this->handle));
         }
 
-        $this->deferred = new Deferred;
+        $this->deferred = new DeferredFuture;
 
         EventLoop::reference($this->poll);
         if ($result === 0) {
@@ -354,7 +346,7 @@ final class PgSqlHandle implements Handle
             return;
         }
 
-        $storage->future = launch(function () use ($storage, $name): void {
+        $storage->future = async(function () use ($storage, $name): void {
             $this->query(\sprintf("DEALLOCATE %s", $name));
             unset($this->statements[$name]);
         });
@@ -425,7 +417,7 @@ final class PgSqlHandle implements Handle
         $this->statements[$name] = $storage;
 
         try {
-            ($storage->future = launch(function () use ($name, $modifiedSql, $sql) {
+            ($storage->future = async(function () use ($name, $modifiedSql, $sql) {
                 $result = $this->send("pg_send_prepare", $name, $modifiedSql);
 
                 switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {

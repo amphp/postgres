@@ -2,8 +2,8 @@
 
 namespace Amp\Postgres;
 
-use Amp\CancellationToken;
-use Amp\Deferred;
+use Amp\Cancellation;
+use Amp\DeferredFuture;
 use Amp\Sql\Link;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
@@ -13,16 +13,16 @@ abstract class Connection implements Link, Handle
     /** @var Handle */
     private Handle $handle;
 
-    /** @var Deferred|null Used to only allow one transaction at a time. */
-    private ?Deferred $busy = null;
+    /** @var DeferredFuture|null Used to only allow one transaction at a time. */
+    private ?DeferredFuture $busy = null;
 
     /**
      * @param ConnectionConfig $connectionConfig
-     * @param CancellationToken|null $token
+     * @param Cancellation|null $cancellation
      *
      * @return self
      */
-    abstract public static function connect(ConnectionConfig $connectionConfig, ?CancellationToken $token = null): self;
+    abstract public static function connect(ConnectionConfig $connectionConfig, ?Cancellation $cancellation = null): self;
 
     /**
      * @param Handle $handle
@@ -82,7 +82,7 @@ abstract class Connection implements Link, Handle
     private function reserve(): void
     {
         \assert($this->busy === null);
-        $this->busy = new Deferred;
+        $this->busy = new DeferredFuture;
     }
 
     /**

@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-use Amp\Deferred;
+use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Pipeline\Emitter;
 use Amp\Sql\Common\CommandResult;
@@ -13,15 +13,15 @@ use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use pq;
 use Revolt\EventLoop;
-use function Amp\launch;
+use function Amp\async;
 
 final class PqHandle implements Handle
 {
     private ?pq\Connection $handle;
 
-    private ?Deferred $deferred = null;
+    private ?DeferredFuture $deferred = null;
 
-    private ?Deferred $busy = null;
+    private ?DeferredFuture $busy = null;
 
     private string $poll;
 
@@ -179,7 +179,7 @@ final class PqHandle implements Handle
         }
 
         try {
-            $this->deferred = $this->busy = new Deferred;
+            $this->deferred = $this->busy = new DeferredFuture;
 
             $handle = $method(...$args);
 
@@ -229,7 +229,7 @@ final class PqHandle implements Handle
                 return new PqBufferedResultSet($result, Future::complete($this->fetchNextResult($sql)));
 
             case pq\Result::SINGLE_TUPLE:
-                $this->busy = new Deferred;
+                $this->busy = new DeferredFuture;
                 return new PqUnbufferedResultSet(
                     fn () => $this->fetch($sql),
                     $result,
@@ -276,7 +276,7 @@ final class PqHandle implements Handle
         if (!$this->handle->busy) { // Results buffered.
             $result = $this->handle->getResult();
         } else {
-            $this->deferred = new Deferred;
+            $this->deferred = new DeferredFuture;
 
             EventLoop::reference($this->poll);
             if (!$this->handle->flush()) {
@@ -352,7 +352,7 @@ final class PqHandle implements Handle
 
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        $storage->future = launch(function () use ($storage, $name): void {
+        $storage->future = async(function () use ($storage, $name): void {
             $this->send(null, [$storage->statement, "deallocateAsync"]);
             unset($this->statements[$name]);
         });
@@ -423,7 +423,7 @@ final class PqHandle implements Handle
         $this->statements[$name] = $storage;
 
         try {
-            $storage->statement = ($storage->future = launch(
+            $storage->statement = ($storage->future = async(
                 fn () => $this->send($sql, [$this->handle, "prepareAsync"], $name, $modifiedSql)
             ))->await();
         } catch (\Throwable $exception) {
