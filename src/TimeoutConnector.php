@@ -3,7 +3,6 @@
 namespace Amp\Postgres;
 
 use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
-use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
 use Amp\TimeoutCancellation;
 

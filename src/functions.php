@@ -4,7 +4,6 @@ namespace Amp\Postgres;
 
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
-use Amp\Sql\Connector;
 use Amp\Sql\FailureException;
 use Revolt\EventLoop;
 
@@ -43,9 +42,9 @@ function connect(SqlConnectionConfig $config): Connection
  * Create a pool using the global Connector instance.
  *
  * @param SqlConnectionConfig $config
- * @param int                 $maxConnections
- * @param int                 $idleTimeout
- * @param bool                $resetConnections
+ * @param int $maxConnections
+ * @param int $idleTimeout
+ * @param bool $resetConnections
  *
  * @return Pool
  */
