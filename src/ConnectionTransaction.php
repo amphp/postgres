@@ -28,13 +28,13 @@ final class ConnectionTransaction implements Transaction
      *
      * @throws \Error If the isolation level is invalid.
      */
-    public function __construct(Handle $handle, callable $release, int $isolation = Transaction::ISOLATION_COMMITTED)
+    public function __construct(Handle $handle, callable $release, int $isolation = self::ISOLATION_COMMITTED)
     {
         switch ($isolation) {
-            case Transaction::ISOLATION_UNCOMMITTED:
-            case Transaction::ISOLATION_COMMITTED:
-            case Transaction::ISOLATION_REPEATABLE:
-            case Transaction::ISOLATION_SERIALIZABLE:
+            case self::ISOLATION_UNCOMMITTED:
+            case self::ISOLATION_COMMITTED:
+            case self::ISOLATION_REPEATABLE:
+            case self::ISOLATION_SERIALIZABLE:
                 $this->isolation = $isolation;
                 break;
 
@@ -204,7 +204,11 @@ final class ConnectionTransaction implements Transaction
 
         $handle = $this->handle;
         $this->handle = null;
-        $handle->query("COMMIT");
+        try {
+            $handle->query("COMMIT");
+        } finally {
+            EventLoop::queue($this->release);
+        }
     }
 
     /**
@@ -220,7 +224,11 @@ final class ConnectionTransaction implements Transaction
 
         $handle = $this->handle;
         $this->handle = null;
-        $handle->query("ROLLBACK");
+        try {
+            $handle->query("ROLLBACK");
+        } finally {
+            EventLoop::queue($this->release);
+        }
     }
 
     /**

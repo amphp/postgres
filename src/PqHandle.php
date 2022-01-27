@@ -474,7 +474,7 @@ final class PqHandle implements Handle
         }
 
         EventLoop::enable($this->poll);
-        return new ConnectionListener($source->asPipeline(), $channel, \Closure::fromCallable([$this, 'unlisten']));
+        return new ConnectionListener($source->pipe(), $channel, \Closure::fromCallable([$this, 'unlisten']));
     }
 
     /**

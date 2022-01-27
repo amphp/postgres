@@ -21,7 +21,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     protected const CREATE_QUERY = "CREATE TABLE test (domain VARCHAR(63) NOT NULL,
                                                        tld VARCHAR(63) NOT NULL,
                                                        keys INTEGER[] NOT NULL,
-                                                       enabled BOOLEAN NOT NULL, 
+                                                       enabled BOOLEAN NOT NULL,
                                                        number DOUBLE PRECISION NOT NULL,
                                                        nullable CHAR(1) DEFAULT NULL,
                                                        PRIMARY KEY (domain, tld))";
@@ -531,6 +531,58 @@ abstract class AbstractLinkTest extends AsyncTestCase
         } catch (TransactionError $exception) {
             // Exception expected.
         }
+    }
+
+    public function testTransactionIsReleasedOnCommit(): void
+    {
+        $transaction = $this->link->beginTransaction();
+
+        $this->assertInstanceOf(Transaction::class, $transaction);
+
+        $data = $this->getData()[0];
+
+        $result = $transaction->execute("SELECT * FROM test WHERE domain=:domain", ['domain' => $data[0]]);
+        unset($result);
+        $transaction->commit();
+
+        try {
+            $transaction->execute("SELECT * FROM test");
+            $this->fail('Query should fail after transaction commit');
+        } catch (TransactionError $exception) {
+            // Exception expected.
+        }
+
+        $this->assertTrue($this->link->isAlive());
+
+        $result = $this->link->execute('SELECT * FROM test WHERE domain = ?', [$data[0]]);
+        self::assertSame(1, $result->getRowCount());
+        unset($result);
+    }
+
+    public function testTransactionIsReleasedOnRollback(): void
+    {
+        $transaction = $this->link->beginTransaction();
+
+        $this->assertInstanceOf(Transaction::class, $transaction);
+
+        $data = $this->getData()[0];
+
+        $result = $transaction->query("DELETE FROM test");
+        unset($result);
+        $transaction->rollback();
+
+        try {
+            $transaction->execute("SELECT * FROM test");
+            $this->fail('Query should fail after transaction commit');
+        } catch (TransactionError $exception) {
+            // Exception expected.
+        }
+
+        $this->assertTrue($this->link->isAlive());
+
+        $result = $this->link->execute('SELECT * FROM test WHERE domain = ?', [$data[0]]);
+        self::assertSame(1, $result->getRowCount());
+        unset($result);
     }
 
     public function testListen()
