@@ -163,7 +163,7 @@ abstract class Connection implements Link, Handle
             throw $exception;
         }
 
-        return new ConnectionTransaction($this->handle, \Closure::fromCallable([$this, 'release']), $isolation);
+        return new ConnectionTransaction($this->handle, $this->release(...), $isolation);
     }
 
     /**

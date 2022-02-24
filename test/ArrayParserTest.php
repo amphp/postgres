@@ -15,7 +15,7 @@ class ArrayParserTest extends TestCase
         $this->parser = new ArrayParser;
     }
 
-    protected function getDefaultCastFunction(): callable
+    protected function getDefaultCastFunction(): \Closure
     {
         return function (string $value) {
             return $value;

@@ -8,7 +8,7 @@ final class PooledListener implements Listener, \IteratorAggregate
 {
     private readonly Listener $listener;
 
-    /** @var callable|null */
+    /** @var \Closure|null */
     private ?\Closure $release;
 
     public function __construct(Listener $listener, \Closure $release)

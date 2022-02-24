@@ -11,16 +11,16 @@ final class PooledTransaction extends SqlPooledTransaction implements Transactio
 {
     private readonly Transaction $transaction;
 
-    protected function createStatement(SqlStatement $statement, callable $release): SqlStatement
+    protected function createStatement(SqlStatement $statement, \Closure $release): SqlStatement
     {
         return new PooledStatement($statement, $release);
     }
 
     /**
      * @param Transaction $transaction
-     * @param callable    $release
+     * @param \Closure $release
      */
-    public function __construct(Transaction $transaction, callable $release)
+    public function __construct(Transaction $transaction, \Closure $release)
     {
         parent::__construct($transaction, $release);
         $this->transaction = $transaction;

@@ -51,17 +51,17 @@ final class Pool extends ConnectionPool implements Link
         return connector();
     }
 
-    protected function createStatement(SqlStatement $statement, callable $release): SqlStatement
+    protected function createStatement(SqlStatement $statement, \Closure $release): SqlStatement
     {
         return new PooledStatement($statement, $release);
     }
 
-    protected function createStatementPool(SqlPool $pool, string $sql, callable $prepare): StatementPool
+    protected function createStatementPool(SqlPool $pool, string $sql, \Closure $prepare): StatementPool
     {
         return new StatementPool($pool, $sql, $prepare);
     }
 
-    protected function createTransaction(SqlTransaction $transaction, callable $release): Transaction
+    protected function createTransaction(SqlTransaction $transaction, \Closure $release): Transaction
     {
         \assert($transaction instanceof Transaction);
         return new PooledTransaction($transaction, $release);
