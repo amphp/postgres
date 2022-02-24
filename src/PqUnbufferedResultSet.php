@@ -53,11 +53,6 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
         })->getIterator();
     }
 
-    public function __destruct()
-    {
-        $this->generator->dispose();
-    }
-
     public function getNextResult(): ?Result
     {
         return $this->nextResult->await();
