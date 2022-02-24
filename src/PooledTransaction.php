@@ -9,7 +9,7 @@ use Amp\Sql\Statement as SqlStatement;
 
 final class PooledTransaction extends SqlPooledTransaction implements Transaction
 {
-    private Transaction $transaction;
+    private readonly Transaction $transaction;
 
     protected function createStatement(SqlStatement $statement, callable $release): SqlStatement
     {

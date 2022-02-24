@@ -8,44 +8,37 @@ use Amp\Sql\FailureException;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\TransactionError;
+use Amp\Sql\TransactionIsolation;
 use Revolt\EventLoop;
 
 final class ConnectionTransaction implements Transaction
 {
     private ?Handle $handle;
 
-    private int $isolation;
+    private readonly TransactionIsolation $isolation;
 
-    /** @var callable */
-    private $release;
+    /** @var \Closure():void */
+    private readonly \Closure $release;
 
     private int $refCount = 1;
 
     /**
      * @param Handle $handle
-     * @param callable $release
-     * @param int $isolation
+     * @param \Closure():void $release
+     * @param TransactionIsolation $isolation
      *
      * @throws \Error If the isolation level is invalid.
      */
-    public function __construct(Handle $handle, callable $release, int $isolation = Transaction::ISOLATION_COMMITTED)
-    {
-        switch ($isolation) {
-            case Transaction::ISOLATION_UNCOMMITTED:
-            case Transaction::ISOLATION_COMMITTED:
-            case Transaction::ISOLATION_REPEATABLE:
-            case Transaction::ISOLATION_SERIALIZABLE:
-                $this->isolation = $isolation;
-                break;
-
-            default:
-                throw new \Error("Isolation must be a valid transaction isolation level");
-        }
-
+    public function __construct(
+        Handle $handle,
+        \Closure $release,
+        TransactionIsolation $isolation = TransactionIsolation::COMMITTED
+    ) {
         $this->handle = $handle;
+        $this->isolation = $isolation;
 
         $refCount =& $this->refCount;
-        $this->release = static function () use (&$refCount, $release) {
+        $this->release = static function () use (&$refCount, $release): void {
             if (--$refCount === 0) {
                 $release();
             }
@@ -58,7 +51,7 @@ final class ConnectionTransaction implements Transaction
             $handle = $this->handle;
             EventLoop::queue(static function () use ($handle): void {
                 try {
-                    $this->handle->isAlive() && $handle->query('ROLLBACK');
+                    $handle->isAlive() && $handle->query('ROLLBACK');
                 } catch (FailureException) {
                     // Ignore failure if connection closes during query.
                 }
@@ -82,7 +75,7 @@ final class ConnectionTransaction implements Transaction
     public function close(): void
     {
         if ($this->handle) {
-            $this->commit(); // Invokes $this->release callback.
+            $this->rollback(); // Invokes $this->release callback.
         }
     }
 
@@ -102,10 +95,7 @@ final class ConnectionTransaction implements Transaction
         return $this->handle !== null;
     }
 
-    /**
-     * @return int
-     */
-    public function getIsolationLevel(): int
+    public function getIsolationLevel(): TransactionIsolation
     {
         return $this->isolation;
     }

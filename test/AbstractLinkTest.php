@@ -13,6 +13,7 @@ use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
+use Amp\Sql\TransactionIsolation;
 use Revolt\EventLoop;
 use function Amp\async;
 
@@ -495,7 +496,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testTransaction()
     {
-        $isolation = SqlTransaction::ISOLATION_COMMITTED;
+        $isolation = TransactionIsolation::COMMITTED;
 
         $transaction = $this->link->beginTransaction($isolation);
 

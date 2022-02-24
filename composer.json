@@ -19,16 +19,16 @@
         }
     ],
     "require": {
-        "php": ">=8",
-        "amphp/amp": "^3-dev",
-        "amphp/pipeline": "^1-dev",
-        "amphp/sql": "^2-dev",
-        "amphp/sql-common": "^2-dev"
+        "php": ">=8.1",
+        "amphp/amp": "^3",
+        "amphp/pipeline": "^1",
+        "amphp/sql": "^2",
+        "amphp/sql-common": "^2"
     },
     "require-dev": {
         "ext-pgsql": "*",
         "ext-pq": "*",
-        "amphp/phpunit-util": "^2-dev",
+        "amphp/phpunit-util": "^3",
         "phpunit/phpunit": "^9",
         "amphp/php-cs-fixer-config": "dev-master",
         "psalm/phar": "^4.10"

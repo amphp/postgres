@@ -11,6 +11,7 @@ use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
 use Amp\Sql\Transaction as SqlTransaction;
+use Amp\Sql\TransactionIsolation;
 use function Amp\async;
 
 final class Pool extends ConnectionPool implements Link
@@ -21,7 +22,7 @@ final class Pool extends ConnectionPool implements Link
     /** @var int Number of listeners on listening connection. */
     private int $listenerCount = 0;
 
-    private bool $resetConnections;
+    private readonly bool $resetConnections;
 
     /**
      * @param ConnectionConfig $config
@@ -71,7 +72,7 @@ final class Pool extends ConnectionPool implements Link
      *
      * @inheritDoc
      */
-    public function beginTransaction(int $isolation = Transaction::ISOLATION_COMMITTED): Transaction
+    public function beginTransaction(TransactionIsolation $isolation = TransactionIsolation::COMMITTED): Transaction
     {
         return parent::beginTransaction($isolation);
     }

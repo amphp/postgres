@@ -3,20 +3,21 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
-use Amp\Pipeline\AsyncGenerator;
+use Amp\Pipeline\ConcurrentIterator;
+use Amp\Pipeline\Pipeline;
 use Amp\Sql\Result;
 use pq;
 
 final class PqBufferedResultSet implements Result, \IteratorAggregate
 {
-    private AsyncGenerator $generator;
+    private readonly ConcurrentIterator $generator;
 
-    private int $rowCount;
+    private readonly int $rowCount;
 
-    private int $columnCount;
+    private readonly int $columnCount;
 
     /** @var Future<Result|null> */
-    private Future $nextResult;
+    private readonly Future $nextResult;
 
     /**
      * @param pq\Result $result PostgreSQL result object.
@@ -28,14 +29,14 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
         $this->columnCount = $result->numCols;
         $this->nextResult = $nextResult;
 
-        $this->generator = new AsyncGenerator(static function () use ($result): \Generator {
+        $this->generator = Pipeline::fromIterable(static function () use ($result): \Generator {
             $position = 0;
 
             while (++$position <= $result->numRows) {
                 $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
                 yield $result->fetchRow(pq\Result::FETCH_ASSOC);
             }
-        });
+        })->getIterator();
     }
 
     /**

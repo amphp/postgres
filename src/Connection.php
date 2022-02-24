@@ -7,11 +7,12 @@ use Amp\DeferredFuture;
 use Amp\Sql\Link;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
+use Amp\Sql\TransactionIsolation;
 
 abstract class Connection implements Link, Handle
 {
     /** @var Handle */
-    private Handle $handle;
+    private readonly Handle $handle;
 
     /** @var DeferredFuture|null Used to only allow one transaction at a time. */
     private ?DeferredFuture $busy = null;
@@ -145,31 +146,18 @@ abstract class Connection implements Link, Handle
     /**
      * @inheritDoc
      */
-    final public function beginTransaction(int $isolation = Transaction::ISOLATION_COMMITTED): Transaction
-    {
+    final public function beginTransaction(
+        TransactionIsolation $isolation = TransactionIsolation::COMMITTED
+    ): Transaction {
         $this->reserve();
 
         try {
-            switch ($isolation) {
-                case Transaction::ISOLATION_UNCOMMITTED:
-                    $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
-                    break;
-
-                case Transaction::ISOLATION_COMMITTED:
-                    $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED");
-                    break;
-
-                case Transaction::ISOLATION_REPEATABLE:
-                    $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ");
-                    break;
-
-                case Transaction::ISOLATION_SERIALIZABLE:
-                    $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE");
-                    break;
-
-                default:
-                    throw new \Error("Invalid transaction type");
-            }
+            $this->handle->query(match ($isolation) {
+                TransactionIsolation::UNCOMMITTED => "BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED",
+                TransactionIsolation::COMMITTED => "BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED",
+                TransactionIsolation::REPEATABLE => "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ",
+                TransactionIsolation::SERIALIZABLE => "BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE",
+            });
         } catch (\Throwable $exception) {
             $this->release();
             throw $exception;

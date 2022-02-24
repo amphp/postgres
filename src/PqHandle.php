@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\DeferredFuture;
 use Amp\Future;
-use Amp\Pipeline\Emitter;
+use Amp\Pipeline\Queue;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
@@ -23,11 +23,11 @@ final class PqHandle implements Handle
 
     private ?DeferredFuture $busy = null;
 
-    private string $poll;
+    private readonly string $poll;
 
-    private string $await;
+    private readonly string $await;
 
-    /** @var Emitter[] */
+    /** @var Queue[] */
     private array $listeners = [];
 
     /** @var object[] Anonymous class using Struct trait. */
@@ -93,7 +93,9 @@ final class PqHandle implements Handle
             }
         });
 
-        $this->await = EventLoop::onWritable($this->handle->socket, static function ($watcher) use (&$deferred, &$listeners, &$handle): void {
+        $this->await = EventLoop::onWritable($this->handle->socket, static function ($watcher) use (
+            &$deferred, &$listeners, &$handle
+        ): void {
             try {
                 if (!$handle->flush()) {
                     return; // Not finished sending data, continue polling for writability.
@@ -157,14 +159,14 @@ final class PqHandle implements Handle
 
     /**
      * @param string|null Query SQL or null if not related.
-     * @param callable $method Method to execute.
+     * @param \Closure $method Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
      * @return Result|pq\Statement
      *
      * @throws FailureException
      */
-    private function send(?string $sql, callable $method, ...$args): Result|pq\Statement
+    private function send(?string $sql, \Closure $method, mixed ...$args): Result|pq\Statement
     {
         while ($this->busy) {
             try {
@@ -329,7 +331,7 @@ final class PqHandle implements Handle
 
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
-        return $this->send($storage->sql, [$storage->statement, "execAsync"], $params);
+        return $this->send($storage->sql, $storage->statement->execAsync(...), $params);
     }
 
     /**
@@ -367,7 +369,7 @@ final class PqHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
-        return $this->send($sql, [$this->handle, "execAsync"], $sql);
+        return $this->send($sql, $this->handle->execAsync(...), $sql);
     }
 
     /**
@@ -382,7 +384,7 @@ final class PqHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        return $this->send($sql, [$this->handle, "execParamsAsync"], $sql, $params);
+        return $this->send($sql, $this->handle->execParamsAsync(...), $sql, $params);
     }
 
     /**
@@ -424,7 +426,7 @@ final class PqHandle implements Handle
 
         try {
             $storage->statement = ($storage->future = async(
-                fn () => $this->send($sql, [$this->handle, "prepareAsync"], $name, $modifiedSql)
+                fn () => $this->send($sql, $this->handle->prepareAsync(...), $name, $modifiedSql)
             ))->await();
         } catch (\Throwable $exception) {
             unset($this->statements[$name]);
@@ -441,7 +443,7 @@ final class PqHandle implements Handle
      */
     public function notify(string $channel, string $payload = ""): Result
     {
-        return $this->send(null, [$this->handle, "notifyAsync"], $channel, $payload);
+        return $this->send(null, $this->handle->notifyAsync(...), $channel, $payload);
     }
 
     /**
@@ -453,19 +455,16 @@ final class PqHandle implements Handle
             throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
         }
 
-        $this->listeners[$channel] = $source = new Emitter;
+        $this->listeners[$channel] = $source = new Queue();
 
         try {
             $this->send(
                 null,
-                [$this->handle, "listenAsync"],
+                $this->handle->listenAsync(...),
                 $channel,
                 static function (string $channel, string $message, int $pid) use ($source): void {
-                    $notification = new Notification;
-                    $notification->channel = $channel;
-                    $notification->pid = $pid;
-                    $notification->payload = $message;
-                    $source->emit($notification);
+                    $notification = new Notification($channel, $pid, $message);
+                    $source->pushAsync($notification)->ignore();
                 }
             );
         } catch (\Throwable $exception) {
@@ -474,7 +473,7 @@ final class PqHandle implements Handle
         }
 
         EventLoop::enable($this->poll);
-        return new ConnectionListener($source->asPipeline(), $channel, \Closure::fromCallable([$this, 'unlisten']));
+        return new ConnectionListener($source->iterate(), $channel, $this->unlisten(...));
     }
 
     /**
@@ -497,7 +496,7 @@ final class PqHandle implements Handle
         }
 
         try {
-            $this->send(null, [$this->handle, "unlistenAsync"], $channel);
+            $this->send(null, $this->handle->unlistenAsync(...), $channel);
             $source->complete();
         } catch (\Throwable $exception) {
             $source->error($exception);

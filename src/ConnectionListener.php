@@ -6,22 +6,19 @@ use Revolt\EventLoop;
 
 final class ConnectionListener implements Listener, \IteratorAggregate
 {
-    private \Traversable $source;
-
-    private string $channel;
-
-    /** @var callable|null */
-    private $unlisten;
+    /** @var null|\Closure(string):void */
+    private ?\Closure $unlisten;
 
     /**
-     * @param \Traversable $source Traversable of notificatons on the channel.
+     * @param \Traversable $source Traversable of notifications on the channel.
      * @param string $channel Channel name.
-     * @param callable(string):void $unlisten Function invoked to unlisten from the channel.
+     * @param \Closure(string):void $unlisten Function invoked to stop listening on the channel.
      */
-    public function __construct(\Traversable $source, string $channel, callable $unlisten)
-    {
-        $this->source = $source;
-        $this->channel = $channel;
+    public function __construct(
+        private readonly \Traversable $source,
+        private readonly string $channel,
+        \Closure $unlisten
+    ) {
         $this->unlisten = $unlisten;
     }
 

@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\DeferredFuture;
 use Amp\Future;
-use Amp\Pipeline\Emitter;
+use Amp\Pipeline\Queue;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\FailureException;
@@ -38,15 +38,15 @@ final class PgSqlHandle implements Handle
     private $handle;
 
     /** @var array<int, array{string, string}> */
-    private array $types;
+    private readonly array $types;
 
     private ?DeferredFuture $deferred = null;
 
-    private string $poll;
+    private readonly string $poll;
 
-    private string $await;
+    private readonly string $await;
 
-    /** @var Emitter[] */
+    /** @var Queue[] */
     private array $listeners = [];
 
     /** @var object[] Anonymous class using Struct trait. */
@@ -107,11 +107,8 @@ final class PgSqlHandle implements Handle
                     continue;
                 }
 
-                $notification = new Notification;
-                $notification->channel = $channel;
-                $notification->pid = $result["pid"];
-                $notification->payload = $result["payload"];
-                $listeners[$channel]->emit($notification);
+                $notification = new Notification($channel, $result["pid"], $result["payload"]);
+                $listeners[$channel]->pushAsync($notification)->ignore();
             }
 
             if ($deferred === null) {
@@ -215,14 +212,14 @@ final class PgSqlHandle implements Handle
     }
 
     /**
-     * @param callable $function Function name to execute.
+     * @param \Closure $function Function to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
      * @return resource
      *
      * @throws FailureException
      */
-    private function send(callable $function, ...$args)
+    private function send(\Closure $function, mixed ...$args)
     {
         while ($this->deferred) {
             try {
@@ -324,7 +321,7 @@ final class PgSqlHandle implements Handle
     public function statementExecute(string $name, array $params): Result
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
-        return $this->createResult($this->send("pg_send_execute", $name, $params), $this->statements[$name]->sql);
+        return $this->createResult($this->send(pg_send_execute(...), $name, $params), $this->statements[$name]->sql);
     }
 
     /**
@@ -362,7 +359,7 @@ final class PgSqlHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
-        return $this->createResult($this->send("pg_send_query", $sql), $sql);
+        return $this->createResult($this->send(pg_send_query(...), $sql), $sql);
     }
 
     /**
@@ -377,7 +374,7 @@ final class PgSqlHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        return $this->createResult($this->send("pg_send_query_params", $sql, $params), $sql);
+        return $this->createResult($this->send(pg_send_query_params(...), $sql, $params), $sql);
     }
 
     /**
@@ -418,7 +415,7 @@ final class PgSqlHandle implements Handle
 
         try {
             ($storage->future = async(function () use ($name, $modifiedSql, $sql) {
-                $result = $this->send("pg_send_prepare", $name, $modifiedSql);
+                $result = $this->send(pg_send_prepare(...), $name, $modifiedSql);
 
                 switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
                     case \PGSQL_COMMAND_OK:
@@ -472,7 +469,7 @@ final class PgSqlHandle implements Handle
             throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
         }
 
-        $this->listeners[$channel] = $source = new Emitter;
+        $this->listeners[$channel] = $source = new Queue();
 
         try {
             $this->query(\sprintf("LISTEN %s", $this->quoteName($channel)));
@@ -482,7 +479,7 @@ final class PgSqlHandle implements Handle
         }
 
         EventLoop::enable($this->poll);
-        return new ConnectionListener($source->asPipeline(), $channel, \Closure::fromCallable([$this, 'unlisten']));
+        return new ConnectionListener($source->iterate(), $channel, $this->unlisten(...));
     }
 
     /**

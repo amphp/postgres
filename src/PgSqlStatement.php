@@ -7,13 +7,13 @@ use Amp\Sql\Statement;
 
 final class PgSqlStatement implements Statement
 {
-    private PgSqlHandle $handle;
+    private readonly PgSqlHandle $handle;
 
-    private string $name;
+    private readonly string $name;
 
-    private string $sql;
+    private readonly string $sql;
 
-    private array $params;
+    private readonly array $params;
 
     private int $lastUsedAt;
 

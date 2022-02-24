@@ -6,7 +6,7 @@ use Amp\Sql\QueryError;
 
 class QueryExecutionError extends QueryError
 {
-    private array $diagnostics;
+    private readonly array $diagnostics;
 
     public function __construct(string $message, array $diagnostics, string $query, \Throwable $previous = null)
     {

@@ -3,7 +3,8 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
-use Amp\Pipeline\AsyncGenerator;
+use Amp\Pipeline\ConcurrentIterator;
+use Amp\Pipeline\Pipeline;
 use Amp\Sql\FailureException;
 use Amp\Sql\Result;
 
@@ -11,14 +12,14 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 {
     private static Internal\ArrayParser $parser;
 
-    private AsyncGenerator $generator;
+    private readonly ConcurrentIterator $generator;
 
-    private int $rowCount;
+    private readonly int $rowCount;
 
-    private int $columnCount;
+    private readonly int $columnCount;
 
     /** @var Future<Result|null> */
-    private Future $nextResult;
+    private readonly Future $nextResult;
 
     /**
      * @param resource $handle PostgreSQL result resource.
@@ -43,7 +44,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
         $this->columnCount = \pg_num_fields($handle);
         $this->nextResult = $nextResult;
 
-        $this->generator = new AsyncGenerator(static function () use (
+        $this->generator = Pipeline::fromIterable(static function () use (
             $handle,
             $types,
             $fieldNames,
@@ -64,7 +65,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
             } finally {
                 \pg_free_result($handle);
             }
-        });
+        })->getIterator();
     }
 
     /**

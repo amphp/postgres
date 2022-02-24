@@ -10,7 +10,7 @@ final class TimeoutConnector implements Connector
 {
     const DEFAULT_TIMEOUT = 5;
 
-    private int $timeout;
+    private readonly int $timeout;
 
     /**
      * @param int $timeout Milliseconds until connections attempts are cancelled.

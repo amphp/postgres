@@ -6,12 +6,12 @@ use Revolt\EventLoop;
 
 final class PooledListener implements Listener, \IteratorAggregate
 {
-    private Listener $listener;
+    private readonly Listener $listener;
 
     /** @var callable|null */
-    private $release;
+    private ?\Closure $release;
 
-    public function __construct(Listener $listener, callable $release)
+    public function __construct(Listener $listener, \Closure $release)
     {
         $this->listener = $listener;
         $this->release = $release;
@@ -31,7 +31,7 @@ final class PooledListener implements Listener, \IteratorAggregate
                 try {
                     $listener->unlisten();
                 } finally {
-                    $release();
+                    EventLoop::queue($release);
                 }
             });
         }
@@ -65,7 +65,7 @@ final class PooledListener implements Listener, \IteratorAggregate
         try {
             $this->listener->unlisten();
         } finally {
-            $release();
+            EventLoop::queue($release);
         }
     }
 }
