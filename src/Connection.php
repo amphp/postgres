@@ -147,16 +147,16 @@ abstract class Connection implements Link, Handle
      * @inheritDoc
      */
     final public function beginTransaction(
-        TransactionIsolation $isolation = TransactionIsolation::COMMITTED
+        TransactionIsolation $isolation = TransactionIsolation::Committed
     ): Transaction {
         $this->reserve();
 
         try {
-            $this->handle->query(match ($isolation) {
-                TransactionIsolation::UNCOMMITTED => "BEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED",
-                TransactionIsolation::COMMITTED => "BEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED",
-                TransactionIsolation::REPEATABLE => "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ",
-                TransactionIsolation::SERIALIZABLE => "BEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE",
+            $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL " . match ($isolation) {
+                TransactionIsolation::Uncommitted => "READ UNCOMMITTED",
+                TransactionIsolation::Committed => "READ COMMITTED",
+                TransactionIsolation::Repeatable => "REPEATABLE READ",
+                TransactionIsolation::Serializable => "SERIALIZABLE",
             });
         } catch (\Throwable $exception) {
             $this->release();

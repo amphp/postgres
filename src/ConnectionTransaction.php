@@ -32,7 +32,7 @@ final class ConnectionTransaction implements Transaction
     public function __construct(
         Handle $handle,
         \Closure $release,
-        TransactionIsolation $isolation = TransactionIsolation::COMMITTED
+        TransactionIsolation $isolation
     ) {
         $this->handle = $handle;
         $this->isolation = $isolation;
