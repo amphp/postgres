@@ -19,7 +19,7 @@ abstract class AbstractConnectTest extends AsyncTestCase
     public function testConnect()
     {
         $connection = $this->connect(
-            PostgresConnectionConfig::fromString('host=localhost user=postgres'),
+            PostgresConnectionConfig::fromString('host=localhost user=postgres password=postgres'),
             new TimeoutCancellation(1)
         );
         $this->assertInstanceOf(Connection::class, $connection);
@@ -35,7 +35,7 @@ abstract class AbstractConnectTest extends AsyncTestCase
         $source = new DeferredCancellation;
         $cancellation = $source->getCancellation();
         $source->cancel();
-        $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $cancellation);
+        $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres password=postgres'), $cancellation);
     }
 
     /**
@@ -45,7 +45,7 @@ abstract class AbstractConnectTest extends AsyncTestCase
     {
         $source = new DeferredCancellation;
         $cancellation = $source->getCancellation();
-        $connection = $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'), $cancellation);
+        $connection = $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres password=postgres'), $cancellation);
         $this->assertInstanceOf(Connection::class, $connection);
         $source->cancel();
     }
@@ -57,6 +57,6 @@ abstract class AbstractConnectTest extends AsyncTestCase
     {
         $this->expectException(FailureException::class);
 
-        $this->connect(PostgresConnectionConfig::fromString('host=localhost user=invalid'), new TimeoutCancellation(100));
+        $this->connect(PostgresConnectionConfig::fromString('host=localhost user=invalid password=invalid'), new TimeoutCancellation(100));
     }
 }

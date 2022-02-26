@@ -12,19 +12,25 @@ jobs:
           - operating-system: 'ubuntu-latest'
             php-version: '8.1'
 
-          - operating-system: 'windows-latest'
-            php-version: '8.1'
-            job-description: 'on Windows'
-
-          - operating-system: 'macos-latest'
-            php-version: '8.1'
-            job-description: 'on macOS'
-
     name: PHP ${{ matrix.php-version }} ${{ matrix.job-description }}
 
     runs-on: ${{ matrix.operating-system }}
 
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ''
+
     steps:
+      - name: Start Postgres
+        run: |
+          sudo systemctl start postgresql.service
+          pg_isready
+          sudo -u postgres psql --command="ALTER USER postgres PASSWORD 'postgres'"
+
       - name: Set git to use LF
         run: |
           git config --global core.autocrlf false

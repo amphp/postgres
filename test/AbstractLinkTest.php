@@ -68,7 +68,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->link = $this->createLink('host=localhost user=postgres');
+        $this->link = $this->createLink('host=localhost user=postgres password=postgres');
     }
 
     public function tearDown(): void
@@ -493,7 +493,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testTransaction()
     {
-        $isolation = TransactionIsolation::COMMITTED;
+        $isolation = TransactionIsolation::Committed;
 
         $transaction = $this->link->beginTransaction($isolation);
 

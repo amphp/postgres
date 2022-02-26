@@ -21,7 +21,7 @@ class FunctionsTest extends AsyncTestCase
 
     public function testConnect()
     {
-        $connection = connect(ConnectionConfig::fromString('host=localhost user=postgres'));
+        $connection = connect(ConnectionConfig::fromString('host=localhost user=postgres password=postgres'));
         $this->assertInstanceOf(Connection::class, $connection);
     }
 
@@ -29,6 +29,6 @@ class FunctionsTest extends AsyncTestCase
     {
         $this->expectException(FailureException::class);
 
-        connect(ConnectionConfig::fromString('host=localhost user=invalid'));
+        connect(ConnectionConfig::fromString('host=localhost user=invalid password=invalid'));
     }
 }
