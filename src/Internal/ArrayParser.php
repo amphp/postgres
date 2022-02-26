@@ -39,8 +39,6 @@ final class ArrayParser
      * @param \Closure(string):mixed $cast Callback to cast parsed values.
      * @param string $delimiter Delimiter used to separate values.
      *
-     * @return \Generator
-     *
      * @throws ParseException
      */
     private function parser(string $data, \Closure $cast, string $delimiter = ','): \Generator

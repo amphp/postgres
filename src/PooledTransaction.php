@@ -16,10 +16,6 @@ final class PooledTransaction extends SqlPooledTransaction implements Transactio
         return new PooledStatement($statement, $release);
     }
 
-    /**
-     * @param Transaction $transaction
-     * @param \Closure $release
-     */
     public function __construct(Transaction $transaction, \Closure $release)
     {
         parent::__construct($transaction, $release);

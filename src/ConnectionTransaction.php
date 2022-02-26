@@ -23,9 +23,7 @@ final class ConnectionTransaction implements Transaction
     private int $refCount = 1;
 
     /**
-     * @param Handle $handle
      * @param \Closure():void $release
-     * @param TransactionIsolation $isolation
      *
      * @throws \Error If the isolation level is invalid.
      */
@@ -59,17 +57,12 @@ final class ConnectionTransaction implements Transaction
         }
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getLastUsedAt(): int
     {
         return $this->handle->getLastUsedAt();
     }
 
     /**
-     * @inheritDoc
-     *
      * Closes and commits all changes in the transaction.
      */
     public function close(): void
@@ -79,9 +72,6 @@ final class ConnectionTransaction implements Transaction
         }
     }
 
-    /**
-     * @inheritDoc
-     */
     public function isAlive(): bool
     {
         return $this->handle && $this->handle->isAlive();
@@ -101,8 +91,6 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * @inheritDoc
-     *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function query(string $sql): Result
@@ -123,8 +111,6 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * @inheritDoc
-     *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function prepare(string $sql): Statement
@@ -145,8 +131,6 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * @inheritDoc
-     *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function execute(string $sql, array $params = []): Result
@@ -166,10 +150,7 @@ final class ConnectionTransaction implements Transaction
         return new PooledResult($result, $this->release);
     }
 
-
     /**
-     * @inheritDoc
-     *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function notify(string $channel, string $payload = ""): Result
@@ -250,8 +231,6 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * @inheritDoc
-     *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function quoteString(string $data): string
@@ -264,8 +243,6 @@ final class ConnectionTransaction implements Transaction
     }
 
     /**
-     * @inheritDoc
-     *
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function quoteName(string $name): string

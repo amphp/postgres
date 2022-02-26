@@ -11,7 +11,6 @@ use Amp\Postgres\Transaction;
 use Amp\Sql\QueryError;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
-use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionError;
 use Amp\Sql\TransactionIsolation;
 use Revolt\EventLoop;
@@ -62,8 +61,6 @@ abstract class AbstractLinkTest extends AsyncTestCase
     }
 
     /**
-     * @param string $connectionString
-     *
      * @return Link Connection or Link object to be tested.
      */
     abstract public function createLink(string $connectionString): Link;
@@ -297,8 +294,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $sql = "SELECT * FROM test WHERE domain=\$1";
 
-        $statement1 = async(fn() => $this->link->prepare($sql));
-        $statement2 = async(fn() => $this->link->prepare($sql));
+        $statement1 = async(fn () => $this->link->prepare($sql));
+        $statement2 = async(fn () => $this->link->prepare($sql));
 
         [$statement1, $statement2] = Future\all([$statement1, $statement2]);
 
@@ -317,9 +314,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testPrepareSimilarQueryReturnsDifferentStatements()
     {
-        $statement1 = async(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=\$1"));
+        $statement1 = async(fn () => $this->link->prepare("SELECT * FROM test WHERE domain=\$1"));
 
-        $statement2 = async(fn() => $this->link->prepare("SELECT * FROM test WHERE domain=:domain"));
+        $statement2 = async(fn () => $this->link->prepare("SELECT * FROM test WHERE domain=:domain"));
 
         [$statement1, $statement2] = Future\all([$statement1, $statement2]);
 

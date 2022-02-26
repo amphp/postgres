@@ -9,9 +9,6 @@ interface Listener extends \Traversable
      */
     public function getChannel(): string;
 
-    /**
-     * @return bool
-     */
     public function isListening(): bool;
 
     /**

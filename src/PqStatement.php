@@ -18,7 +18,6 @@ final class PqStatement implements Statement
     private int $lastUsedAt;
 
     /**
-     * @param PqHandle $handle
      * @param string $name Statement name.
      * @param string $sql Original prepared SQL query.
      * @param string[] $params Parameter indices to parameter names.
@@ -37,25 +36,21 @@ final class PqStatement implements Statement
         $this->handle->statementDeallocate($this->name);
     }
 
-    /** @inheritDoc */
     public function isAlive(): bool
     {
         return $this->handle->isAlive();
     }
 
-    /** @inheritDoc */
     public function getQuery(): string
     {
         return $this->sql;
     }
 
-    /** @inheritDoc */
     public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }
 
-    /** @inheritDoc */
     public function execute(array $params = []): Result
     {
         $this->lastUsedAt = \time();

@@ -25,11 +25,7 @@ final class Pool extends ConnectionPool implements Link
     private readonly bool $resetConnections;
 
     /**
-     * @param ConnectionConfig $config
-     * @param int              $maxConnections
-     * @param int              $idleTimeout
      * @param bool             $resetConnections True to automatically execute DISCARD ALL on a connection before use.
-     * @param Connector|null   $connector
      */
     public function __construct(
         ConnectionConfig $config,
@@ -69,8 +65,6 @@ final class Pool extends ConnectionPool implements Link
 
     /**
      * Changes return type to this library's Transaction type.
-     *
-     * @inheritDoc
      */
     public function beginTransaction(TransactionIsolation $isolation = TransactionIsolation::Committed): Transaction
     {
@@ -80,7 +74,7 @@ final class Pool extends ConnectionPool implements Link
     protected function pop(): Connection
     {
         $connection = parent::pop();
-		\assert($connection instanceof Connection);
+        \assert($connection instanceof Connection);
 
         if ($this->resetConnections) {
             $connection->query("DISCARD ALL");
@@ -89,9 +83,6 @@ final class Pool extends ConnectionPool implements Link
         return $connection;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function notify(string $channel, string $payload = ""): Result
     {
         $connection = $this->pop();
@@ -106,15 +97,12 @@ final class Pool extends ConnectionPool implements Link
         return $result;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function listen(string $channel): Listener
     {
         ++$this->listenerCount;
 
         if ($this->listeningConnection === null) {
-            $this->listeningConnection = async(fn() => $this->pop());
+            $this->listeningConnection = async(fn () => $this->pop());
         }
 
         if ($this->listeningConnection instanceof Future) {

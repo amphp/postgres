@@ -13,8 +13,6 @@ interface Executor extends SqlExecutor
      * @param string $channel Channel name.
      * @param string $payload Notification payload.
      *
-     * @return Result
-     *
      * @throws FailureException If the operation fails due to unexpected condition.
      * @throws ConnectionException If the connection to the database is lost.
      */

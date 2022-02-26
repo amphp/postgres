@@ -45,9 +45,6 @@ final class ConnectionListener implements Listener, \IteratorAggregate
         return $this->channel;
     }
 
-    /**
-     * @return bool
-     */
     public function isListening(): bool
     {
         return $this->unlisten !== null;

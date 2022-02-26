@@ -58,25 +58,16 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
         return $this->nextResult->await();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getIterator(): \Traversable
     {
         return $this->generator->getIterator();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getRowCount(): ?int
     {
         return null; // Unbuffered result sets do not have a total row count.
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getColumnCount(): int
     {
         return $this->columnCount;

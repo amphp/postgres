@@ -39,33 +39,21 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
         })->getIterator();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getIterator(): \Traversable
     {
         return $this->generator->getIterator();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getNextResult(): ?Result
     {
         return $this->nextResult->await();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getRowCount(): int
     {
         return $this->rowCount;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getColumnCount(): int
     {
         return $this->columnCount;

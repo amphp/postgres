@@ -68,17 +68,11 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
         })->getIterator();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getIterator(): \Traversable
     {
         return $this->generator->getIterator();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getNextResult(): ?Result
     {
         return $this->nextResult->await();
@@ -128,8 +122,6 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
      * @see https://www.postgresql.org/docs/14/catalog-pg-type.html for pg_type catalog docs.
      *
      * @param array<int, array{string, string}> $types
-     * @param int $oid
-     * @param string $value
      *
      * @return array|bool|float|int Cast value.
      *

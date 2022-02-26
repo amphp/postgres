@@ -11,8 +11,6 @@ interface Receiver extends Executor
     /**
      * @param string $channel Channel name.
      *
-     * @return Listener
-     *
      * @throws FailureException If the operation fails due to unexpected condition.
      * @throws ConnectionException If the connection to the database is lost.
      * @throws QueryError If the operation fails due to an error in the query (such as a syntax error).

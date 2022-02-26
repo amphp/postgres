@@ -3,8 +3,8 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Cancellation;
-use Amp\DeferredCancellation;
 use Amp\CancelledException;
+use Amp\DeferredCancellation;
 use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\Connection;
 use Amp\Postgres\ConnectionConfig as PostgresConnectionConfig;
@@ -14,12 +14,6 @@ use Amp\TimeoutCancellation;
 
 abstract class AbstractConnectTest extends AsyncTestCase
 {
-    /**
-     * @param ConnectionConfig $connectionConfig
-     * @param Cancellation|null $cancellation
-     *
-     * @return Connection
-     */
     abstract public function connect(ConnectionConfig $connectionConfig, Cancellation $cancellation = null): Connection;
 
     public function testConnect()

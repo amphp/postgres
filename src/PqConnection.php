@@ -15,9 +15,6 @@ final class PqConnection extends Connection implements Link
     private PqHandle $handle;
 
     /**
-     * @param ConnectionConfig $connectionConfig
-     * @param Cancellation|null $cancellation
-     *
      * @return PqConnection
      */
     public static function connect(ConnectionConfig $connectionConfig, ?Cancellation $cancellation = null): self
@@ -74,9 +71,6 @@ final class PqConnection extends Connection implements Link
         }
     }
 
-    /**
-     * @param pq\Connection $handle
-     */
     public function __construct(pq\Connection $handle)
     {
         $this->handle = new PqHandle($handle);

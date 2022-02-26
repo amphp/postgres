@@ -12,9 +12,6 @@ use Revolt\EventLoop;
 final class PgSqlConnection extends Connection implements Link
 {
     /**
-     * @param ConnectionConfig $connectionConfig
-     * @param Cancellation|null $cancellation
-     *
      * @return PgSqlConnection
      *
      * @throws \Error If pecl-ev is used as a loop extension.

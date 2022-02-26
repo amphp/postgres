@@ -181,9 +181,6 @@ final class PgSqlHandle implements Handle
         return $types;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function close(): void
     {
         $this->handle = null;
@@ -195,17 +192,11 @@ final class PgSqlHandle implements Handle
         EventLoop::cancel($this->await);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function isAlive(): bool
     {
         return $this->handle instanceof \PgSql\Connection || \is_resource($this->handle);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
@@ -297,10 +288,6 @@ final class PgSqlHandle implements Handle
     }
 
     /**
-     * @param string $sql
-     *
-     * @return Result|null
-     *
      * @throws FailureException
      */
     private function fetchNextResult(string $sql): ?Result
@@ -312,12 +299,6 @@ final class PgSqlHandle implements Handle
         return null;
     }
 
-    /**
-     * @param string $name
-     * @param array $params
-     *
-     * @return Result
-     */
     public function statementExecute(string $name, array $params): Result
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
@@ -325,8 +306,6 @@ final class PgSqlHandle implements Handle
     }
 
     /**
-     * @param string $name
-     *
      * @throws \Error
      */
     public function statementDeallocate(string $name): void
@@ -350,9 +329,6 @@ final class PgSqlHandle implements Handle
         $storage->future->ignore();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function query(string $sql): Result
     {
         if ($this->handle === null) {
@@ -361,10 +337,7 @@ final class PgSqlHandle implements Handle
 
         return $this->createResult($this->send(pg_send_query(...), $sql), $sql);
     }
-
-    /**
-     * @inheritDoc
-     */
+    
     public function execute(string $sql, array $params = []): Result
     {
         if ($this->handle === null) {
@@ -377,9 +350,6 @@ final class PgSqlHandle implements Handle
         return $this->createResult($this->send(pg_send_query_params(...), $sql, $params), $sql);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function prepare(string $sql): Statement
     {
         if ($this->handle === null) {
@@ -448,9 +418,6 @@ final class PgSqlHandle implements Handle
         return new PgSqlStatement($this, $name, $sql, $names);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function notify(string $channel, string $payload = ""): Result
     {
         if ($payload === "") {
@@ -460,9 +427,6 @@ final class PgSqlHandle implements Handle
         return $this->query(\sprintf("NOTIFY %s, %s", $this->quoteName($channel), $this->quoteString($payload)));
     }
 
-    /**
-     * @inheritDoc
-     */
     public function listen(string $channel): Listener
     {
         if (isset($this->listeners[$channel])) {
@@ -483,8 +447,6 @@ final class PgSqlHandle implements Handle
     }
 
     /**
-     * @param string $channel
-     *
      * @throws \Error
      */
     private function unlisten(string $channel): void
@@ -509,9 +471,6 @@ final class PgSqlHandle implements Handle
         }
     }
 
-    /**
-     * @inheritDoc
-     */
     public function quoteString(string $data): string
     {
         if ($this->handle === null) {
@@ -521,9 +480,6 @@ final class PgSqlHandle implements Handle
         return \pg_escape_literal($this->handle, $data);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function quoteName(string $name): string
     {
         if ($this->handle === null) {

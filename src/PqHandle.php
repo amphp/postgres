@@ -37,8 +37,6 @@ final class PqHandle implements Handle
 
     /**
      * Connection constructor.
-     *
-     * @param pq\Connection $handle
      */
     public function __construct(pq\Connection $handle)
     {
@@ -51,7 +49,10 @@ final class PqHandle implements Handle
         $listeners = &$this->listeners;
 
         $this->poll = EventLoop::onReadable($this->handle->socket, static function ($watcher) use (
-            &$deferred, &$lastUsedAt, &$listeners, &$handle
+            &$deferred,
+            &$lastUsedAt,
+            &$listeners,
+            &$handle
         ): void {
             $lastUsedAt = \time();
 
@@ -94,7 +95,9 @@ final class PqHandle implements Handle
         });
 
         $this->await = EventLoop::onWritable($this->handle->socket, static function ($watcher) use (
-            &$deferred, &$listeners, &$handle
+            &$deferred,
+            &$listeners,
+            &$handle
         ): void {
             try {
                 if (!$handle->flush()) {
@@ -127,25 +130,16 @@ final class PqHandle implements Handle
         $this->close();
     }
 
-    /**
-     * @inheritDoc
-     */
     public function isAlive(): bool
     {
         return $this->handle !== null;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }
 
-    /**
-     * @inheritDoc
-     */
     public function close(): void
     {
         $this->deferred?->error(new ConnectionException("The connection was closed"));
@@ -161,8 +155,6 @@ final class PqHandle implements Handle
      * @param string|null Query SQL or null if not related.
      * @param \Closure $method Method to execute.
      * @param mixed ...$args Arguments to pass to function.
-     *
-     * @return Result|pq\Statement
      *
      * @throws FailureException
      */
@@ -211,11 +203,6 @@ final class PqHandle implements Handle
     }
 
     /**
-     * @param pq\Result $result
-     * @param string|null $sql
-     *
-     * @return Result
-     *
      * @throws FailureException
      */
     private function makeResult(pq\Result $result, ?string $sql): Result
@@ -243,6 +230,7 @@ final class PqHandle implements Handle
                 while ($this->handle->busy && $this->handle->getResult()) ;
                 throw new QueryExecutionError($result->errorMessage, $result->diag, $sql ?? '');
 
+                // no break
             case pq\Result::BAD_RESPONSE:
                 $this->close();
                 throw new FailureException($result->errorMessage);
@@ -254,10 +242,6 @@ final class PqHandle implements Handle
     }
 
     /**
-     * @param string|null $sql
-     *
-     * @return Result|null
-     *
      * @throws FailureException
      */
     private function fetchNextResult(?string $sql): ?Result
@@ -317,10 +301,6 @@ final class PqHandle implements Handle
     /**
      * Executes the named statement using the given parameters.
      *
-     * @param string $name
-     * @param array $params
-     *
-     * @return Result
      * @throws FailureException
      */
     public function statementExecute(string $name, array $params): Result
@@ -335,7 +315,6 @@ final class PqHandle implements Handle
     }
 
     /**
-     * @param string $name
      * @throws FailureException
      */
     public function statementDeallocate(string $name): void
@@ -360,9 +339,6 @@ final class PqHandle implements Handle
         });
     }
 
-    /**
-     * @inheritDoc
-     */
     public function query(string $sql): Result
     {
         if (!$this->handle) {
@@ -372,9 +348,6 @@ final class PqHandle implements Handle
         return $this->send($sql, $this->handle->execAsync(...), $sql);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function execute(string $sql, array $params = []): Result
     {
         if (!$this->handle) {
@@ -387,9 +360,6 @@ final class PqHandle implements Handle
         return $this->send($sql, $this->handle->execParamsAsync(...), $sql, $params);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function prepare(string $sql): Statement
     {
         if (!$this->handle) {
@@ -438,17 +408,11 @@ final class PqHandle implements Handle
         return new PqStatement($this, $name, $sql, $names);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function notify(string $channel, string $payload = ""): Result
     {
         return $this->send(null, $this->handle->notifyAsync(...), $channel, $payload);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function listen(string $channel): Listener
     {
         if (isset($this->listeners[$channel])) {
@@ -477,8 +441,6 @@ final class PqHandle implements Handle
     }
 
     /**
-     * @param string $channel
-     *
      * @throws \Error
      */
     private function unlisten(string $channel): void
@@ -503,9 +465,6 @@ final class PqHandle implements Handle
         }
     }
 
-    /**
-     * @inheritDoc
-     */
     public function quoteString(string $data): string
     {
         if (!$this->handle) {
@@ -515,9 +474,6 @@ final class PqHandle implements Handle
         return $this->handle->quote($data);
     }
 
-    /**
-     * @inheritDoc
-     */
     public function quoteName(string $name): string
     {
         if (!$this->handle) {

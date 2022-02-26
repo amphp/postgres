@@ -23,10 +23,6 @@ function connector(?Connector $connector = null): Connector
 /**
  * Create a connection using the global Connector instance.
  *
- * @param SqlConnectionConfig $config
- *
- * @return Connection
- *
  * @throws FailureException If connecting fails.
  *
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
@@ -40,13 +36,6 @@ function connect(SqlConnectionConfig $config): Connection
 
 /**
  * Create a pool using the global Connector instance.
- *
- * @param SqlConnectionConfig $config
- * @param int $maxConnections
- * @param int $idleTimeout
- * @param bool $resetConnections
- *
- * @return Pool
  */
 function pool(
     SqlConnectionConfig $config,
@@ -59,10 +48,6 @@ function pool(
 
 /**
  * Casts a PHP value to a representation that is understood by Postgres, including encoding arrays.
- *
- * @param mixed $value
- *
- * @return string|int|float|null
  *
  * @throws \Error If $value is an object without a __toString() method, a resource, or an unknown type.
  */
@@ -95,8 +80,6 @@ function cast(mixed $value): string|int|float|null
 
 /**
  * Encodes an array into a PostgreSQL representation of the array.
- *
- * @param array $array
  *
  * @return string The serialized representation of the array.
  *

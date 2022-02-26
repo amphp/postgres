@@ -18,9 +18,6 @@ final class PgSqlStatement implements Statement
     private int $lastUsedAt;
 
     /**
-     * @param PgSqlHandle $handle
-     * @param string $name
-     * @param string $sql
      * @param string[] $params
      */
     public function __construct(PgSqlHandle $handle, string $name, string $sql, array $params)
@@ -37,25 +34,21 @@ final class PgSqlStatement implements Statement
         $this->handle->statementDeallocate($this->name);
     }
 
-    /** @inheritDoc */
     public function isAlive(): bool
     {
         return $this->handle->isAlive();
     }
 
-    /** @inheritDoc */
     public function getQuery(): string
     {
         return $this->sql;
     }
 
-    /** @inheritDoc */
     public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }
 
-    /** @inheritDoc */
     public function execute(array $params = []): Result
     {
         return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));

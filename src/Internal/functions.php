@@ -4,6 +4,7 @@ namespace Amp\Postgres\Internal;
 
 use function Amp\Postgres\cast;
 
+/** @internal */
 const STATEMENT_PARAM_REGEX = <<<'REGEX'
 [
     # Skip all quoted groups.

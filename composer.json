@@ -30,7 +30,7 @@
         "ext-pq": "*",
         "amphp/phpunit-util": "^3",
         "phpunit/phpunit": "^9",
-        "amphp/php-cs-fixer-config": "dev-master",
+        "amphp/php-cs-fixer-config": "^2-dev",
         "psalm/phar": "^4.10"
     },
     "minimum-stability": "dev",
