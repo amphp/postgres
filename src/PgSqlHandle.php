@@ -275,6 +275,7 @@ final class PgSqlHandle implements Handle
                 while (\pg_connection_busy($this->handle) && \pg_get_result($this->handle));
                 throw new QueryExecutionError($message, $diagnostics, $sql);
 
+                // no break
             case \PGSQL_BAD_RESPONSE:
                 $this->close();
                 throw new FailureException(\pg_result_error($result));
@@ -337,7 +338,7 @@ final class PgSqlHandle implements Handle
 
         return $this->createResult($this->send(pg_send_query(...), $sql), $sql);
     }
-    
+
     public function execute(string $sql, array $params = []): Result
     {
         if ($this->handle === null) {
