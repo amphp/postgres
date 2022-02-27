@@ -8,6 +8,7 @@ use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\Pool;
 use Amp\Sql\Connector;
 use Revolt\EventLoop;
+use function Amp\Postgres\cast;
 
 /**
  * @requires extension pgsql
@@ -54,7 +55,7 @@ class PgSqlPoolTest extends AbstractLinkTest
         }
 
         foreach ($this->getData() as $row) {
-            $result = \pg_query_params($handle, self::INSERT_QUERY, \array_map('Amp\\Postgres\\cast', $row));
+            $result = \pg_query_params($handle, self::INSERT_QUERY, \array_map(cast(...), $row));
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -76,6 +77,8 @@ class PgSqlPoolTest extends AbstractLinkTest
         foreach ($this->handles as $handle) {
             \pg_close($handle);
         }
+
+        $this->handles = [];
 
         parent::tearDown();
     }

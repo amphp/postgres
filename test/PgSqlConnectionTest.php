@@ -5,6 +5,7 @@ namespace Amp\Postgres\Test;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 use Revolt\EventLoop;
+use function Amp\Postgres\cast;
 
 /**
  * @requires extension pgsql
@@ -32,7 +33,7 @@ class PgSqlConnectionTest extends AbstractConnectionTest
         }
 
         foreach ($this->getData() as $row) {
-            $result = \pg_query_params($this->handle, self::INSERT_QUERY, \array_map('Amp\\Postgres\\cast', $row));
+            $result = \pg_query_params($this->handle, self::INSERT_QUERY, \array_map(cast(...), $row));
             if (!$result) {
                 $this->fail('Could not insert test data.');
             }
@@ -47,6 +48,8 @@ class PgSqlConnectionTest extends AbstractConnectionTest
         \pg_query($this->handle, "ROLLBACK");
         \pg_query($this->handle, self::DROP_QUERY);
         \pg_close($this->handle);
+
+        $this->handle = null;
 
         parent::tearDown();
     }

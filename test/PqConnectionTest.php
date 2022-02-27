@@ -6,14 +6,15 @@ use Amp\Postgres\Link;
 use Amp\Postgres\PqBufferedResultSet;
 use Amp\Postgres\PqConnection;
 use Amp\Postgres\PqUnbufferedResultSet;
+use function Amp\Postgres\cast;
 
 /**
  * @requires extension pq
  */
 class PqConnectionTest extends AbstractConnectionTest
 {
-    /** @var resource PostgreSQL connection resource. */
-    protected $handle;
+    /** @var \pg\Connection|null PostgreSQL connection resource. */
+    protected ?\pq\Connection $handle;
 
     public function createLink(string $connectionString): Link
     {
@@ -30,7 +31,7 @@ class PqConnectionTest extends AbstractConnectionTest
         }
 
         foreach ($this->getData() as $row) {
-            $result = $this->handle->execParams(self::INSERT_QUERY, \array_map('Amp\\Postgres\\cast', $row));
+            $result = $this->handle->execParams(self::INSERT_QUERY, \array_map(cast(...), $row));
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -44,6 +45,8 @@ class PqConnectionTest extends AbstractConnectionTest
     {
         $this->handle->exec("ROLLBACK");
         $this->handle->exec(self::DROP_QUERY);
+
+        $this->handle = null;
 
         parent::tearDown();
     }

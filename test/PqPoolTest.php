@@ -7,6 +7,7 @@ use Amp\Postgres\Link;
 use Amp\Postgres\Pool;
 use Amp\Postgres\PqConnection;
 use Amp\Sql\Connector;
+use function Amp\Postgres\cast;
 
 /**
  * @requires extension pq
@@ -51,7 +52,7 @@ class PqPoolTest extends AbstractLinkTest
         }
 
         foreach ($this->getData() as $row) {
-            $result = $handle->execParams(self::INSERT_QUERY, \array_map('Amp\\Postgres\\cast', $row));
+            $result = $handle->execParams(self::INSERT_QUERY, \array_map(cast(...), $row));
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -65,6 +66,8 @@ class PqPoolTest extends AbstractLinkTest
     {
         $this->handles[0]->exec("ROLLBACK");
         $this->handles[0]->exec(self::DROP_QUERY);
+
+        $this->handles = [];
 
         parent::tearDown();
     }
