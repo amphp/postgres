@@ -84,7 +84,7 @@ final class PgSqlConnection extends Connection implements Link
     }
 
     /**
-     * @param resource $handle PostgreSQL connection handle.
+     * @param \PgSql\Connection $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
      * @param string $id Connection identifier for determining which cached type table to use.
      */

@@ -31,10 +31,10 @@ final class PgSqlHandle implements Handle
         \PGSQL_DIAG_SOURCE_FUNCTION => "source_function",
     ];
 
-    /** @var array<string, Future<array<int, array{string, string}>>> */
+    /** @var array<string, array<int, array{string, string}>> */
     private static array $typeCache;
 
-    /** @var resource PostgreSQL connection handle. */
+    /** @var \PgSql\Connection PostgreSQL connection handle. */
     private $handle;
 
     /** @var array<int, array{string, string}> */
@@ -55,7 +55,7 @@ final class PgSqlHandle implements Handle
     private int $lastUsedAt;
 
     /**
-     * @param resource $handle PostgreSQL connection handle.
+     * @param \PgSql\Connection $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
      * @param string $id Connection identifier for determining which cached type table to use.
      */
@@ -166,6 +166,9 @@ final class PgSqlHandle implements Handle
         $this->close();
     }
 
+    /**
+     * @return array<int, array{string, string}>
+     */
     private function fetchTypes(): array
     {
         $result = \pg_query($this->handle, "SELECT t.oid, t.typcategory, t.typdelim, t.typelem
@@ -194,7 +197,7 @@ final class PgSqlHandle implements Handle
 
     public function isAlive(): bool
     {
-        return $this->handle instanceof \PgSql\Connection || \is_resource($this->handle);
+        return $this->handle instanceof \PgSql\Connection;
     }
 
     public function getLastUsedAt(): int
@@ -206,11 +209,11 @@ final class PgSqlHandle implements Handle
      * @param \Closure $function Function to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
-     * @return resource
+     * @return \PgSql\Result
      *
      * @throws FailureException
      */
-    private function send(\Closure $function, mixed ...$args)
+    private function send(\Closure $function, mixed ...$args): mixed
     {
         while ($this->deferred) {
             try {
@@ -245,7 +248,7 @@ final class PgSqlHandle implements Handle
     }
 
     /**
-     * @param resource $result PostgreSQL result resource.
+     * @param \PgSql\Result $result PostgreSQL result resource.
      * @param string $sql Query SQL.
      *
      * @return Result
@@ -253,7 +256,7 @@ final class PgSqlHandle implements Handle
      * @throws FailureException
      * @throws QueryError
      */
-    private function createResult($result, string $sql)
+    private function createResult(\PgSql\Result $result, string $sql)
     {
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:

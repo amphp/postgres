@@ -47,6 +47,9 @@ final class Pool extends ConnectionPool implements Link
         return connector();
     }
 
+    /**
+     * @param \Closure():void $release
+     */
     protected function createStatement(SqlStatement $statement, \Closure $release): SqlStatement
     {
         return new PooledStatement($statement, $release);
@@ -86,7 +89,6 @@ final class Pool extends ConnectionPool implements Link
     public function notify(string $channel, string $payload = ""): Result
     {
         $connection = $this->pop();
-        \assert($connection instanceof Connection);
 
         try {
             $result = $connection->notify($channel, $payload);

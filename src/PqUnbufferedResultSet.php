@@ -11,7 +11,7 @@ use Revolt\EventLoop;
 
 final class PqUnbufferedResultSet implements Result, \IteratorAggregate
 {
-    /** @var ConcurrentIterator<array<string, mixed>, null, null> */
+    /** @var ConcurrentIterator<array<string, mixed>> */
     private readonly ConcurrentIterator $generator;
 
     /** @var Future<Result|null> */
@@ -20,7 +20,7 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
     private readonly int $columnCount;
 
     /**
-     * @param \Closure():Future<\pq\Result|null> $fetch Function to fetch next result row.
+     * @param \Closure():(\pq\Result|null) $fetch Function to fetch next result row.
      * @param \pq\Result $result Initial pq\Result result object.
      * @param Future<Result|null> $nextResult
      */

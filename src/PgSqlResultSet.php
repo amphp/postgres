@@ -22,12 +22,13 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
     private readonly Future $nextResult;
 
     /**
-     * @param resource $handle PostgreSQL result resource.
+     * @param \PgSql\Result $handle PostgreSQL result resource.
      * @param array<int, array{string, string}> $types
      * @param Future<Result|null> $nextResult
      */
-    public function __construct($handle, array $types, Future $nextResult)
+    public function __construct(\PgSql\Result $handle, array $types, Future $nextResult)
     {
+        /** @psalm-suppress RedundantPropertyInitializationCheck */
         if (!isset(self::$parser)) {
             self::$parser = new Internal\ArrayParser;
         }
@@ -44,6 +45,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
         $this->columnCount = \pg_num_fields($handle);
         $this->nextResult = $nextResult;
 
+        /** @var list<int> $fieldTypes */
         $this->generator = Pipeline::fromIterable(static function () use (
             $handle,
             $types,
@@ -123,11 +125,11 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
      *
      * @param array<int, array{string, string}> $types
      *
-     * @return array|bool|float|int Cast value.
+     * @return string|int|bool|array|float Cast value.
      *
      * @throws ParseException
      */
-    private static function cast(array $types, int $oid, string $value): mixed
+    private static function cast(array $types, int $oid, string $value): string|int|bool|array|float
     {
         [$type, $delimiter, $element] = $types[$oid] ?? ['S', ',', 0];
 

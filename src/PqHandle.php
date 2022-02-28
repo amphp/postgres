@@ -158,7 +158,7 @@ final class PqHandle implements Handle
      *
      * @throws FailureException
      */
-    private function send(?string $sql, \Closure $method, mixed ...$args): Result|pq\Statement
+    private function send(?string $sql, \Closure $method, mixed ...$args): mixed
     {
         while ($this->busy) {
             try {
@@ -334,7 +334,7 @@ final class PqHandle implements Handle
         \assert($storage->statement instanceof pq\Statement, "Statement storage in invalid state");
 
         $storage->future = async(function () use ($storage, $name): void {
-            $this->send(null, [$storage->statement, "deallocateAsync"]);
+            $this->send(null, $storage->statement->deallocateAsync(...));
             unset($this->statements[$name]);
         });
     }
