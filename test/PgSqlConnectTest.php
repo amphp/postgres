@@ -4,7 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Cancellation;
 use Amp\Postgres\PgSqlConnection;
-use Amp\Sql\ConnectionConfig;
+use Amp\Postgres\PostgresConfig;
 use Revolt\EventLoop;
 
 /**
@@ -12,7 +12,7 @@ use Revolt\EventLoop;
  */
 class PgSqlConnectTest extends AbstractConnectTest
 {
-    public function connect(ConnectionConfig $connectionConfig, Cancellation $cancellation = null): PgSqlConnection
+    public function connect(PostgresConfig $connectionConfig, Cancellation $cancellation = null): PgSqlConnection
     {
         if (EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
             $this->markTestSkipped("ext-pgsql is not compatible with pecl-ev");

@@ -16,7 +16,7 @@ final class PgSqlConnection extends Connection implements Link
      *
      * @throws \Error If pecl-ev is used as a loop extension.
      */
-    public static function connect(ConnectionConfig $connectionConfig, ?Cancellation $cancellation = null): self
+    public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self
     {
         // @codeCoverageIgnoreStart
         /** @psalm-suppress UndefinedClass */

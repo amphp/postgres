@@ -2,9 +2,9 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
+use Amp\Sql\SqlConfig;
 
-final class ConnectionConfig extends SqlConnectionConfig
+final class PostgresConfig extends SqlConfig
 {
     public const DEFAULT_PORT = 5432;
 

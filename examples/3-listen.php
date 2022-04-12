@@ -4,10 +4,10 @@
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres;
-use function Amp\defer;
+use function Amp\async;
 use function Amp\delay;
 
-$config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
+$config = Postgres\PostgresConfig::fromString('host=localhost user=postgres');
 
 $pool = Postgres\pool($config);
 
@@ -17,16 +17,16 @@ $listener = $pool->listen($channel);
 
 \printf("Listening on channel '%s'\n", $listener->getChannel());
 
-defer(function () use ($pool, $channel, $listener): void {
-    delay(1000);
+async(function () use ($pool, $channel, $listener): void {
+    delay(1);
 
     $pool->notify($channel, "Data 1"); // Send first notification.
 
-    delay(1000);
+    delay(1);
 
     $pool->notify($channel, "Data 2"); // Send second notification.
 
-    delay(1000);
+    delay(1);
 
     $listener->unlisten();
 });

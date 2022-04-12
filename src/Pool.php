@@ -5,8 +5,6 @@ namespace Amp\Postgres;
 use Amp\Future;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Common\PooledStatement;
-use Amp\Sql\ConnectionConfig;
-use Amp\Sql\Connector;
 use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
@@ -28,11 +26,11 @@ final class Pool extends ConnectionPool implements Link
      * @param bool             $resetConnections True to automatically execute DISCARD ALL on a connection before use.
      */
     public function __construct(
-        ConnectionConfig $config,
+        PostgresConfig $config,
         int $maxConnections = self::DEFAULT_MAX_CONNECTIONS,
         int $idleTimeout = self::DEFAULT_IDLE_TIMEOUT,
         bool $resetConnections = true,
-        ?Connector $connector = null
+        ?PostgresConnector $connector = null
     ) {
         parent::__construct($config, $maxConnections, $idleTimeout, $connector);
 
@@ -40,9 +38,9 @@ final class Pool extends ConnectionPool implements Link
     }
 
     /**
-     * @return Connector The Connector instance defined by the connector() function.
+     * @return PostgresConnector The Connector instance defined by the connector() function.
      */
-    protected function createDefaultConnector(): Connector
+    protected function createDefaultConnector(): PostgresConnector
     {
         return connector();
     }

@@ -17,7 +17,7 @@ final class PqConnection extends Connection implements Link
     /**
      * @return PqConnection
      */
-    public static function connect(ConnectionConfig $connectionConfig, ?Cancellation $cancellation = null): self
+    public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self
     {
         try {
             $connection = new pq\Connection($connectionConfig->getConnectionString(), pq\Connection::ASYNC);

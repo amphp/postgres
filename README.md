@@ -34,12 +34,12 @@ More examples can be found in the [`examples`](examples) directory.
 
 ```php
 use Amp\Postgres;
-use Amp\Postgres\ConnectionConfig;
+use Amp\Postgres\PostgresConfig;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 
 Amp\Loop::run(function () {
-    $config = ConnectionConfig::fromString("host=localhost user=postgres db=test");
+    $config = PostgresConfig::fromString("host=localhost user=postgres db=test");
 
     /** @var Postgres\Pool $pool */
     $pool = Postgres\pool($config);

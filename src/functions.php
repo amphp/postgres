@@ -3,11 +3,10 @@
 namespace Amp\Postgres;
 
 use Amp\Sql\Common\ConnectionPool;
-use Amp\Sql\ConnectionConfig as SqlConnectionConfig;
-use Amp\Sql\FailureException;
+use Amp\Sql\SqlException;
 use Revolt\EventLoop;
 
-function connector(?Connector $connector = null): Connector
+function connector(?PostgresConnector $connector = null): PostgresConnector
 {
     static $map;
     $map ??= new \WeakMap();
@@ -17,19 +16,19 @@ function connector(?Connector $connector = null): Connector
         return $map[$driver] = $connector;
     }
 
-    return $map[$driver] ??= new TimeoutConnector;
+    return $map[$driver] ??= new DefaultPostgresConnector;
 }
 
 /**
  * Create a connection using the global Connector instance.
  *
- * @throws FailureException If connecting fails.
+ * @throws SqlException If connecting fails.
  *
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
  *
  * @codeCoverageIgnore
  */
-function connect(SqlConnectionConfig $config): Connection
+function connect(PostgresConfig $config): Connection
 {
     return connector()->connect($config);
 }
@@ -38,7 +37,7 @@ function connect(SqlConnectionConfig $config): Connection
  * Create a pool using the global Connector instance.
  */
 function pool(
-    SqlConnectionConfig $config,
+    PostgresConfig $config,
     int $maxConnections = ConnectionPool::DEFAULT_MAX_CONNECTIONS,
     int $idleTimeout = ConnectionPool::DEFAULT_IDLE_TIMEOUT,
     bool $resetConnections = true

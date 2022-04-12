@@ -16,7 +16,7 @@ abstract class Connection implements Link, Handle
     /** @var DeferredFuture|null Used to only allow one transaction at a time. */
     private ?DeferredFuture $busy = null;
 
-    abstract public static function connect(ConnectionConfig $connectionConfig, ?Cancellation $cancellation = null): self;
+    abstract public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self;
 
     public function __construct(Handle $handle)
     {
@@ -111,12 +111,7 @@ abstract class Connection implements Link, Handle
         $this->reserve();
 
         try {
-            $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL " . match ($isolation) {
-                TransactionIsolation::Uncommitted => "READ UNCOMMITTED",
-                TransactionIsolation::Committed => "READ COMMITTED",
-                TransactionIsolation::Repeatable => "REPEATABLE READ",
-                TransactionIsolation::Serializable => "SERIALIZABLE",
-            });
+            $this->handle->query("BEGIN TRANSACTION ISOLATION LEVEL " . $isolation->toSql());
         } catch (\Throwable $exception) {
             $this->release();
             throw $exception;

@@ -4,8 +4,8 @@ namespace Amp\Postgres;
 
 use Amp\Sql\Common\PooledResult;
 use Amp\Sql\Common\PooledStatement;
-use Amp\Sql\FailureException;
 use Amp\Sql\Result;
+use Amp\Sql\SqlException;
 use Amp\Sql\Statement;
 use Amp\Sql\TransactionError;
 use Amp\Sql\TransactionIsolation;
@@ -50,7 +50,7 @@ final class ConnectionTransaction implements Transaction
             EventLoop::queue(static function () use ($handle): void {
                 try {
                     $handle->isAlive() && $handle->query('ROLLBACK');
-                } catch (FailureException) {
+                } catch (SqlException) {
                     // Ignore failure if connection closes during query.
                 }
             });

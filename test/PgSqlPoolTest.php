@@ -2,11 +2,11 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\ConnectionConfig;
 use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\Pool;
-use Amp\Sql\Connector;
+use Amp\Postgres\PostgresConfig;
+use Amp\Postgres\PostgresConnector;
 use Revolt\EventLoop;
 use function Amp\Postgres\cast;
 
@@ -30,7 +30,7 @@ class PgSqlPoolTest extends AbstractLinkTest
             $this->handles[] = \pg_connect($connectionString, \PGSQL_CONNECT_FORCE_NEW);
         }
 
-        $connector = $this->createMock(Connector::class);
+        $connector = $this->createMock(PostgresConnector::class);
         $connector->method('connect')
             ->will($this->returnCallback(function (): PgSqlConnection {
                 static $count = 0;
@@ -42,7 +42,7 @@ class PgSqlPoolTest extends AbstractLinkTest
                 return new PgSqlConnection($handle, \pg_socket($handle));
             }));
 
-        $pool = new Pool(new ConnectionConfig('localhost'), \count($this->handles), Pool::DEFAULT_IDLE_TIMEOUT, true, $connector);
+        $pool = new Pool(new PostgresConfig('localhost'), \count($this->handles), Pool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
         $handle = \reset($this->handles);
 

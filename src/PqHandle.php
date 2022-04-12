@@ -7,9 +7,9 @@ use Amp\Future;
 use Amp\Pipeline\Queue;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
-use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
 use Amp\Sql\Result;
+use Amp\Sql\SqlException;
 use Amp\Sql\Statement;
 use pq;
 use Revolt\EventLoop;
@@ -156,7 +156,7 @@ final class PqHandle implements Handle
      * @param \Closure $method Method to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
-     * @throws FailureException
+     * @throws SqlException
      */
     private function send(?string $sql, \Closure $method, mixed ...$args): mixed
     {
@@ -184,13 +184,13 @@ final class PqHandle implements Handle
 
             $result = $this->deferred->getFuture()->await();
         } catch (pq\Exception $exception) {
-            throw new FailureException($this->handle->errorMessage, 0, $exception);
+            throw new SqlException($this->handle->errorMessage, 0, $exception);
         } finally {
             $this->busy = null;
         }
 
         if (!$result instanceof pq\Result) {
-            throw new FailureException("Unknown query result");
+            throw new SqlException("Unknown query result");
         }
 
         $result = $this->makeResult($result, $sql);
@@ -203,7 +203,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * @throws FailureException
+     * @throws SqlException
      */
     private function makeResult(pq\Result $result, ?string $sql): Result
     {
@@ -233,16 +233,16 @@ final class PqHandle implements Handle
                 // no break
             case pq\Result::BAD_RESPONSE:
                 $this->close();
-                throw new FailureException($result->errorMessage);
+                throw new SqlException($result->errorMessage);
 
             default:
                 $this->close();
-                throw new FailureException("Unknown result status");
+                throw new SqlException("Unknown result status");
         }
     }
 
     /**
-     * @throws FailureException
+     * @throws SqlException
      */
     private function fetchNextResult(?string $sql): ?Result
     {
@@ -294,14 +294,14 @@ final class PqHandle implements Handle
 
             default:
                 $this->close();
-                throw new FailureException($result->errorMessage);
+                throw new SqlException($result->errorMessage);
         }
     }
 
     /**
      * Executes the named statement using the given parameters.
      *
-     * @throws FailureException
+     * @throws SqlException
      */
     public function statementExecute(string $name, array $params): Result
     {
@@ -315,7 +315,7 @@ final class PqHandle implements Handle
     }
 
     /**
-     * @throws FailureException
+     * @throws SqlException
      */
     public function statementDeallocate(string $name): void
     {

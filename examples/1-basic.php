@@ -5,7 +5,7 @@ require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres;
 
-$config = Postgres\ConnectionConfig::fromString('host=localhost user=postgres');
+$config = Postgres\PostgresConfig::fromString('host=localhost user=postgres');
 
 $connection = Postgres\connect($config);
 

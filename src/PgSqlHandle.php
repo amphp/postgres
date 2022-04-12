@@ -7,9 +7,9 @@ use Amp\Future;
 use Amp\Pipeline\Queue;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
-use Amp\Sql\FailureException;
 use Amp\Sql\QueryError;
 use Amp\Sql\Result;
+use Amp\Sql\SqlException;
 use Amp\Sql\Statement;
 use Revolt\EventLoop;
 use function Amp\async;
@@ -211,7 +211,7 @@ final class PgSqlHandle implements Handle
      *
      * @return \PgSql\Result
      *
-     * @throws FailureException
+     * @throws SqlException
      */
     private function send(\Closure $function, mixed ...$args): mixed
     {
@@ -234,7 +234,7 @@ final class PgSqlHandle implements Handle
         $result = $function($this->handle, ...$args);
 
         if ($result === false) {
-            throw new FailureException(\pg_last_error($this->handle));
+            throw new SqlException(\pg_last_error($this->handle));
         }
 
         $this->deferred = new DeferredFuture;
@@ -253,7 +253,7 @@ final class PgSqlHandle implements Handle
      *
      * @return Result
      *
-     * @throws FailureException
+     * @throws SqlException
      * @throws QueryError
      */
     private function createResult(\PgSql\Result $result, string $sql)
@@ -281,18 +281,18 @@ final class PgSqlHandle implements Handle
                 // no break
             case \PGSQL_BAD_RESPONSE:
                 $this->close();
-                throw new FailureException(\pg_result_error($result));
+                throw new SqlException(\pg_result_error($result));
 
             default:
                 // @codeCoverageIgnoreStart
                 $this->close();
-                throw new FailureException("Unknown result status");
+                throw new SqlException("Unknown result status");
                 // @codeCoverageIgnoreEnd
         }
     }
 
     /**
-     * @throws FailureException
+     * @throws SqlException
      */
     private function fetchNextResult(string $sql): ?Result
     {
@@ -404,11 +404,11 @@ final class PgSqlHandle implements Handle
                         throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
 
                     case \PGSQL_BAD_RESPONSE:
-                        throw new FailureException(\pg_result_error($result));
+                        throw new SqlException(\pg_result_error($result));
 
                     default:
                         // @codeCoverageIgnoreStart
-                        throw new FailureException("Unknown result status");
+                        throw new SqlException("Unknown result status");
                         // @codeCoverageIgnoreEnd
                 }
             }))->await();

@@ -5,8 +5,8 @@ namespace Amp\Postgres;
 use Amp\Future;
 use Amp\Pipeline\ConcurrentIterator;
 use Amp\Pipeline\Pipeline;
-use Amp\Sql\FailureException;
 use Amp\Sql\Result;
+use Amp\Sql\SqlException;
 
 final class PgSqlResultSet implements Result, \IteratorAggregate
 {
@@ -59,7 +59,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
                     $result = \pg_fetch_array($handle, null, \PGSQL_NUM);
 
                     if ($result === false) {
-                        throw new FailureException(\pg_result_error($handle));
+                        throw new SqlException(\pg_result_error($handle));
                     }
 
                     yield self::processRow($types, $fieldNames, $fieldTypes, $result);
