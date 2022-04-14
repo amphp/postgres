@@ -20,8 +20,6 @@ final class Pool extends ConnectionPool implements Link
     /** @var int Number of listeners on listening connection. */
     private int $listenerCount = 0;
 
-    private readonly bool $resetConnections;
-
     /**
      * @param bool             $resetConnections True to automatically execute DISCARD ALL on a connection before use.
      */
@@ -29,20 +27,10 @@ final class Pool extends ConnectionPool implements Link
         PostgresConfig $config,
         int $maxConnections = self::DEFAULT_MAX_CONNECTIONS,
         int $idleTimeout = self::DEFAULT_IDLE_TIMEOUT,
-        bool $resetConnections = true,
-        ?PostgresConnector $connector = null
+        private readonly bool $resetConnections = true,
+        ?PostgresConnector $connector = null,
     ) {
-        parent::__construct($config, $maxConnections, $idleTimeout, $connector);
-
-        $this->resetConnections = $resetConnections;
-    }
-
-    /**
-     * @return PostgresConnector The Connector instance defined by the connector() function.
-     */
-    protected function createDefaultConnector(): PostgresConnector
-    {
-        return connector();
+        parent::__construct($config, $connector ?? connector(), $maxConnections, $idleTimeout);
     }
 
     /**
