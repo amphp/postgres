@@ -7,20 +7,20 @@ use Amp\Sql\Statement;
 
 final class PqStatement implements Statement
 {
-    private PqHandle $handle;
+    private readonly PqHandle $handle;
 
-    private string $name;
+    private readonly string $name;
 
-    private string $sql;
+    private readonly string $sql;
 
-    private array $params;
+    private readonly array $params;
 
     private int $lastUsedAt;
 
     /**
      * @param string $name Statement name.
      * @param string $sql Original prepared SQL query.
-     * @param string[] $params Parameter indices to parameter names.
+     * @param array<int, int|string> $params Parameter indices to parameter names.
      */
     public function __construct(PqHandle $handle, string $name, string $sql, array $params)
     {

@@ -6,7 +6,7 @@ final class Notification
 {
     /**
      * @param string $channel Channel name.
-     * @param int $pid PID of message source.
+     * @param positive-int $pid PID of message source.
      * @param string $payload Message payload.
      */
     public function __construct(

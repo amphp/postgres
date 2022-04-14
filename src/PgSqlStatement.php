@@ -18,7 +18,7 @@ final class PgSqlStatement implements Statement
     private int $lastUsedAt;
 
     /**
-     * @param string[] $params
+     * @param array<int, int|string> $params
      */
     public function __construct(PgSqlHandle $handle, string $name, string $sql, array $params)
     {

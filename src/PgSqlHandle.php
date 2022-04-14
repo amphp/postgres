@@ -35,7 +35,7 @@ final class PgSqlHandle implements Handle
     private static array $typeCache;
 
     /** @var \PgSql\Connection PostgreSQL connection handle. */
-    private $handle;
+    private ?\PgSql\Connection $handle;
 
     /** @var array<int, array{string, string}> */
     private readonly array $types;
@@ -59,7 +59,7 @@ final class PgSqlHandle implements Handle
      * @param resource $socket PostgreSQL connection stream socket.
      * @param string $id Connection identifier for determining which cached type table to use.
      */
-    public function __construct($handle, $socket, string $id)
+    public function __construct(\PgSql\Connection $handle, $socket, string $id)
     {
         $this->handle = $handle;
 
