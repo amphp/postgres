@@ -21,7 +21,9 @@ final class Pool extends ConnectionPool implements Link
     private int $listenerCount = 0;
 
     /**
-     * @param bool             $resetConnections True to automatically execute DISCARD ALL on a connection before use.
+     * @param positive-int $maxConnections
+     * @param positive-int $idleTimeout
+     * @param bool $resetConnections True to automatically execute DISCARD ALL on a connection before use.
      */
     public function __construct(
         PostgresConfig $config,
@@ -54,6 +56,8 @@ final class Pool extends ConnectionPool implements Link
 
     /**
      * Changes return type to this library's Transaction type.
+     *
+     * @psalm-suppress LessSpecificReturnStatement, MoreSpecificReturnType
      */
     public function beginTransaction(TransactionIsolation $isolation = TransactionIsolation::Committed): Transaction
     {
@@ -90,28 +94,27 @@ final class Pool extends ConnectionPool implements Link
         ++$this->listenerCount;
 
         if ($this->listeningConnection === null) {
-            $this->listeningConnection = async(fn () => $this->pop());
+            $this->listeningConnection = async($this->pop(...));
         }
 
         if ($this->listeningConnection instanceof Future) {
             $this->listeningConnection = $this->listeningConnection->await();
         }
 
+        $connection = $this->listeningConnection;
+        \assert($connection instanceof Connection);
+
         try {
-            $listener = $this->listeningConnection->listen($channel);
+            $listener = $connection->listen($channel);
         } catch (\Throwable $exception) {
             if (--$this->listenerCount === 0) {
-                $connection = $this->listeningConnection;
-                $this->listeningConnection = null;
                 $this->push($connection);
             }
             throw $exception;
         }
 
-        return new PooledListener($listener, function (): void {
+        return new PooledListener($listener, function () use ($connection): void {
             if (--$this->listenerCount === 0) {
-                $connection = $this->listeningConnection;
-                $this->listeningConnection = null;
                 $this->push($connection);
             }
         });

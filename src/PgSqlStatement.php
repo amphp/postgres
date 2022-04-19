@@ -7,25 +7,17 @@ use Amp\Sql\Statement;
 
 final class PgSqlStatement implements Statement
 {
-    private readonly PgSqlHandle $handle;
-
-    private readonly string $name;
-
-    private readonly string $sql;
-
-    private readonly array $params;
-
     private int $lastUsedAt;
 
     /**
      * @param array<int, int|string> $params
      */
-    public function __construct(PgSqlHandle $handle, string $name, string $sql, array $params)
-    {
-        $this->handle = $handle;
-        $this->name = $name;
-        $this->sql = $sql;
-        $this->params = $params;
+    public function __construct(
+        private readonly PgSqlHandle $handle,
+        private readonly string $name,
+        private readonly string $sql,
+        private readonly array $params,
+    ) {
         $this->lastUsedAt = \time();
     }
 

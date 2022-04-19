@@ -12,7 +12,7 @@ use Revolt\EventLoop;
 final class PqUnbufferedResultSet implements Result, \IteratorAggregate
 {
     /** @var ConcurrentIterator<array<string, mixed>> */
-    private readonly ConcurrentIterator $generator;
+    private readonly ConcurrentIterator $iterator;
 
     /** @var Future<Result|null> */
     private readonly Future $nextResult;
@@ -29,7 +29,7 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
         $this->nextResult = $nextResult;
         $this->columnCount = $result->numCols;
 
-        $this->generator = Pipeline::fromIterable(static function () use ($result, $fetch): \Generator {
+        $this->iterator = Pipeline::fromIterable(static function () use ($result, $fetch): \Generator {
             try {
                 do {
                     $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
@@ -60,7 +60,7 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        return $this->generator->getIterator();
+        return $this->iterator;
     }
 
     public function getRowCount(): ?int

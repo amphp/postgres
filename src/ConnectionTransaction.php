@@ -59,7 +59,7 @@ final class ConnectionTransaction implements Transaction
 
     public function getLastUsedAt(): int
     {
-        return $this->handle->getLastUsedAt();
+        return $this->handle?->getLastUsedAt() ?? 0;
     }
 
     /**

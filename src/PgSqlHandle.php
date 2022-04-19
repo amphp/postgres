@@ -37,7 +37,7 @@ final class PgSqlHandle implements Handle
     /** @var \PgSql\Connection PostgreSQL connection handle. */
     private ?\PgSql\Connection $handle;
 
-    /** @var array<int, array{string, string}> */
+    /** @var array<int, array{string, string, int}> */
     private readonly array $types;
 
     private ?DeferredFuture $deferred = null;
@@ -46,10 +46,10 @@ final class PgSqlHandle implements Handle
 
     private readonly string $await;
 
-    /** @var Queue[] */
+    /** @var array<string, Queue> */
     private array $listeners = [];
 
-    /** @var object[] Anonymous class using Struct trait. */
+    /** @var array<string, Internal\StatementStorage<string>> */
     private array $statements = [];
 
     private int $lastUsedAt;
@@ -155,6 +155,7 @@ final class PgSqlHandle implements Handle
         EventLoop::unreference($this->poll);
         EventLoop::disable($this->await);
 
+        /** @psalm-suppress PropertyTypeCoercion */
         $this->types = (self::$typeCache[$id] ??= $this->fetchTypes());
     }
 
@@ -167,10 +168,14 @@ final class PgSqlHandle implements Handle
     }
 
     /**
-     * @return array<int, array{string, string}>
+     * @return array<int, array{string, string, int}>
+     *
+     * @psalm-suppress LessSpecificReturnStatement, MoreSpecificReturnType
      */
     private function fetchTypes(): array
     {
+        \assert($this->handle !== null);
+
         $result = \pg_query($this->handle, "SELECT t.oid, t.typcategory, t.typdelim, t.typelem
              FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON t.typnamespace=n.oid
              WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public')");
@@ -258,6 +263,10 @@ final class PgSqlHandle implements Handle
      */
     private function createResult(\PgSql\Result $result, string $sql)
     {
+        if ($this->handle === null) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
         switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
             case \PGSQL_EMPTY_QUERY:
                 throw new QueryError("Empty query string");
@@ -296,6 +305,10 @@ final class PgSqlHandle implements Handle
      */
     private function fetchNextResult(string $sql): ?Result
     {
+        if ($this->handle === null) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
         if ($result = \pg_get_result($this->handle)) {
             return $this->createResult($result, $sql);
         }
@@ -306,7 +319,7 @@ final class PgSqlHandle implements Handle
     public function statementExecute(string $name, array $params): Result
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
-        return $this->createResult($this->send(pg_send_execute(...), $name, $params), $this->statements[$name]->sql);
+        return $this->createResult($this->send(\pg_send_execute(...), $name, $params), $this->statements[$name]->sql);
     }
 
     /**
@@ -326,7 +339,12 @@ final class PgSqlHandle implements Handle
             return;
         }
 
-        $storage->future = async(function () use ($storage, $name): void {
+        $future = $storage->future;
+        $storage->future = async(function () use ($future, $storage, $name): void {
+            if (!$future->await()) {
+                return; // Statement already deallocated.
+            }
+
             $this->query(\sprintf("DEALLOCATE %s", $name));
             unset($this->statements[$name]);
         });
@@ -339,7 +357,7 @@ final class PgSqlHandle implements Handle
             throw new \Error("The connection to the database has been closed");
         }
 
-        return $this->createResult($this->send(pg_send_query(...), $sql), $sql);
+        return $this->createResult($this->send(\pg_send_query(...), $sql), $sql);
     }
 
     public function execute(string $sql, array $params = []): Result
@@ -351,7 +369,7 @@ final class PgSqlHandle implements Handle
         $sql = Internal\parseNamedParams($sql, $names);
         $params = Internal\replaceNamedParams($params, $names);
 
-        return $this->createResult($this->send(pg_send_query_params(...), $sql, $params), $sql);
+        return $this->createResult($this->send(\pg_send_query_params(...), $sql, $params), $sql);
     }
 
     public function prepare(string $sql): Statement
@@ -364,59 +382,51 @@ final class PgSqlHandle implements Handle
 
         $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
-        if (isset($this->statements[$name])) {
+        while (isset($this->statements[$name])) {
             $storage = $this->statements[$name];
 
             ++$storage->refCount;
+            // Do not return promised prepared statement object, as the $names array may differ.
+            $result = $storage->future->await();
 
-            if ($storage->future instanceof Future) {
-                // Do not return promised prepared statement object, as the $names array may differ.
-                $storage->future->await();
+            if ($result) { // Null returned if future was from deallocation.
+                return new PgSqlStatement($this, $name, $sql, $names);
             }
-
-            return new PgSqlStatement($this, $name, $sql, $names);
         }
 
-        $storage = new class {
-            public int $refCount = 1;
-            public ?Future $future;
-            public string $sql;
-        };
+        $future = async(function () use ($name, $modifiedSql, $sql): string {
+            $result = $this->send(\pg_send_prepare(...), $name, $modifiedSql);
 
-        $storage->sql = $sql;
+            switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
+                case \PGSQL_COMMAND_OK:
+                    return $name; // Statement created successfully.
 
+                case \PGSQL_NONFATAL_ERROR:
+                case \PGSQL_FATAL_ERROR:
+                    $diagnostics = [];
+                    foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
+                        $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
+                    }
+                    throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
+
+                case \PGSQL_BAD_RESPONSE:
+                    throw new SqlException(\pg_result_error($result));
+
+                default:
+                    // @codeCoverageIgnoreStart
+                    throw new SqlException("Unknown result status");
+                // @codeCoverageIgnoreEnd
+            }
+        });
+
+        $storage = new Internal\StatementStorage($sql, $future);
         $this->statements[$name] = $storage;
 
         try {
-            ($storage->future = async(function () use ($name, $modifiedSql, $sql) {
-                $result = $this->send(pg_send_prepare(...), $name, $modifiedSql);
-
-                switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
-                    case \PGSQL_COMMAND_OK:
-                        return $name; // Statement created successfully.
-
-                    case \PGSQL_NONFATAL_ERROR:
-                    case \PGSQL_FATAL_ERROR:
-                        $diagnostics = [];
-                        foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
-                            $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
-                        }
-                        throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
-
-                    case \PGSQL_BAD_RESPONSE:
-                        throw new SqlException(\pg_result_error($result));
-
-                    default:
-                        // @codeCoverageIgnoreStart
-                        throw new SqlException("Unknown result status");
-                        // @codeCoverageIgnoreEnd
-                }
-            }))->await();
+            $storage->future->await();
         } catch (\Throwable $exception) {
             unset($this->statements[$name]);
             throw $exception;
-        } finally {
-            $storage->future = null;
         }
 
         return new PgSqlStatement($this, $name, $sql, $names);

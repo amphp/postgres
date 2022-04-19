@@ -12,7 +12,7 @@ use Revolt\EventLoop;
 
 final class PqConnection extends Connection implements Link
 {
-    private PqHandle $handle;
+    private readonly PqHandle $handle;
 
     /**
      * @return PqConnection

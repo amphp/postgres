@@ -38,16 +38,6 @@ abstract class Connection implements Link, Handle
         $this->handle->close();
     }
 
-    /**
-     * @param string $methodName Method to execute.
-     * @param mixed ...$args Arguments to pass to function.
-     */
-    private function send(string $methodName, ...$args): Result|Statement|Listener
-    {
-        $this->awaitPending();
-        return $this->handle->{$methodName}(...$args);
-    }
-
     private function awaitPending(): void
     {
         while ($this->busy) {
@@ -71,7 +61,7 @@ abstract class Connection implements Link, Handle
     {
         \assert($this->busy !== null);
 
-        $this->busy->complete(null);
+        $this->busy->complete();
         $this->busy = null;
     }
 

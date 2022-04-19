@@ -7,14 +7,6 @@ use Amp\Sql\Statement;
 
 final class PqStatement implements Statement
 {
-    private readonly PqHandle $handle;
-
-    private readonly string $name;
-
-    private readonly string $sql;
-
-    private readonly array $params;
-
     private int $lastUsedAt;
 
     /**
@@ -22,12 +14,12 @@ final class PqStatement implements Statement
      * @param string $sql Original prepared SQL query.
      * @param array<int, int|string> $params Parameter indices to parameter names.
      */
-    public function __construct(PqHandle $handle, string $name, string $sql, array $params)
-    {
-        $this->handle = $handle;
-        $this->name = $name;
-        $this->params = $params;
-        $this->sql = $sql;
+    public function __construct(
+        private readonly PqHandle $handle,
+        private readonly string $name,
+        private readonly string $sql,
+        private readonly array $params,
+    ) {
         $this->lastUsedAt = \time();
     }
 

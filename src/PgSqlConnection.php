@@ -39,7 +39,8 @@ final class PgSqlConnection extends Connection implements Link
         $deferred = new DeferredFuture;
         $id = \sha1($connectionConfig->getHost() . $connectionConfig->getPort() . $connectionConfig->getUser());
 
-        $callback = function ($watcher, $resource) use ($connection, $deferred, $id): void {
+        /** @psalm-suppress MissingClosureParamType $resource is a resource and cannot be inferred in this context */
+        $callback = static function (string $watcher, $resource) use ($connection, $deferred, $id): void {
             if ($deferred->isComplete()) {
                 return;
             }

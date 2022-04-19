@@ -10,7 +10,7 @@ use pq;
 
 final class PqBufferedResultSet implements Result, \IteratorAggregate
 {
-    private readonly ConcurrentIterator $generator;
+    private readonly ConcurrentIterator $iterator;
 
     private readonly int $rowCount;
 
@@ -29,7 +29,7 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
         $this->columnCount = $result->numCols;
         $this->nextResult = $nextResult;
 
-        $this->generator = Pipeline::fromIterable(static function () use ($result): \Generator {
+        $this->iterator = Pipeline::fromIterable(static function () use ($result): \Generator {
             $position = 0;
 
             while (++$position <= $result->numRows) {
@@ -41,7 +41,7 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        return $this->generator->getIterator();
+        return $this->iterator;
     }
 
     public function getNextResult(): ?Result

@@ -35,6 +35,9 @@ function connect(PostgresConfig $config): Connection
 
 /**
  * Create a pool using the global Connector instance.
+ *
+ * @param positive-int $maxConnections
+ * @param positive-int $idleTimeout
  */
 function pool(
     PostgresConfig $config,

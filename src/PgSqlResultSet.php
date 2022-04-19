@@ -12,7 +12,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 {
     private static Internal\ArrayParser $parser;
 
-    private readonly ConcurrentIterator $generator;
+    private readonly ConcurrentIterator $iterator;
 
     private readonly int $rowCount;
 
@@ -23,15 +23,13 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 
     /**
      * @param \PgSql\Result $handle PostgreSQL result resource.
-     * @param array<int, array{string, string}> $types
+     * @param array<int, array{string, string, int}> $types
      * @param Future<Result|null> $nextResult
      */
     public function __construct(\PgSql\Result $handle, array $types, Future $nextResult)
     {
         /** @psalm-suppress RedundantPropertyInitializationCheck */
-        if (!isset(self::$parser)) {
-            self::$parser = new Internal\ArrayParser;
-        }
+        self::$parser ??= new Internal\ArrayParser;
 
         $fieldNames = [];
         $fieldTypes = [];
@@ -46,7 +44,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
         $this->nextResult = $nextResult;
 
         /** @var list<int> $fieldTypes */
-        $this->generator = Pipeline::fromIterable(static function () use (
+        $this->iterator = Pipeline::fromIterable(static function () use (
             $handle,
             $types,
             $fieldNames,
@@ -56,6 +54,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 
             try {
                 while (++$position <= \pg_num_rows($handle)) {
+                    /** @var array<int, string|null>|false $result */
                     $result = \pg_fetch_array($handle, null, \PGSQL_NUM);
 
                     if ($result === false) {
@@ -72,7 +71,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        return $this->generator->getIterator();
+        return $this->iterator;
     }
 
     public function getNextResult(): ?Result
@@ -97,10 +96,10 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
     }
 
     /**
-     * @param array<int, array{string, string}> $types
+     * @param array<int, array{string, string, int}> $types
      * @param array<int, string> $fieldNames
      * @param array<int, int> $fieldTypes
-     * @param array<int, mixed> $result
+     * @param array<int, string|null> $result
      *
      * @return array<string, mixed>
      * @throws ParseException
@@ -113,6 +112,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
                 continue;
             }
 
+            /** @psalm-suppress InvalidArgument $result[$column] will be a string when passed to {@see cast()} */
             $result[$column] = self::cast($types, $fieldTypes[$column], $result[$column]);
         }
 
@@ -123,7 +123,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
      * @see https://github.com/postgres/postgres/blob/REL_14_STABLE/src/include/catalog/pg_type.dat for OID types.
      * @see https://www.postgresql.org/docs/14/catalog-pg-type.html for pg_type catalog docs.
      *
-     * @param array<int, array{string, string}> $types
+     * @param array<int, array{string, string, int}> $types
      *
      * @return string|int|bool|array|float Cast value.
      *
