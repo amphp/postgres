@@ -231,7 +231,9 @@ final class PqHandle implements Handle
 
             case pq\Result::NONFATAL_ERROR:
             case pq\Result::FATAL_ERROR:
-                while ($this->handle->busy && $this->handle->getResult()) ;
+                while ($this->handle->busy && $this->handle->getResult()) {
+                    // Clear all outstanding result rows from the connection
+                }
                 throw new QueryExecutionError($result->errorMessage, $result->diag, $sql ?? '');
 
             case pq\Result::BAD_RESPONSE:

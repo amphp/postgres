@@ -282,10 +282,11 @@ final class PgSqlHandle implements Handle
                     $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                 }
                 $message = \pg_result_error($result);
-                while (\pg_connection_busy($this->handle) && \pg_get_result($this->handle));
+                while (\pg_connection_busy($this->handle) && \pg_get_result($this->handle)) {
+                    // Clear all outstanding result rows from the connection
+                }
                 throw new QueryExecutionError($message, $diagnostics, $sql);
 
-                // no break
             case \PGSQL_BAD_RESPONSE:
                 $this->close();
                 throw new SqlException(\pg_result_error($result));
