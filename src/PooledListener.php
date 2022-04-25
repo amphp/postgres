@@ -10,6 +10,9 @@ final class PooledListener implements Listener, \IteratorAggregate
 
     private ?\Closure $release;
 
+    /**
+     * @param \Closure():void $release
+     */
     public function __construct(Listener $listener, \Closure $release)
     {
         $this->listener = $listener;

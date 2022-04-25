@@ -14,8 +14,8 @@ use function Amp\async;
 
 final class Pool extends ConnectionPool implements Link
 {
-    /** @var Connection|Future|null Connection used for notification listening. */
-    private Connection|Future|null $listeningConnection = null;
+    /** @var Future<Connection>|null Connection used for notification listening. */
+    private Future|null $listeningConnection = null;
 
     /** @var int Number of listeners on listening connection. */
     private int $listenerCount = 0;
@@ -91,18 +91,11 @@ final class Pool extends ConnectionPool implements Link
 
     public function listen(string $channel): Listener
     {
+        $this->listeningConnection ??= async($this->pop(...));
+
+        $connection = $this->listeningConnection->await();
+
         ++$this->listenerCount;
-
-        if ($this->listeningConnection === null) {
-            $this->listeningConnection = async($this->pop(...));
-        }
-
-        if ($this->listeningConnection instanceof Future) {
-            $this->listeningConnection = $this->listeningConnection->await();
-        }
-
-        $connection = $this->listeningConnection;
-        \assert($connection instanceof Connection);
 
         try {
             $listener = $connection->listen($channel);
