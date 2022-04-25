@@ -190,16 +190,22 @@ final class PqHandle implements Handle
         }
 
         if (!$result instanceof pq\Result) {
-            throw new SqlException("Unknown query result");
+            throw new SqlException("Unknown query result: " . \get_debug_type($result));
         }
-
-        $result = $this->makeResult($result, $sql);
 
         if ($handle instanceof pq\Statement) {
-            return $handle; // Will be wrapped into a PqStatement object.
+            switch ($result->status) {
+                case pq\Result::COMMAND_OK:
+                    return $handle; // Will be wrapped into a PqStatement object.
+
+                default:
+                    $this->makeResult($result, $sql);
+                    // The statement below *should* be unreachable: $this->makeResult() will throw.
+                    throw new SqlException("Unexpected error preparing statement: " . $result->errorMessage);
+            }
         }
 
-        return $result;
+        return $this->makeResult($result, $sql);
     }
 
     /**
