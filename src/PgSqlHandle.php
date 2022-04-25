@@ -256,12 +256,10 @@ final class PgSqlHandle implements Handle
      * @param \PgSql\Result $result PostgreSQL result resource.
      * @param string $sql Query SQL.
      *
-     * @return Result
-     *
      * @throws SqlException
      * @throws QueryError
      */
-    private function createResult(\PgSql\Result $result, string $sql)
+    private function createResult(\PgSql\Result $result, string $sql): Result
     {
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
