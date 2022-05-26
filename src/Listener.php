@@ -2,6 +2,9 @@
 
 namespace Amp\Postgres;
 
+/**
+ * @extends \Traversable<int, Notification>
+ */
 interface Listener extends \Traversable
 {
     /**
@@ -12,9 +15,7 @@ interface Listener extends \Traversable
     public function isListening(): bool;
 
     /**
-     * Unlistens from the channel. No more values will be emitted from this listener.
-     *
-     * @throws \Error If this method was previously invoked.
+     * Stops listening on the channel. No more values will be emitted from this listener.
      */
     public function unlisten(): void;
 }

@@ -17,16 +17,14 @@ final class ConnectionListener implements Listener, \IteratorAggregate
     public function __construct(
         private readonly \Traversable $source,
         private readonly string $channel,
-        \Closure $unlisten
+        \Closure $unlisten,
     ) {
         $this->unlisten = $unlisten;
     }
 
     public function __destruct()
     {
-        if ($this->unlisten) {
-            EventLoop::queue($this->unlisten, $this->channel);
-        }
+        $this->unlisten();
     }
 
     /**
@@ -34,7 +32,8 @@ final class ConnectionListener implements Listener, \IteratorAggregate
      */
     public function getIterator(): \Traversable
     {
-        return $this->source;
+        // Using a Generator to keep a reference to $this.
+        yield from $this->source;
     }
 
     /**
@@ -61,8 +60,7 @@ final class ConnectionListener implements Listener, \IteratorAggregate
             return;
         }
 
-        $unlisten = $this->unlisten;
+        EventLoop::queue($this->unlisten, $this->channel);
         $this->unlisten = null;
-        $unlisten($this->channel);
     }
 }
