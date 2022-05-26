@@ -3,8 +3,6 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
-use Amp\Pipeline\ConcurrentIterator;
-use Amp\Pipeline\Pipeline;
 use Amp\Sql\Result;
 use Amp\Sql\SqlException;
 
@@ -12,25 +10,32 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 {
     private static Internal\ArrayParser $parser;
 
-    private readonly ConcurrentIterator $iterator;
+    private readonly \Generator $iterator;
 
     private readonly int $rowCount;
 
     private readonly int $columnCount;
 
-    /** @var Future<Result|null> */
-    private readonly Future $nextResult;
-
     /**
-     * @param \PgSql\Result $handle PostgreSQL result resource.
      * @param array<int, array{string, string, int}> $types
      * @param Future<Result|null> $nextResult
      */
-    public function __construct(\PgSql\Result $handle, array $types, Future $nextResult)
-    {
+    public function __construct(
+        \PgSql\Result $handle,
+        array $types,
+        private readonly Future $nextResult,
+    ) {
         /** @psalm-suppress RedundantPropertyInitializationCheck */
         self::$parser ??= new Internal\ArrayParser;
 
+        $this->rowCount = \pg_num_rows($handle);
+        $this->columnCount = \pg_num_fields($handle);
+
+        $this->iterator = self::generate($handle, $types);
+    }
+
+    private static function generate(\PgSql\Result $handle, array $types): \Generator
+    {
         $fieldNames = [];
         $fieldTypes = [];
         $numFields = \pg_num_fields($handle);
@@ -39,34 +44,23 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
             $fieldTypes[] = \pg_field_type_oid($handle, $i);
         }
 
-        $this->rowCount = \pg_num_rows($handle);
-        $this->columnCount = \pg_num_fields($handle);
-        $this->nextResult = $nextResult;
+        $position = 0;
 
-        /** @var list<int> $fieldTypes */
-        $this->iterator = Pipeline::fromIterable(static function () use (
-            $handle,
-            $types,
-            $fieldNames,
-            $fieldTypes
-        ): \Generator {
-            $position = 0;
+        try {
+            while (++$position <= \pg_num_rows($handle)) {
+                /** @var list<string|null>|false $result */
+                $result = \pg_fetch_array($handle, null, \PGSQL_NUM);
 
-            try {
-                while (++$position <= \pg_num_rows($handle)) {
-                    /** @var array<int, string|null>|false $result */
-                    $result = \pg_fetch_array($handle, null, \PGSQL_NUM);
-
-                    if ($result === false) {
-                        throw new SqlException(\pg_result_error($handle));
-                    }
-
-                    yield self::processRow($types, $fieldNames, $fieldTypes, $result);
+                if ($result === false) {
+                    throw new SqlException(\pg_result_error($handle));
                 }
-            } finally {
-                \pg_free_result($handle);
+
+                /** @var list<int> $fieldTypes */
+                yield self::processRow($types, $fieldNames, $fieldTypes, $result);
             }
-        })->getIterator();
+        } finally {
+            \pg_free_result($handle);
+        }
     }
 
     public function getIterator(): \Traversable
@@ -97,9 +91,9 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 
     /**
      * @param array<int, array{string, string, int}> $types
-     * @param array<int, string> $fieldNames
-     * @param array<int, int> $fieldTypes
-     * @param array<int, string|null> $result
+     * @param list<string> $fieldNames
+     * @param list<int> $fieldTypes
+     * @param list<string|null> $result
      *
      * @return array<string, mixed>
      * @throws ParseException

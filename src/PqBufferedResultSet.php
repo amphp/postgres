@@ -3,40 +3,38 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
-use Amp\Pipeline\ConcurrentIterator;
-use Amp\Pipeline\Pipeline;
 use Amp\Sql\Result;
 use pq;
 
 final class PqBufferedResultSet implements Result, \IteratorAggregate
 {
-    private readonly ConcurrentIterator $iterator;
+    private readonly \Generator $iterator;
 
     private readonly int $rowCount;
 
     private readonly int $columnCount;
 
-    /** @var Future<Result|null> */
-    private readonly Future $nextResult;
-
     /**
-     * @param pq\Result $result PostgreSQL result object.
      * @param Future<Result|null> $nextResult Promise for next result set.
      */
-    public function __construct(pq\Result $result, Future $nextResult)
-    {
+    public function __construct(
+        pq\Result $result,
+        private readonly Future $nextResult,
+    ) {
         $this->rowCount = $result->numRows;
         $this->columnCount = $result->numCols;
-        $this->nextResult = $nextResult;
 
-        $this->iterator = Pipeline::fromIterable(static function () use ($result): \Generator {
-            $position = 0;
+        $this->iterator = self::generate($result);
+    }
 
-            while (++$position <= $result->numRows) {
-                $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
-                yield $result->fetchRow(pq\Result::FETCH_ASSOC);
-            }
-        })->getIterator();
+    private static function generate(pq\Result $result): \Generator
+    {
+        $position = 0;
+
+        while (++$position <= $result->numRows) {
+            $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
+            yield $result->fetchRow(pq\Result::FETCH_ASSOC);
+        }
     }
 
     public function getIterator(): \Traversable

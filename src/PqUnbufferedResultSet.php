@@ -3,19 +3,13 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
-use Amp\Pipeline\ConcurrentIterator;
-use Amp\Pipeline\Pipeline;
 use Amp\Sql\Result;
 use pq;
 use Revolt\EventLoop;
 
 final class PqUnbufferedResultSet implements Result, \IteratorAggregate
 {
-    /** @var ConcurrentIterator<array<string, mixed>> */
-    private readonly ConcurrentIterator $iterator;
-
-    /** @var Future<Result|null> */
-    private readonly Future $nextResult;
+    private readonly \Generator $iterator;
 
     private readonly int $columnCount;
 
@@ -24,43 +18,50 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
      * @param \pq\Result $result Initial pq\Result result object.
      * @param Future<Result|null> $nextResult
      */
-    public function __construct(\Closure $fetch, pq\Result $result, Future $nextResult)
-    {
-        $this->nextResult = $nextResult;
+    public function __construct(
+        private readonly \Closure $fetch,
+        pq\Result $result,
+        private readonly Future $nextResult,
+    ) {
         $this->columnCount = $result->numCols;
 
-        $this->iterator = Pipeline::fromIterable(static function () use ($result, $fetch): \Generator {
-            try {
-                do {
-                    $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
-                    yield $result->fetchRow(pq\Result::FETCH_ASSOC);
-                    $result = $fetch();
-                } while ($result instanceof pq\Result);
-            } finally {
-                if ($result === null) {
-                    return; // Result fully consumed.
-                }
+        $this->iterator = self::generate($fetch, $result);
+    }
 
-                EventLoop::queue(static function () use ($fetch): void {
-                    try {
+    private static function generate(\Closure $fetch, pq\Result $result): \Generator
+    {
+        do {
+            $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
+            yield $result->fetchRow(pq\Result::FETCH_ASSOC);
+            $result = $fetch();
+        } while ($result instanceof pq\Result);
+    }
+
+    public function __destruct()
+    {
+        if ($this->iterator->valid()) {
+            $fetch = $this->fetch;
+            EventLoop::queue(static function () use ($fetch): void {
+                try {
+                    while ($fetch() instanceof pq\Result) {
                         // Discard remaining rows in the result set.
-                        while ($fetch() instanceof pq\Result) ;
-                    } catch (\Throwable) {
-                        // Ignore errors while discarding result.
                     }
-                });
-            }
-        })->getIterator();
+                } catch (\Throwable) {
+                    // Ignore errors while discarding result.
+                }
+            });
+        }
+    }
+
+    public function getIterator(): \Traversable
+    {
+        // Using a Generator to keep a reference to $this.
+        yield from $this->iterator;
     }
 
     public function getNextResult(): ?Result
     {
         return $this->nextResult->await();
-    }
-
-    public function getIterator(): \Traversable
-    {
-        return $this->iterator;
     }
 
     public function getRowCount(): ?int
