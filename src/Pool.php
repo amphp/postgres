@@ -10,6 +10,7 @@ use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
 use Amp\Sql\Transaction as SqlTransaction;
 use Amp\Sql\TransactionIsolation;
+use Amp\Sql\TransactionIsolationLevel;
 use function Amp\async;
 
 final class Pool extends ConnectionPool implements Link
@@ -59,8 +60,9 @@ final class Pool extends ConnectionPool implements Link
      *
      * @psalm-suppress LessSpecificReturnStatement, MoreSpecificReturnType
      */
-    public function beginTransaction(TransactionIsolation $isolation = TransactionIsolation::Committed): Transaction
-    {
+    public function beginTransaction(
+        TransactionIsolation $isolation = TransactionIsolationLevel::Committed
+    ): Transaction {
         return parent::beginTransaction($isolation);
     }
 

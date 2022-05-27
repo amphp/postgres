@@ -8,6 +8,7 @@ use Amp\Sql\Link;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\TransactionIsolation;
+use Amp\Sql\TransactionIsolationLevel;
 
 abstract class Connection implements Link, Handle
 {
@@ -96,7 +97,7 @@ abstract class Connection implements Link, Handle
     }
 
     final public function beginTransaction(
-        TransactionIsolation $isolation = TransactionIsolation::Committed
+        TransactionIsolation $isolation = TransactionIsolationLevel::Committed
     ): Transaction {
         $this->reserve();
 
