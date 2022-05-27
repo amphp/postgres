@@ -12,7 +12,6 @@ use Amp\Sql\QueryError;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\TransactionError;
-use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 use Revolt\EventLoop;
 use function Amp\async;
