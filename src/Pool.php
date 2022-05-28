@@ -5,6 +5,7 @@ namespace Amp\Postgres;
 use Amp\Future;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Common\PooledStatement;
+use Amp\Sql\Common\StatementPool;
 use Amp\Sql\Pool as SqlPool;
 use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
