@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres;
 
+use Amp\DeferredFuture;
 use Amp\Sql\Common\PooledResult;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Result;
@@ -13,7 +14,7 @@ use Revolt\EventLoop;
 
 final class ConnectionTransaction implements Transaction
 {
-    private ?Handle $handle;
+    private readonly Handle $handle;
 
     private readonly TransactionIsolation $isolation;
 
@@ -21,6 +22,8 @@ final class ConnectionTransaction implements Transaction
     private readonly \Closure $release;
 
     private int $refCount = 1;
+
+    private readonly DeferredFuture $onClose;
 
     /**
      * @param \Closure():void $release
@@ -41,40 +44,63 @@ final class ConnectionTransaction implements Transaction
                 $release();
             }
         };
+
+        $this->onClose = new DeferredFuture();
+        $this->onClose($this->release);
     }
 
     public function __destruct()
     {
-        if ($this->handle && $this->handle->isAlive()) {
-            $handle = $this->handle;
-            EventLoop::queue(static function () use ($handle): void {
-                try {
-                    $handle->isAlive() && $handle->query('ROLLBACK');
-                } catch (SqlException) {
-                    // Ignore failure if connection closes during query.
-                }
-            });
+        if ($this->onClose->isComplete()) {
+            return;
         }
+
+        $this->onClose->complete();
+
+        if ($this->handle->isClosed()) {
+            return;
+        }
+
+        $handle = $this->handle;
+        EventLoop::queue(static function () use ($handle): void {
+            try {
+                !$handle->isClosed() && $handle->query('ROLLBACK');
+            } catch (SqlException) {
+                // Ignore failure if connection closes during query.
+            }
+        });
     }
 
     public function getLastUsedAt(): int
     {
-        return $this->handle?->getLastUsedAt() ?? 0;
+        return $this->handle->getLastUsedAt();
+    }
+
+    private function assertOpen(): void
+    {
+        if ($this->isClosed()) {
+            throw new TransactionError("The transaction has been committed or rolled back");
+        }
     }
 
     /**
-     * Closes and commits all changes in the transaction.
+     * Rolls back all changes in the transaction if it has not been committed.
      */
     public function close(): void
     {
-        if ($this->handle) {
+        if (!$this->isClosed()) {
             $this->rollback(); // Invokes $this->release callback.
         }
     }
 
-    public function isAlive(): bool
+    public function isClosed(): bool
     {
-        return $this->handle && $this->handle->isAlive();
+        return $this->onClose->isComplete();
+    }
+
+    public function onClose(\Closure $onClose): void
+    {
+        $this->onClose->getFuture()->finally($onClose);
     }
 
     /**
@@ -82,7 +108,7 @@ final class ConnectionTransaction implements Transaction
      */
     public function isActive(): bool
     {
-        return $this->handle !== null;
+        return !$this->isClosed();
     }
 
     public function getIsolationLevel(): TransactionIsolation
@@ -95,18 +121,16 @@ final class ConnectionTransaction implements Transaction
      */
     public function query(string $sql): Result
     {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
+        $this->assertOpen();
 
         ++$this->refCount;
         try {
             $result = $this->handle->query($sql);
-        } finally {
+        } catch (\Throwable $exception) {
             EventLoop::queue($this->release);
+            throw $exception;
         }
 
-        ++$this->refCount;
         return new PooledResult($result, $this->release);
     }
 
@@ -115,9 +139,7 @@ final class ConnectionTransaction implements Transaction
      */
     public function prepare(string $sql): Statement
     {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
+        $this->assertOpen();
 
         ++$this->refCount;
         try {
@@ -135,18 +157,16 @@ final class ConnectionTransaction implements Transaction
      */
     public function execute(string $sql, array $params = []): Result
     {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
+        $this->assertOpen();
 
         ++$this->refCount;
         try {
             $result = $this->handle->execute($sql, $params);
-        } finally {
+        } catch (\Throwable $exception) {
             EventLoop::queue($this->release);
+            throw $exception;
         }
 
-        ++$this->refCount;
         return new PooledResult($result, $this->release);
     }
 
@@ -155,10 +175,7 @@ final class ConnectionTransaction implements Transaction
      */
     public function notify(string $channel, string $payload = ""): Result
     {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
-
+        $this->assertOpen();
         return $this->handle->notify($channel, $payload);
     }
 
@@ -169,13 +186,9 @@ final class ConnectionTransaction implements Transaction
      */
     public function commit(): void
     {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
-
-        $handle = $this->handle;
-        $this->handle = null;
-        $handle->query("COMMIT");
+        $this->assertOpen();
+        $this->onClose->complete();
+        $this->handle->query("COMMIT");
     }
 
     /**
@@ -185,13 +198,9 @@ final class ConnectionTransaction implements Transaction
      */
     public function rollback(): void
     {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
-
-        $handle = $this->handle;
-        $this->handle = null;
-        $handle->query("ROLLBACK");
+        $this->assertOpen();
+        $this->onClose->complete();
+        $this->handle->query("ROLLBACK");
     }
 
     /**
@@ -235,10 +244,7 @@ final class ConnectionTransaction implements Transaction
      */
     public function quoteString(string $data): string
     {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
-
+        $this->assertOpen();
         return $this->handle->quoteString($data);
     }
 
@@ -247,10 +253,7 @@ final class ConnectionTransaction implements Transaction
      */
     public function quoteName(string $name): string
     {
-        if ($this->handle === null) {
-            throw new TransactionError("The transaction has been committed or rolled back");
-        }
-
+        $this->assertOpen();
         return $this->handle->quoteName($name);
     }
 }

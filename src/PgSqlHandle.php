@@ -40,7 +40,7 @@ final class PgSqlHandle implements Handle
     /** @var array<int, array{string, string, int}> */
     private readonly array $types;
 
-    private ?DeferredFuture $deferred = null;
+    private ?DeferredFuture $pendingOperation = null;
 
     private readonly string $poll;
 
@@ -54,6 +54,8 @@ final class PgSqlHandle implements Handle
 
     private int $lastUsedAt;
 
+    private readonly DeferredFuture $onClose;
+
     /**
      * @param \PgSql\Connection $handle PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
@@ -64,10 +66,11 @@ final class PgSqlHandle implements Handle
         $this->handle = $handle;
 
         $this->lastUsedAt = \time();
+        $this->onClose = new DeferredFuture();
 
         $handle = &$this->handle;
         $lastUsedAt = &$this->lastUsedAt;
-        $deferred = &$this->deferred;
+        $deferred = &$this->pendingOperation;
         $listeners = &$this->listeners;
 
         $this->poll = EventLoop::onReadable($socket, static function ($watcher) use (
@@ -164,7 +167,9 @@ final class PgSqlHandle implements Handle
      */
     public function __destruct()
     {
-        $this->close();
+        if ($this->isClosed()) {
+            $this->close();
+        }
     }
 
     /**
@@ -193,16 +198,25 @@ final class PgSqlHandle implements Handle
     {
         $this->handle = null;
 
-        $this->deferred?->error(new ConnectionException("The connection was closed"));
-        $this->deferred = null;
+        $this->pendingOperation?->error(new ConnectionException("The connection was closed"));
+        $this->pendingOperation = null;
+
+        if (!$this->onClose->isComplete()) {
+            $this->onClose->complete();
+        }
 
         EventLoop::cancel($this->poll);
         EventLoop::cancel($this->await);
     }
 
-    public function isAlive(): bool
+    public function onClose(\Closure $onClose): void
     {
-        return $this->handle instanceof \PgSql\Connection;
+        $this->onClose->getFuture()->finally($onClose);
+    }
+
+    public function isClosed(): bool
+    {
+        return !$this->handle instanceof \PgSql\Connection;
     }
 
     public function getLastUsedAt(): int
@@ -220,9 +234,9 @@ final class PgSqlHandle implements Handle
      */
     private function send(\Closure $function, mixed ...$args): mixed
     {
-        while ($this->deferred) {
+        while ($this->pendingOperation) {
             try {
-                $this->deferred->getFuture()->await();
+                $this->pendingOperation->getFuture()->await();
             } catch (\Throwable) {
                 // Ignore failure from another operation.
             }
@@ -242,14 +256,14 @@ final class PgSqlHandle implements Handle
             throw new SqlException(\pg_last_error($this->handle));
         }
 
-        $this->deferred = new DeferredFuture;
+        $this->pendingOperation = new DeferredFuture;
 
         EventLoop::reference($this->poll);
         if ($result === 0) {
             EventLoop::enable($this->await);
         }
 
-        return $this->deferred->getFuture()->await();
+        return $this->pendingOperation->getFuture()->await();
     }
 
     /**
@@ -326,7 +340,7 @@ final class PgSqlHandle implements Handle
      */
     public function statementDeallocate(string $name): void
     {
-        if (!$this->isAlive()) {
+        if ($this->isClosed()) {
             return; // Connection closed, no need to deallocate.
         }
 
@@ -389,7 +403,7 @@ final class PgSqlHandle implements Handle
             $result = $storage->future->await();
 
             if ($result) { // Null returned if future was from deallocation.
-                return new PgSqlStatement($this, $name, $sql, $names);
+                return new ConnectionStatement($this, $name, $sql, $names);
             }
         }
 
@@ -428,7 +442,7 @@ final class PgSqlHandle implements Handle
             throw $exception;
         }
 
-        return new PgSqlStatement($this, $name, $sql, $names);
+        return new ConnectionStatement($this, $name, $sql, $names);
     }
 
     public function notify(string $channel, string $payload = ""): Result

@@ -19,7 +19,7 @@ final class PqHandle implements Handle
 {
     private ?pq\Connection $handle;
 
-    private ?DeferredFuture $deferred = null;
+    private ?DeferredFuture $pendingOperation = null;
 
     private ?DeferredFuture $busy = null;
 
@@ -35,6 +35,8 @@ final class PqHandle implements Handle
 
     private int $lastUsedAt;
 
+    private readonly DeferredFuture $onClose;
+
     /**
      * Connection constructor.
      */
@@ -42,10 +44,11 @@ final class PqHandle implements Handle
     {
         $this->handle = $handle;
         $this->lastUsedAt = \time();
+        $this->onClose = new DeferredFuture();
 
         $handle = &$this->handle;
         $lastUsedAt = &$this->lastUsedAt;
-        $deferred = &$this->deferred;
+        $deferred = &$this->pendingOperation;
         $listeners = &$this->listeners;
 
         $this->poll = EventLoop::onReadable($this->handle->socket, static function (string $watcher) use (
@@ -127,12 +130,14 @@ final class PqHandle implements Handle
      */
     public function __destruct()
     {
-        $this->close();
+        if ($this->isClosed()) {
+            $this->close();
+        }
     }
 
-    public function isAlive(): bool
+    public function isClosed(): bool
     {
-        return $this->handle !== null;
+        return $this->handle === null;
     }
 
     public function getLastUsedAt(): int
@@ -142,13 +147,22 @@ final class PqHandle implements Handle
 
     public function close(): void
     {
-        $this->deferred?->error(new ConnectionException("The connection was closed"));
-        $this->deferred = null;
-
         $this->handle = null;
+
+        $this->pendingOperation?->error(new ConnectionException("The connection was closed"));
+        $this->pendingOperation = null;
+
+        if (!$this->onClose->isComplete()) {
+            $this->onClose->complete();
+        }
 
         EventLoop::cancel($this->poll);
         EventLoop::cancel($this->await);
+    }
+
+    public function onClose(\Closure $onClose): void
+    {
+        $this->onClose->getFuture()->finally($onClose);
     }
 
     /**
@@ -173,7 +187,7 @@ final class PqHandle implements Handle
         }
 
         try {
-            $this->deferred = $this->busy = new DeferredFuture;
+            $this->pendingOperation = $this->busy = new DeferredFuture;
 
             $handle = $method(...$args);
 
@@ -182,7 +196,7 @@ final class PqHandle implements Handle
                 EventLoop::enable($this->await);
             }
 
-            $result = $this->deferred->getFuture()->await();
+            $result = $this->pendingOperation->getFuture()->await();
         } catch (pq\Exception $exception) {
             throw new SqlException($this->handle->errorMessage, 0, $exception);
         } finally {
@@ -196,7 +210,7 @@ final class PqHandle implements Handle
         if ($handle instanceof pq\Statement) {
             switch ($result->status) {
                 case pq\Result::COMMAND_OK:
-                    return $handle; // Will be wrapped into a PqStatement object.
+                    return $handle; // Will be wrapped into a ConnectionStatement object.
 
                 default:
                     $this->makeResult($result, $sql);
@@ -277,14 +291,14 @@ final class PqHandle implements Handle
         if (!$this->handle->busy) { // Results buffered.
             $result = $this->handle->getResult();
         } else {
-            $this->deferred = new DeferredFuture;
+            $this->pendingOperation = new DeferredFuture;
 
             EventLoop::reference($this->poll);
             if (!$this->handle->flush()) {
                 EventLoop::enable($this->await);
             }
 
-            $result = $this->deferred->getFuture()->await();
+            $result = $this->pendingOperation->getFuture()->await();
         }
 
         if (!$result) {
@@ -402,7 +416,7 @@ final class PqHandle implements Handle
             $result = $storage->future->await();
 
             if ($result) { // Null returned if future was from deallocation.
-                return new PqStatement($this, $name, $sql, $names);
+                return new ConnectionStatement($this, $name, $sql, $names);
             }
         }
 
@@ -424,7 +438,7 @@ final class PqHandle implements Handle
             throw $exception;
         }
 
-        return new PqStatement($this, $name, $sql, $names);
+        return new ConnectionStatement($this, $name, $sql, $names);
     }
 
     public function notify(string $channel, string $payload = ""): Result

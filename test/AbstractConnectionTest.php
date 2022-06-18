@@ -4,8 +4,8 @@ namespace Amp\Postgres\Test;
 
 abstract class AbstractConnectionTest extends AbstractLinkTest
 {
-    public function testIsAlive()
+    public function testIsClosed()
     {
-        $this->assertTrue($this->link->isAlive());
+        $this->assertFalse($this->link->isClosed());
     }
 }

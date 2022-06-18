@@ -10,7 +10,7 @@ use Amp\Sql\Statement;
 use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 
-abstract class Connection implements Link, Handle
+abstract class Connection implements Link, Receiver, Quoter
 {
     private readonly Handle $handle;
 
@@ -24,11 +24,6 @@ abstract class Connection implements Link, Handle
         $this->handle = $handle;
     }
 
-    final public function isAlive(): bool
-    {
-        return $this->handle->isAlive();
-    }
-
     final public function getLastUsedAt(): int
     {
         return $this->handle->getLastUsedAt();
@@ -37,6 +32,16 @@ abstract class Connection implements Link, Handle
     final public function close(): void
     {
         $this->handle->close();
+    }
+
+    final public function isClosed(): bool
+    {
+        return $this->handle->isClosed();
+    }
+
+    final public function onClose(\Closure $onClose): void
+    {
+        $this->handle->onClose($onClose);
     }
 
     private function awaitPending(): void

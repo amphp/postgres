@@ -501,7 +501,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $data = $this->getData()[0];
 
-        $this->assertTrue($transaction->isAlive());
+        $this->assertFalse($transaction->isClosed());
         $this->assertTrue($transaction->isActive());
         $this->assertSame($isolation, $transaction->getIsolationLevel());
 
@@ -520,7 +520,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $transaction->commit();
 
-        $this->assertFalse($transaction->isAlive());
+        $this->assertTrue($transaction->isClosed());
         $this->assertFalse($transaction->isActive());
 
         try {
