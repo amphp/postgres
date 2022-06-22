@@ -24,7 +24,7 @@ final class PgSqlConnection extends Connection implements Link
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
         } // @codeCoverageIgnoreEnd
 
-        if (!$connection = @\pg_connect($connectionConfig->getConnectionString(), \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
+        if (!$connection = \pg_connect($connectionConfig->getConnectionString(), \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
             throw new ConnectionException("Failed to create connection resource");
         }
 
@@ -65,7 +65,7 @@ final class PgSqlConnection extends Connection implements Link
 
         $future = $deferred->getFuture();
 
-        $cancellation = $cancellation ?? new NullCancellation;
+        $cancellation ??= new NullCancellation;
         $id = $cancellation->subscribe(static function (CancelledException $exception) use ($deferred): void {
             if (!$deferred->isComplete()) {
                 $deferred->error($exception);

@@ -14,7 +14,7 @@ use Amp\Sql\Statement;
 use Revolt\EventLoop;
 use function Amp\async;
 
-final class PgSqlHandle implements Handle
+final class PgSqlHandle extends Internal\AbstractHandle
 {
     const DIAGNOSTIC_CODES = [
         \PGSQL_DIAG_SEVERITY => "severity",
@@ -40,21 +40,8 @@ final class PgSqlHandle implements Handle
     /** @var array<int, array{string, string, int}> */
     private readonly array $types;
 
-    private ?DeferredFuture $pendingOperation = null;
-
-    private readonly string $poll;
-
-    private readonly string $await;
-
-    /** @var array<string, Queue> */
-    private array $listeners = [];
-
     /** @var array<string, Internal\StatementStorage<string>> */
     private array $statements = [];
-
-    private int $lastUsedAt;
-
-    private readonly DeferredFuture $onClose;
 
     /**
      * @param \PgSql\Connection $handle PostgreSQL connection handle.
@@ -65,19 +52,18 @@ final class PgSqlHandle implements Handle
     {
         $this->handle = $handle;
 
-        $this->lastUsedAt = \time();
-        $this->onClose = new DeferredFuture();
-
         $handle = &$this->handle;
         $lastUsedAt = &$this->lastUsedAt;
         $deferred = &$this->pendingOperation;
         $listeners = &$this->listeners;
+        $onClose = new DeferredFuture();
 
-        $this->poll = EventLoop::onReadable($socket, static function ($watcher) use (
+        $poll = EventLoop::onReadable($socket, static function ($watcher) use (
             &$deferred,
             &$lastUsedAt,
             &$listeners,
-            &$handle
+            &$handle,
+            $onClose,
         ): void {
             $lastUsedAt = \time();
 
@@ -93,12 +79,7 @@ final class PgSqlHandle implements Handle
                 $handle = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
-                foreach ($listeners as $listener) {
-                    $listener->error($exception);
-                }
-
-                $deferred?->error($exception);
-                $deferred = null;
+                self::shutdown($listeners, $deferred, $onClose, $exception);
 
                 return;
             }
@@ -130,10 +111,11 @@ final class PgSqlHandle implements Handle
             }
         });
 
-        $this->await = EventLoop::onWritable($socket, static function ($watcher) use (
+        $await = EventLoop::onWritable($socket, static function ($watcher) use (
             &$deferred,
             &$listeners,
-            &$handle
+            &$handle,
+            $onClose,
         ): void {
             $flush = \pg_flush($handle);
             if ($flush === 0) {
@@ -146,30 +128,17 @@ final class PgSqlHandle implements Handle
                 $exception = new ConnectionException(\pg_last_error($handle));
                 $handle = null; // Marks connection as dead.
 
-                foreach ($listeners as $listener) {
-                    $listener->error($exception);
-                }
-
-                $deferred?->error($exception);
-                $deferred = null;
+                self::shutdown($listeners, $deferred, $onClose, $exception);
             }
         });
 
-        EventLoop::unreference($this->poll);
-        EventLoop::disable($this->await);
+        EventLoop::unreference($poll);
+        EventLoop::disable($await);
+
+        parent::__construct($poll, $await, $onClose);
 
         /** @psalm-suppress PropertyTypeCoercion */
         $this->types = (self::$typeCache[$id] ??= $this->fetchTypes());
-    }
-
-    /**
-     * Frees Io watchers from loop.
-     */
-    public function __destruct()
-    {
-        if ($this->isClosed()) {
-            $this->close();
-        }
     }
 
     /**
@@ -197,31 +166,12 @@ final class PgSqlHandle implements Handle
     public function close(): void
     {
         $this->handle = null;
-
-        $this->pendingOperation?->error(new ConnectionException("The connection was closed"));
-        $this->pendingOperation = null;
-
-        if (!$this->onClose->isComplete()) {
-            $this->onClose->complete();
-        }
-
-        EventLoop::cancel($this->poll);
-        EventLoop::cancel($this->await);
-    }
-
-    public function onClose(\Closure $onClose): void
-    {
-        $this->onClose->getFuture()->finally($onClose);
+        parent::close();
     }
 
     public function isClosed(): bool
     {
         return !$this->handle instanceof \PgSql\Connection;
-    }
-
-    public function getLastUsedAt(): int
-    {
-        return $this->lastUsedAt;
     }
 
     /**

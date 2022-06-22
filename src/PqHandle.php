@@ -15,47 +15,31 @@ use pq;
 use Revolt\EventLoop;
 use function Amp\async;
 
-final class PqHandle implements Handle
+final class PqHandle extends Internal\AbstractHandle
 {
     private ?pq\Connection $handle;
 
-    private ?DeferredFuture $pendingOperation = null;
-
     private ?DeferredFuture $busy = null;
-
-    private readonly string $poll;
-
-    private readonly string $await;
-
-    /** @var array<string, Queue> */
-    private array $listeners = [];
 
     /** @var array<string, Internal\StatementStorage<pq\Statement>> */
     private array $statements = [];
 
-    private int $lastUsedAt;
-
-    private readonly DeferredFuture $onClose;
-
-    /**
-     * Connection constructor.
-     */
     public function __construct(pq\Connection $handle)
     {
         $this->handle = $handle;
-        $this->lastUsedAt = \time();
-        $this->onClose = new DeferredFuture();
 
         $handle = &$this->handle;
         $lastUsedAt = &$this->lastUsedAt;
         $deferred = &$this->pendingOperation;
         $listeners = &$this->listeners;
+        $onClose = new DeferredFuture();
 
-        $this->poll = EventLoop::onReadable($this->handle->socket, static function (string $watcher) use (
+        $poll = EventLoop::onReadable($this->handle->socket, static function (string $watcher) use (
             &$deferred,
             &$lastUsedAt,
             &$listeners,
-            &$handle
+            &$handle,
+            $onClose,
         ): void {
             $lastUsedAt = \time();
 
@@ -71,12 +55,7 @@ final class PqHandle implements Handle
                 $handle = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
-                foreach ($listeners as $listener) {
-                    $listener->error($exception);
-                }
-
-                $deferred?->error($exception);
-                $deferred = null;
+                self::shutdown($listeners, $deferred, $onClose, $exception);
 
                 return;
             }
@@ -97,10 +76,11 @@ final class PqHandle implements Handle
             }
         });
 
-        $this->await = EventLoop::onWritable($this->handle->socket, static function (string $watcher) use (
+        $await = EventLoop::onWritable($this->handle->socket, static function (string $watcher) use (
             &$deferred,
             &$listeners,
-            &$handle
+            &$handle,
+            $onClose,
         ): void {
             try {
                 if (!$handle->flush()) {
@@ -110,29 +90,16 @@ final class PqHandle implements Handle
                 $exception = new ConnectionException("Flushing the connection failed", 0, $exception);
                 $handle = null; // Marks connection as dead.
 
-                foreach ($listeners as $listener) {
-                    $listener->error($exception);
-                }
-
-                $deferred?->error($exception);
-                $deferred = null;
+                self::shutdown($listeners, $deferred, $onClose, $exception);
             }
 
             EventLoop::disable($watcher);
         });
 
-        EventLoop::unreference($this->poll);
-        EventLoop::disable($this->await);
-    }
+        EventLoop::unreference($poll);
+        EventLoop::disable($await);
 
-    /**
-     * Frees Io watchers from loop.
-     */
-    public function __destruct()
-    {
-        if ($this->isClosed()) {
-            $this->close();
-        }
+        parent::__construct($poll, $await, $onClose);
     }
 
     public function isClosed(): bool
@@ -140,29 +107,10 @@ final class PqHandle implements Handle
         return $this->handle === null;
     }
 
-    public function getLastUsedAt(): int
-    {
-        return $this->lastUsedAt;
-    }
-
     public function close(): void
     {
         $this->handle = null;
-
-        $this->pendingOperation?->error(new ConnectionException("The connection was closed"));
-        $this->pendingOperation = null;
-
-        if (!$this->onClose->isComplete()) {
-            $this->onClose->complete();
-        }
-
-        EventLoop::cancel($this->poll);
-        EventLoop::cancel($this->await);
-    }
-
-    public function onClose(\Closure $onClose): void
-    {
-        $this->onClose->getFuture()->finally($onClose);
+        parent::close();
     }
 
     /**

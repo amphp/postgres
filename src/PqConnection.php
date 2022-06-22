@@ -55,7 +55,7 @@ final class PqConnection extends Connection implements Link
 
         $future = $deferred->getFuture();
 
-        $cancellation = $cancellation ?? new NullCancellation;
+        $cancellation ??= new NullCancellation;
         $id = $cancellation->subscribe(static function (CancelledException $exception) use ($deferred): void {
             if (!$deferred->isComplete()) {
                 $deferred->error($exception);
