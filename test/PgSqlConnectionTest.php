@@ -39,7 +39,7 @@ class PgSqlConnectionTest extends AbstractConnectionTest
             }
         }
 
-        return new PgSqlConnection($this->handle, $socket);
+        return $this->newConnection(PgsqlConnection::class, $this->handle, $socket);
     }
 
     public function tearDown(): void

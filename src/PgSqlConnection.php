@@ -12,8 +12,6 @@ use Revolt\EventLoop;
 final class PgSqlConnection extends Connection implements Link
 {
     /**
-     * @return PgSqlConnection
-     *
      * @throws \Error If pecl-ev is used as a loop extension.
      */
     public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self
@@ -89,7 +87,7 @@ final class PgSqlConnection extends Connection implements Link
      * @param resource $socket PostgreSQL connection stream socket.
      * @param string $id Connection identifier for determining which cached type table to use.
      */
-    public function __construct($handle, $socket, string $id = '')
+    protected function __construct($handle, $socket, string $id = '')
     {
         parent::__construct(new PgSqlHandle($handle, $socket, $id));
     }

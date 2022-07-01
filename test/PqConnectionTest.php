@@ -38,7 +38,7 @@ class PqConnectionTest extends AbstractConnectionTest
             }
         }
 
-        return new PqConnection($this->handle);
+        return $this->newConnection(PqConnection::class, $this->handle);
     }
 
     public function tearDown(): void

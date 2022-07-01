@@ -4,6 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
+use Amp\Sql\ConnectionException;
 use Amp\Sql\Link;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
@@ -17,9 +18,12 @@ abstract class Connection implements Link, Receiver, Quoter
     /** @var DeferredFuture|null Used to only allow one transaction at a time. */
     private ?DeferredFuture $busy = null;
 
+    /**
+     * @throws ConnectionException
+     */
     abstract public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self;
 
-    public function __construct(Handle $handle)
+    protected function __construct(Handle $handle)
     {
         $this->handle = $handle;
     }

@@ -14,9 +14,6 @@ final class PqConnection extends Connection implements Link
 {
     private readonly PqHandle $handle;
 
-    /**
-     * @return PqConnection
-     */
     public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self
     {
         try {
@@ -71,7 +68,7 @@ final class PqConnection extends Connection implements Link
         }
     }
 
-    public function __construct(pq\Connection $handle)
+    protected function __construct(pq\Connection $handle)
     {
         $this->handle = new PqHandle($handle);
         parent::__construct($this->handle);

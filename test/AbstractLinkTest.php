@@ -4,6 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Future;
 use Amp\PHPUnit\AsyncTestCase;
+use Amp\Postgres\Connection;
 use Amp\Postgres\Link;
 use Amp\Postgres\Listener;
 use Amp\Postgres\QueryExecutionError;
@@ -64,6 +65,24 @@ abstract class AbstractLinkTest extends AsyncTestCase
      * @return Link Connection or Link object to be tested.
      */
     abstract public function createLink(string $connectionString): Link;
+
+    /**
+     * Helper method to invoke the protected constructor of classes extending {@see Connection}.
+     *
+     * @template T extends Connection
+     *
+     * @param class-string<T> $className
+     * @param mixed ...$args Constructor arguments.
+     *
+     * @return T
+     */
+    protected function newConnection(string $className, mixed ...$args): Connection
+    {
+        $reflection = new \ReflectionClass($className);
+        $connection = $reflection->newInstanceWithoutConstructor();
+        $reflection->getConstructor()->invokeArgs($connection, $args);
+        return $connection;
+    }
 
     public function setUp(): void
     {

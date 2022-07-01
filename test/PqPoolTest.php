@@ -36,7 +36,7 @@ class PqPoolTest extends AbstractLinkTest
                 }
                 $handle = $this->handles[$count];
                 ++$count;
-                return new PqConnection($handle);
+                return $this->newConnection(PqConnection::class, $handle);
             }));
 
         $pool = new Pool(new PostgresConfig('localhost'), \count($this->handles), Pool::DEFAULT_IDLE_TIMEOUT, true, $connector);
