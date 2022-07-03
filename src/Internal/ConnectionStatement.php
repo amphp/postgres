@@ -3,7 +3,7 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
-use Amp\Postgres\Handle;
+use Amp\Postgres\PostgresHandle;
 use Amp\Sql\Result;
 use Amp\Sql\SqlException;
 use Amp\Sql\Statement;
@@ -21,7 +21,7 @@ final class ConnectionStatement implements Statement
      * @param list<int|string> $params Parameter indices to parameter names.
      */
     public function __construct(
-        private readonly Handle $handle,
+        private readonly PostgresHandle $handle,
         private readonly string $name,
         private readonly string $sql,
         private readonly array $params,

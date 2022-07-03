@@ -4,7 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\Internal\PqBufferedResultSet;
 use Amp\Postgres\Internal\PqUnbufferedResultSet;
-use Amp\Postgres\Link;
+use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PqConnection;
 use function Amp\Postgres\cast;
 
@@ -16,7 +16,7 @@ class PqConnectionTest extends AbstractConnectionTest
     /** @var \pg\Connection|null PostgreSQL connection resource. */
     protected ?\pq\Connection $handle;
 
-    public function createLink(string $connectionString): Link
+    public function createLink(string $connectionString): PostgresLink
     {
         $this->handle = new \pq\Connection($connectionString);
         $this->handle->nonblocking = true;

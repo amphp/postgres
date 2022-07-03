@@ -10,7 +10,7 @@ use Amp\Sql\ConnectionException;
 use pq;
 use Revolt\EventLoop;
 
-final class PqConnection extends Connection implements Link
+final class PqConnection extends PostgresConnection implements PostgresLink
 {
     private readonly Internal\PqHandle $handle;
 

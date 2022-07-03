@@ -2,11 +2,12 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\Link;
-use Amp\Postgres\Pool;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnector;
+use Amp\Postgres\PostgresLink;
+use Amp\Postgres\PostgresPool;
 use Amp\Postgres\PqConnection;
+use Amp\Sql\Common\ConnectionPool;
 use function Amp\Postgres\cast;
 
 /**
@@ -19,7 +20,7 @@ class PqPoolTest extends AbstractLinkTest
     /** @var \pq\Connection[] */
     protected array $handles = [];
 
-    public function createLink(string $connectionString): Link
+    public function createLink(string $connectionString): PostgresLink
     {
         for ($i = 0; $i < self::POOL_SIZE; ++$i) {
             $this->handles[] = $handle = new \pq\Connection($connectionString);
@@ -39,7 +40,7 @@ class PqPoolTest extends AbstractLinkTest
                 return $this->newConnection(PqConnection::class, $handle);
             }));
 
-        $pool = new Pool(new PostgresConfig('localhost'), \count($this->handles), Pool::DEFAULT_IDLE_TIMEOUT, true, $connector);
+        $pool = new PostgresPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
         $handle = \reset($this->handles);
 

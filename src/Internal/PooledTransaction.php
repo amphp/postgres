@@ -2,16 +2,16 @@
 
 namespace Amp\Postgres\Internal;
 
-use Amp\Postgres\Transaction;
+use Amp\Postgres\PostgresTransaction;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Common\PooledTransaction as SqlPooledTransaction;
 use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
 
 /** @internal  */
-final class PooledTransaction extends SqlPooledTransaction implements Transaction
+final class PooledTransaction extends SqlPooledTransaction implements PostgresTransaction
 {
-    private readonly Transaction $transaction;
+    private readonly PostgresTransaction $transaction;
 
     protected function createStatement(SqlStatement $statement, \Closure $release): SqlStatement
     {
@@ -21,7 +21,7 @@ final class PooledTransaction extends SqlPooledTransaction implements Transactio
     /**
      * @param \Closure():void $release
      */
-    public function __construct(Transaction $transaction, \Closure $release)
+    public function __construct(PostgresTransaction $transaction, \Closure $release)
     {
         parent::__construct($transaction, $release);
         $this->transaction = $transaction;

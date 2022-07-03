@@ -4,11 +4,11 @@ namespace Amp\Postgres\Test;
 
 use Amp\Future;
 use Amp\PHPUnit\AsyncTestCase;
-use Amp\Postgres\Connection;
-use Amp\Postgres\Link;
-use Amp\Postgres\Listener;
+use Amp\Postgres\PostgresConnection;
+use Amp\Postgres\PostgresLink;
+use Amp\Postgres\PostgresListener;
+use Amp\Postgres\PostgresTransaction;
 use Amp\Postgres\QueryExecutionError;
-use Amp\Postgres\Transaction;
 use Amp\Sql\QueryError;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
@@ -30,7 +30,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     protected const INSERT_QUERY = 'INSERT INTO test VALUES ($1, $2, $3, $4, $5, $6)';
     protected const FIELD_COUNT = 6;
 
-    protected Link $link;
+    protected PostgresLink $link;
 
     /**
      * @return array Start test data for database.
@@ -62,12 +62,12 @@ abstract class AbstractLinkTest extends AsyncTestCase
     }
 
     /**
-     * @return Link Connection or Link object to be tested.
+     * @return PostgresLink Connection or Link object to be tested.
      */
-    abstract public function createLink(string $connectionString): Link;
+    abstract public function createLink(string $connectionString): PostgresLink;
 
     /**
-     * Helper method to invoke the protected constructor of classes extending {@see Connection}.
+     * Helper method to invoke the protected constructor of classes extending {@see PostgresConnection}.
      *
      * @template T extends Connection
      *
@@ -76,7 +76,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
      *
      * @return T
      */
-    protected function newConnection(string $className, mixed ...$args): Connection
+    protected function newConnection(string $className, mixed ...$args): PostgresConnection
     {
         $reflection = new \ReflectionClass($className);
         $connection = $reflection->newInstanceWithoutConstructor();
@@ -516,7 +516,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $transaction = $this->link->beginTransaction($isolation);
 
-        $this->assertInstanceOf(Transaction::class, $transaction);
+        $this->assertInstanceOf(PostgresTransaction::class, $transaction);
 
         $data = $this->getData()[0];
 
@@ -555,7 +555,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $channel = "test";
         $listener = $this->link->listen($channel);
 
-        $this->assertInstanceOf(Listener::class, $listener);
+        $this->assertInstanceOf(PostgresListener::class, $listener);
         $this->assertSame($channel, $listener->getChannel());
 
         EventLoop::delay(0.1, function () use ($channel): void {

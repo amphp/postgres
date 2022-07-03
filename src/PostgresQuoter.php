@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-interface Quoter
+interface PostgresQuoter
 {
     /**
      * Quotes (escapes) the given string for use as a string literal or identifier in a query. This method wraps the

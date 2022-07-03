@@ -3,9 +3,9 @@
 namespace Amp\Postgres;
 
 /**
- * @extends \Traversable<int, Notification>
+ * @extends \Traversable<int, PostgresNotification>
  */
-interface Listener extends \Traversable
+interface PostgresListener extends \Traversable
 {
     /**
      * @return string Channel name.

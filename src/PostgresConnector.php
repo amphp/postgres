@@ -12,5 +12,5 @@ interface PostgresConnector extends SqlConnector
     /**
      * @throws SqlException
      */
-    public function connect(SqlConfig $config, ?Cancellation $cancellation = null): Connection;
+    public function connect(SqlConfig $config, ?Cancellation $cancellation = null): PostgresConnection;
 }

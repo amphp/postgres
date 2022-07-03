@@ -2,16 +2,16 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\Link as SqlLink;
+use Amp\Sql\Link;
 use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 
-interface Link extends Receiver, SqlLink
+interface PostgresLink extends Link, PostgresReceiver
 {
     /**
-     * @return Transaction Transaction object specific to this library.
+     * @return PostgresTransaction Transaction object specific to this library.
      */
     public function beginTransaction(
         TransactionIsolation $isolation = TransactionIsolationLevel::Committed
-    ): Transaction;
+    ): PostgresTransaction;
 }

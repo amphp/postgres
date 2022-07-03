@@ -2,8 +2,8 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\Link;
 use Amp\Postgres\PgSqlConnection;
+use Amp\Postgres\PostgresLink;
 use Revolt\EventLoop;
 use function Amp\Postgres\cast;
 
@@ -15,7 +15,7 @@ class PgSqlConnectionTest extends AbstractConnectionTest
     /** @var resource PostgreSQL connection resource. */
     protected $handle;
 
-    public function createLink(string $connectionString): Link
+    public function createLink(string $connectionString): PostgresLink
     {
         if (EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
             $this->markTestSkipped("ext-pgsql is not compatible with pecl-ev");

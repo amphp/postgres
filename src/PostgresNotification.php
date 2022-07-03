@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-final class Notification
+final class PostgresNotification
 {
     /**
      * @param string $channel Channel name.

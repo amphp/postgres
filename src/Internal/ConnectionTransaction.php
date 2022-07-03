@@ -3,8 +3,8 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
-use Amp\Postgres\Handle;
-use Amp\Postgres\Transaction;
+use Amp\Postgres\PostgresHandle;
+use Amp\Postgres\PostgresTransaction;
 use Amp\Sql\Common\PooledResult;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Result;
@@ -15,9 +15,9 @@ use Amp\Sql\TransactionIsolation;
 use Revolt\EventLoop;
 
 /** @internal  */
-final class ConnectionTransaction implements Transaction
+final class ConnectionTransaction implements PostgresTransaction
 {
-    private readonly Handle $handle;
+    private readonly PostgresHandle $handle;
 
     private readonly TransactionIsolation $isolation;
 
@@ -34,7 +34,7 @@ final class ConnectionTransaction implements Transaction
      * @throws \Error If the isolation level is invalid.
      */
     public function __construct(
-        Handle $handle,
+        PostgresHandle $handle,
         \Closure $release,
         TransactionIsolation $isolation
     ) {

@@ -49,7 +49,7 @@ async(function () use ($pool, $listener1, $listener2, $channel1, $channel2): voi
     $listener1->unlisten();
 });
 
-$consumer = function (Postgres\Listener $listener): void {
+$consumer = function (Postgres\PostgresListener $listener): void {
     foreach ($listener as $notification) {
         \printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",

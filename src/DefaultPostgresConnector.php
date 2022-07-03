@@ -13,7 +13,7 @@ final class DefaultPostgresConnector implements PostgresConnector
      *
      * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
      */
-    public function connect(SqlConfig $config, ?Cancellation $cancellation = null): Connection
+    public function connect(SqlConfig $config, ?Cancellation $cancellation = null): PostgresConnection
     {
         if (!$config instanceof PostgresConfig) {
             throw new \TypeError(\sprintf("Must provide an instance of %s to Postgres connectors", PostgresConfig::class));

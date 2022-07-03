@@ -11,9 +11,9 @@ use Amp\Sql\Statement;
 use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 
-abstract class Connection implements Link, Receiver, Quoter
+abstract class PostgresConnection implements Link, PostgresReceiver, PostgresQuoter
 {
-    private readonly Handle $handle;
+    private readonly PostgresHandle $handle;
 
     /** @var DeferredFuture|null Used to only allow one transaction at a time. */
     private ?DeferredFuture $busy = null;
@@ -26,7 +26,7 @@ abstract class Connection implements Link, Receiver, Quoter
         ?Cancellation $cancellation = null,
     ): self;
 
-    protected function __construct(Handle $handle)
+    protected function __construct(PostgresHandle $handle)
     {
         $this->handle = $handle;
     }
@@ -102,7 +102,7 @@ abstract class Connection implements Link, Receiver, Quoter
         return $this->handle->notify($channel, $payload);
     }
 
-    final public function listen(string $channel): Listener
+    final public function listen(string $channel): PostgresListener
     {
         $this->awaitPending();
         return $this->handle->listen($channel);
@@ -110,7 +110,7 @@ abstract class Connection implements Link, Receiver, Quoter
 
     final public function beginTransaction(
         TransactionIsolation $isolation = TransactionIsolationLevel::Committed
-    ): Transaction {
+    ): PostgresTransaction {
         $this->reserve();
 
         try {

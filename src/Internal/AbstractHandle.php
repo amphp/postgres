@@ -4,14 +4,14 @@ namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Pipeline\Queue;
-use Amp\Postgres\Handle;
+use Amp\Postgres\PostgresHandle;
 use Amp\Sql\ConnectionException;
 use Revolt\EventLoop;
 
 /**
  * @internal
  */
-abstract class AbstractHandle implements Handle
+abstract class AbstractHandle implements PostgresHandle
 {
     protected ?DeferredFuture $pendingOperation = null;
 

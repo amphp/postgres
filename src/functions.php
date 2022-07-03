@@ -28,7 +28,7 @@ function connector(?PostgresConnector $connector = null): PostgresConnector
  *
  * @codeCoverageIgnore
  */
-function connect(PostgresConfig $config): Connection
+function connect(PostgresConfig $config): PostgresConnection
 {
     return connector()->connect($config);
 }
@@ -44,8 +44,8 @@ function pool(
     int $maxConnections = ConnectionPool::DEFAULT_MAX_CONNECTIONS,
     int $idleTimeout = ConnectionPool::DEFAULT_IDLE_TIMEOUT,
     bool $resetConnections = true
-): Pool {
-    return new Pool($config, $maxConnections, $idleTimeout, $resetConnections, connector());
+): PostgresPool {
+    return new PostgresPool($config, $maxConnections, $idleTimeout, $resetConnections, connector());
 }
 
 /**

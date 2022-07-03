@@ -6,14 +6,14 @@ use Amp\Cancellation;
 use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\PHPUnit\AsyncTestCase;
-use Amp\Postgres\Connection;
 use Amp\Postgres\PostgresConfig;
+use Amp\Postgres\PostgresConnection;
 use Amp\Sql\SqlException;
 use Amp\TimeoutCancellation;
 
 abstract class AbstractConnectTest extends AsyncTestCase
 {
-    abstract public function connect(PostgresConfig $connectionConfig, Cancellation $cancellation = null): Connection;
+    abstract public function connect(PostgresConfig $connectionConfig, Cancellation $cancellation = null): PostgresConnection;
 
     public function testConnect()
     {
@@ -21,7 +21,7 @@ abstract class AbstractConnectTest extends AsyncTestCase
             PostgresConfig::fromString('host=localhost user=postgres password=postgres'),
             new TimeoutCancellation(1)
         );
-        $this->assertInstanceOf(Connection::class, $connection);
+        $this->assertInstanceOf(PostgresConnection::class, $connection);
     }
 
     /**
@@ -45,7 +45,7 @@ abstract class AbstractConnectTest extends AsyncTestCase
         $source = new DeferredCancellation;
         $cancellation = $source->getCancellation();
         $connection = $this->connect(PostgresConfig::fromString('host=localhost user=postgres password=postgres'), $cancellation);
-        $this->assertInstanceOf(Connection::class, $connection);
+        $this->assertInstanceOf(PostgresConnection::class, $connection);
         $source->cancel();
     }
 

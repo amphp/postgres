@@ -3,8 +3,8 @@
 namespace Amp\Postgres\Test;
 
 use Amp\PHPUnit\AsyncTestCase;
-use Amp\Postgres\Connection;
 use Amp\Postgres\PostgresConfig;
+use Amp\Postgres\PostgresConnection;
 use Amp\Sql\SqlException;
 use function Amp\Postgres\connect;
 
@@ -22,7 +22,7 @@ class FunctionsTest extends AsyncTestCase
     public function testConnect()
     {
         $connection = connect(PostgresConfig::fromString('host=localhost user=postgres password=postgres'));
-        $this->assertInstanceOf(Connection::class, $connection);
+        $this->assertInstanceOf(PostgresConnection::class, $connection);
     }
 
     public function testConnectInvalidUser()

@@ -14,9 +14,9 @@ use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 use function Amp\async;
 
-final class Pool extends ConnectionPool implements Link
+final class PostgresPool extends ConnectionPool implements PostgresLink
 {
-    /** @var Future<Connection>|null Connection used for notification listening. */
+    /** @var Future<PostgresConnection>|null Connection used for notification listening. */
     private Future|null $listeningConnection = null;
 
     /** @var int Number of listeners on listening connection. */
@@ -50,9 +50,9 @@ final class Pool extends ConnectionPool implements Link
         return new StatementPool($pool, $sql, $prepare);
     }
 
-    protected function createTransaction(SqlTransaction $transaction, \Closure $release): Transaction
+    protected function createTransaction(SqlTransaction $transaction, \Closure $release): PostgresTransaction
     {
-        \assert($transaction instanceof Transaction);
+        \assert($transaction instanceof PostgresTransaction);
         return new Internal\PooledTransaction($transaction, $release);
     }
 
@@ -63,14 +63,14 @@ final class Pool extends ConnectionPool implements Link
      */
     public function beginTransaction(
         TransactionIsolation $isolation = TransactionIsolationLevel::Committed
-    ): Transaction {
+    ): PostgresTransaction {
         return parent::beginTransaction($isolation);
     }
 
-    protected function pop(): Connection
+    protected function pop(): PostgresConnection
     {
         $connection = parent::pop();
-        \assert($connection instanceof Connection);
+        \assert($connection instanceof PostgresConnection);
 
         if ($this->resetConnections) {
             $connection->query("DISCARD ALL");
@@ -92,7 +92,7 @@ final class Pool extends ConnectionPool implements Link
         return $result;
     }
 
-    public function listen(string $channel): Listener
+    public function listen(string $channel): PostgresListener
     {
         $this->listeningConnection ??= async($this->pop(...));
 

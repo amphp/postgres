@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Sql\Result;
 
-interface Handle extends Receiver, Quoter
+interface PostgresHandle extends PostgresReceiver, PostgresQuoter
 {
     public const STATEMENT_NAME_PREFIX = "amp_";
 

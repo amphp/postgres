@@ -3,11 +3,11 @@
 namespace Amp\Postgres;
 
 use Amp\Sql\ConnectionException;
-use Amp\Sql\Executor as SqlExecutor;
+use Amp\Sql\Executor;
 use Amp\Sql\Result;
 use Amp\Sql\SqlException;
 
-interface Executor extends SqlExecutor
+interface PostgresExecutor extends Executor
 {
     /**
      * @param string $channel Channel name.

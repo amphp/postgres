@@ -2,12 +2,12 @@
 
 namespace Amp\Postgres\Internal;
 
-use Amp\Postgres\Listener;
-use Amp\Postgres\Notification;
+use Amp\Postgres\PostgresListener;
+use Amp\Postgres\PostgresNotification;
 use Revolt\EventLoop;
 
 /** @internal  */
-final class ConnectionListener implements Listener, \IteratorAggregate
+final class ConnectionListener implements PostgresListener, \IteratorAggregate
 {
     /** @var null|\Closure(string):void */
     private ?\Closure $unlisten;
@@ -31,7 +31,7 @@ final class ConnectionListener implements Listener, \IteratorAggregate
     }
 
     /**
-     * @return \Traversable<int, Notification>
+     * @return \Traversable<int, PostgresNotification>
      */
     public function getIterator(): \Traversable
     {

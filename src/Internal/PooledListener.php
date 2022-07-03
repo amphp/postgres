@@ -2,20 +2,20 @@
 
 namespace Amp\Postgres\Internal;
 
-use Amp\Postgres\Listener;
+use Amp\Postgres\PostgresListener;
 use Revolt\EventLoop;
 
 /** @internal  */
-final class PooledListener implements Listener, \IteratorAggregate
+final class PooledListener implements PostgresListener, \IteratorAggregate
 {
-    private readonly Listener $listener;
+    private readonly PostgresListener $listener;
 
     private ?\Closure $release;
 
     /**
      * @param \Closure():void $release
      */
-    public function __construct(Listener $listener, \Closure $release)
+    public function __construct(PostgresListener $listener, \Closure $release)
     {
         $this->listener = $listener;
         $this->release = $release;

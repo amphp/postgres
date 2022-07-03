@@ -5,9 +5,9 @@ namespace Amp\Postgres\Internal;
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Pipeline\Queue;
-use Amp\Postgres\Handle;
-use Amp\Postgres\Listener;
-use Amp\Postgres\Notification;
+use Amp\Postgres\PostgresHandle;
+use Amp\Postgres\PostgresListener;
+use Amp\Postgres\PostgresNotification;
 use Amp\Postgres\QueryExecutionError;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
@@ -96,7 +96,7 @@ final class PgSqlHandle extends AbstractHandle
                     continue;
                 }
 
-                $notification = new Notification($channel, $result["pid"], $result["payload"]);
+                $notification = new PostgresNotification($channel, $result["pid"], $result["payload"]);
                 $listeners[$channel]->pushAsync($notification)->ignore();
             }
 
@@ -348,7 +348,7 @@ final class PgSqlHandle extends AbstractHandle
 
         $modifiedSql = parseNamedParams($sql, $names);
 
-        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
+        $name = PostgresHandle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
         while (isset($this->statements[$name])) {
             $storage = $this->statements[$name];
@@ -409,7 +409,7 @@ final class PgSqlHandle extends AbstractHandle
         return $this->query(\sprintf("NOTIFY %s, %s", $this->quoteName($channel), $this->quoteString($payload)));
     }
 
-    public function listen(string $channel): Listener
+    public function listen(string $channel): PostgresListener
     {
         if (isset($this->listeners[$channel])) {
             throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));

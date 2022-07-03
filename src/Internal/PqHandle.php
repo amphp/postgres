@@ -5,9 +5,9 @@ namespace Amp\Postgres\Internal;
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Pipeline\Queue;
-use Amp\Postgres\Handle;
-use Amp\Postgres\Listener;
-use Amp\Postgres\Notification;
+use Amp\Postgres\PostgresHandle;
+use Amp\Postgres\PostgresListener;
+use Amp\Postgres\PostgresNotification;
 use Amp\Postgres\QueryExecutionError;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
@@ -359,7 +359,7 @@ final class PqHandle extends AbstractHandle
 
         $modifiedSql = parseNamedParams($sql, $names);
 
-        $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
+        $name = PostgresHandle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
         while (isset($this->statements[$name])) {
             $storage = $this->statements[$name];
@@ -403,7 +403,7 @@ final class PqHandle extends AbstractHandle
         return $this->send(null, $this->handle->notifyAsync(...), $channel, $payload);
     }
 
-    public function listen(string $channel): Listener
+    public function listen(string $channel): PostgresListener
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
@@ -422,7 +422,7 @@ final class PqHandle extends AbstractHandle
                 $channel,
                 /** @param positive-int $pid */
                 static function (string $channel, string $message, int $pid) use ($source): void {
-                    $notification = new Notification($channel, $pid, $message);
+                    $notification = new PostgresNotification($channel, $pid, $message);
                     $source->pushAsync($notification)->ignore();
                 }
             );

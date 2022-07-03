@@ -9,7 +9,7 @@ use Amp\NullCancellation;
 use Amp\Sql\ConnectionException;
 use Revolt\EventLoop;
 
-final class PgSqlConnection extends Connection implements Link
+final class PgSqlConnection extends PostgresConnection implements PostgresLink
 {
     /**
      * @throws \Error If pecl-ev is used as a loop extension.
