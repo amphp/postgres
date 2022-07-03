@@ -53,7 +53,7 @@ final class Pool extends ConnectionPool implements Link
     protected function createTransaction(SqlTransaction $transaction, \Closure $release): Transaction
     {
         \assert($transaction instanceof Transaction);
-        return new PooledTransaction($transaction, $release);
+        return new Internal\PooledTransaction($transaction, $release);
     }
 
     /**
@@ -109,7 +109,7 @@ final class Pool extends ConnectionPool implements Link
             throw $exception;
         }
 
-        return new PooledListener($listener, function () use ($connection): void {
+        return new Internal\PooledListener($listener, function () use ($connection): void {
             if (--$this->listenerCount === 0) {
                 $this->push($connection);
             }

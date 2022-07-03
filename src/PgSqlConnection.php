@@ -89,6 +89,6 @@ final class PgSqlConnection extends Connection implements Link
      */
     protected function __construct($handle, $socket, string $id = '')
     {
-        parent::__construct(new PgSqlHandle($handle, $socket, $id));
+        parent::__construct(new Internal\PgSqlHandle($handle, $socket, $id));
     }
 }

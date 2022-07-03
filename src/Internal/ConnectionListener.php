@@ -1,9 +1,12 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\Listener;
+use Amp\Postgres\Notification;
 use Revolt\EventLoop;
 
+/** @internal  */
 final class ConnectionListener implements Listener, \IteratorAggregate
 {
     /** @var null|\Closure(string):void */

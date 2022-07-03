@@ -6,6 +6,8 @@ use Amp\Future;
 
 /**
  * @template T
+ *
+ * @internal
  */
 final class StatementStorage
 {

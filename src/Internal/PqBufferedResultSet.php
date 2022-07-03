@@ -1,11 +1,12 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
 use Amp\Future;
 use Amp\Sql\Result;
 use pq;
 
+/** @internal  */
 final class PqBufferedResultSet implements Result, \IteratorAggregate
 {
     private readonly \Generator $iterator;

@@ -1,12 +1,13 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
 use Amp\Future;
 use Amp\Sql\Result;
 use pq;
 use Revolt\EventLoop;
 
+/** @internal  */
 final class PqUnbufferedResultSet implements Result, \IteratorAggregate
 {
     private readonly \Generator $iterator;

@@ -1,12 +1,14 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\Transaction;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Common\PooledTransaction as SqlPooledTransaction;
 use Amp\Sql\Result;
 use Amp\Sql\Statement as SqlStatement;
 
+/** @internal  */
 final class PooledTransaction extends SqlPooledTransaction implements Transaction
 {
     private readonly Transaction $transaction;

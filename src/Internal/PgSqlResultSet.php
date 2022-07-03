@@ -1,11 +1,14 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
 use Amp\Future;
+use Amp\Postgres\Internal;
+use Amp\Postgres\ParseException;
 use Amp\Sql\Result;
 use Amp\Sql\SqlException;
 
+/** @internal  */
 final class PgSqlResultSet implements Result, \IteratorAggregate
 {
     private static Internal\ArrayParser $parser;

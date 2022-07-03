@@ -1,8 +1,10 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
+use Amp\Postgres\Handle;
+use Amp\Postgres\Transaction;
 use Amp\Sql\Common\PooledResult;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Result;
@@ -12,6 +14,7 @@ use Amp\Sql\TransactionError;
 use Amp\Sql\TransactionIsolation;
 use Revolt\EventLoop;
 
+/** @internal  */
 final class ConnectionTransaction implements Transaction
 {
     private readonly Handle $handle;

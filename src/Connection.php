@@ -21,7 +21,10 @@ abstract class Connection implements Link, Receiver, Quoter
     /**
      * @throws ConnectionException
      */
-    abstract public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self;
+    abstract public static function connect(
+        PostgresConfig $connectionConfig,
+        ?Cancellation $cancellation = null,
+    ): self;
 
     protected function __construct(Handle $handle)
     {
@@ -117,7 +120,7 @@ abstract class Connection implements Link, Receiver, Quoter
             throw $exception;
         }
 
-        return new ConnectionTransaction($this->handle, $this->release(...), $isolation);
+        return new Internal\ConnectionTransaction($this->handle, $this->release(...), $isolation);
     }
 
     final public function quoteString(string $data): string

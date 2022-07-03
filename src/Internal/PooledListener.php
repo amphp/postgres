@@ -1,9 +1,11 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\Listener;
 use Revolt\EventLoop;
 
+/** @internal  */
 final class PooledListener implements Listener, \IteratorAggregate
 {
     private readonly Listener $listener;

@@ -1,12 +1,14 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
+use Amp\Postgres\Handle;
 use Amp\Sql\Result;
 use Amp\Sql\SqlException;
 use Amp\Sql\Statement;
 
+/** @internal  */
 final class ConnectionStatement implements Statement
 {
     private int $lastUsedAt;
@@ -68,6 +70,6 @@ final class ConnectionStatement implements Statement
         }
 
         $this->lastUsedAt = \time();
-        return $this->handle->statementExecute($this->name, Internal\replaceNamedParams($params, $this->params));
+        return $this->handle->statementExecute($this->name, replaceNamedParams($params, $this->params));
     }
 }

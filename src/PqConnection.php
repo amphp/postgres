@@ -12,7 +12,7 @@ use Revolt\EventLoop;
 
 final class PqConnection extends Connection implements Link
 {
-    private readonly PqHandle $handle;
+    private readonly Internal\PqHandle $handle;
 
     public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self
     {
@@ -70,7 +70,7 @@ final class PqConnection extends Connection implements Link
 
     protected function __construct(pq\Connection $handle)
     {
-        $this->handle = new PqHandle($handle);
+        $this->handle = new Internal\PqHandle($handle);
         parent::__construct($this->handle);
     }
 

@@ -2,10 +2,10 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\Internal\PqBufferedResultSet;
+use Amp\Postgres\Internal\PqUnbufferedResultSet;
 use Amp\Postgres\Link;
-use Amp\Postgres\PqBufferedResultSet;
 use Amp\Postgres\PqConnection;
-use Amp\Postgres\PqUnbufferedResultSet;
 use function Amp\Postgres\cast;
 
 /**

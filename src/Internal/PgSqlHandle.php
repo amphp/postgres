@@ -1,10 +1,14 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Pipeline\Queue;
+use Amp\Postgres\Handle;
+use Amp\Postgres\Listener;
+use Amp\Postgres\Notification;
+use Amp\Postgres\QueryExecutionError;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\QueryError;
@@ -14,7 +18,8 @@ use Amp\Sql\Statement;
 use Revolt\EventLoop;
 use function Amp\async;
 
-final class PgSqlHandle extends Internal\AbstractHandle
+/** @internal  */
+final class PgSqlHandle extends AbstractHandle
 {
     const DIAGNOSTIC_CODES = [
         \PGSQL_DIAG_SEVERITY => "severity",
@@ -40,7 +45,7 @@ final class PgSqlHandle extends Internal\AbstractHandle
     /** @var array<int, array{string, string, int}> */
     private readonly array $types;
 
-    /** @var array<string, Internal\StatementStorage<string>> */
+    /** @var array<string, StatementStorage<string>> */
     private array $statements = [];
 
     /**
@@ -329,8 +334,8 @@ final class PgSqlHandle extends Internal\AbstractHandle
             throw new \Error("The connection to the database has been closed");
         }
 
-        $sql = Internal\parseNamedParams($sql, $names);
-        $params = Internal\replaceNamedParams($params, $names);
+        $sql = parseNamedParams($sql, $names);
+        $params = replaceNamedParams($params, $names);
 
         return $this->createResult($this->send(\pg_send_query_params(...), $sql, $params), $sql);
     }
@@ -341,7 +346,7 @@ final class PgSqlHandle extends Internal\AbstractHandle
             throw new \Error("The connection to the database has been closed");
         }
 
-        $modifiedSql = Internal\parseNamedParams($sql, $names);
+        $modifiedSql = parseNamedParams($sql, $names);
 
         $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
@@ -382,7 +387,7 @@ final class PgSqlHandle extends Internal\AbstractHandle
             }
         });
 
-        $storage = new Internal\StatementStorage($sql, $future);
+        $storage = new StatementStorage($sql, $future);
         $this->statements[$name] = $storage;
 
         try {

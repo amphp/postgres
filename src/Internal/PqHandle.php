@@ -1,10 +1,14 @@
 <?php
 
-namespace Amp\Postgres;
+namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Pipeline\Queue;
+use Amp\Postgres\Handle;
+use Amp\Postgres\Listener;
+use Amp\Postgres\Notification;
+use Amp\Postgres\QueryExecutionError;
 use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\QueryError;
@@ -15,13 +19,14 @@ use pq;
 use Revolt\EventLoop;
 use function Amp\async;
 
-final class PqHandle extends Internal\AbstractHandle
+/** @internal  */
+final class PqHandle extends AbstractHandle
 {
     private ?pq\Connection $handle;
 
     private ?DeferredFuture $busy = null;
 
-    /** @var array<string, Internal\StatementStorage<pq\Statement>> */
+    /** @var array<string, StatementStorage<pq\Statement>> */
     private array $statements = [];
 
     public function __construct(pq\Connection $handle)
@@ -340,8 +345,8 @@ final class PqHandle extends Internal\AbstractHandle
             throw new \Error("The connection to the database has been closed");
         }
 
-        $sql = Internal\parseNamedParams($sql, $names);
-        $params = Internal\replaceNamedParams($params, $names);
+        $sql = parseNamedParams($sql, $names);
+        $params = replaceNamedParams($params, $names);
 
         return $this->send($sql, $this->handle->execParamsAsync(...), $sql, $params);
     }
@@ -352,7 +357,7 @@ final class PqHandle extends Internal\AbstractHandle
             throw new \Error("The connection to the database has been closed");
         }
 
-        $modifiedSql = Internal\parseNamedParams($sql, $names);
+        $modifiedSql = parseNamedParams($sql, $names);
 
         $name = Handle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
@@ -376,7 +381,7 @@ final class PqHandle extends Internal\AbstractHandle
             return $this->send($sql, $this->handle->prepareAsync(...), $name, $modifiedSql);
         });
 
-        $storage = new Internal\StatementStorage($sql, $future);
+        $storage = new StatementStorage($sql, $future);
         $this->statements[$name] = $storage;
 
         try {
