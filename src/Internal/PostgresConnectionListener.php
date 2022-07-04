@@ -7,7 +7,7 @@ use Amp\Postgres\PostgresNotification;
 use Revolt\EventLoop;
 
 /** @internal  */
-final class ConnectionListener implements PostgresListener, \IteratorAggregate
+final class PostgresConnectionListener implements PostgresListener, \IteratorAggregate
 {
     /** @var null|\Closure(string):void */
     private ?\Closure $unlisten;

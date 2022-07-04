@@ -6,10 +6,10 @@ use Amp\Future;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Common\StatementPool;
-use Amp\Sql\Pool as SqlPool;
+use Amp\Sql\Pool;
 use Amp\Sql\Result;
-use Amp\Sql\Statement as SqlStatement;
-use Amp\Sql\Transaction as SqlTransaction;
+use Amp\Sql\Statement;
+use Amp\Sql\Transaction;
 use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 use function Amp\async;
@@ -40,20 +40,20 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
     /**
      * @param \Closure():void $release
      */
-    protected function createStatement(SqlStatement $statement, \Closure $release): SqlStatement
+    protected function createStatement(Statement $statement, \Closure $release): Statement
     {
         return new PooledStatement($statement, $release);
     }
 
-    protected function createStatementPool(SqlPool $pool, string $sql, \Closure $prepare): StatementPool
+    protected function createStatementPool(Pool $pool, string $sql, \Closure $prepare): StatementPool
     {
         return new StatementPool($pool, $sql, $prepare);
     }
 
-    protected function createTransaction(SqlTransaction $transaction, \Closure $release): PostgresTransaction
+    protected function createTransaction(Transaction $transaction, \Closure $release): PostgresTransaction
     {
         \assert($transaction instanceof PostgresTransaction);
-        return new Internal\PooledTransaction($transaction, $release);
+        return new Internal\PostgresPooledTransaction($transaction, $release);
     }
 
     /**
@@ -109,7 +109,7 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
             throw $exception;
         }
 
-        return new Internal\PooledListener($listener, function () use ($connection): void {
+        return new Internal\PostgresPooledListener($listener, function () use ($connection): void {
             if (--$this->listenerCount === 0) {
                 $this->push($connection);
             }

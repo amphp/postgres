@@ -369,7 +369,7 @@ final class PqHandle extends AbstractHandle
             $result = $storage->future->await();
 
             if ($result) { // Null returned if future was from deallocation.
-                return new ConnectionStatement($this, $name, $sql, $names);
+                return new PostgresConnectionStatement($this, $name, $sql, $names);
             }
         }
 
@@ -391,7 +391,7 @@ final class PqHandle extends AbstractHandle
             throw $exception;
         }
 
-        return new ConnectionStatement($this, $name, $sql, $names);
+        return new PostgresConnectionStatement($this, $name, $sql, $names);
     }
 
     public function notify(string $channel, string $payload = ""): Result
@@ -432,7 +432,7 @@ final class PqHandle extends AbstractHandle
         }
 
         EventLoop::enable($this->poll);
-        return new ConnectionListener($source->iterate(), $channel, $this->unlisten(...));
+        return new PostgresConnectionListener($source->iterate(), $channel, $this->unlisten(...));
     }
 
     /**

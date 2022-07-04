@@ -15,7 +15,7 @@ use Amp\Sql\TransactionIsolation;
 use Revolt\EventLoop;
 
 /** @internal  */
-final class ConnectionTransaction implements PostgresTransaction
+final class PostgresConnectionTransaction implements PostgresTransaction
 {
     private readonly PostgresHandle $handle;
 

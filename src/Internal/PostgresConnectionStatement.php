@@ -9,7 +9,7 @@ use Amp\Sql\SqlException;
 use Amp\Sql\Statement;
 
 /** @internal  */
-final class ConnectionStatement implements Statement
+final class PostgresConnectionStatement implements Statement
 {
     private int $lastUsedAt;
 

@@ -6,7 +6,7 @@ use Amp\Postgres\PostgresListener;
 use Revolt\EventLoop;
 
 /** @internal  */
-final class PooledListener implements PostgresListener, \IteratorAggregate
+final class PostgresPooledListener implements PostgresListener, \IteratorAggregate
 {
     private readonly PostgresListener $listener;
 

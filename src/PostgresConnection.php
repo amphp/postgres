@@ -120,7 +120,7 @@ abstract class PostgresConnection implements Link, PostgresReceiver, PostgresQuo
             throw $exception;
         }
 
-        return new Internal\ConnectionTransaction($this->handle, $this->release(...), $isolation);
+        return new Internal\PostgresConnectionTransaction($this->handle, $this->release(...), $isolation);
     }
 
     final public function quoteString(string $data): string
