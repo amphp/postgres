@@ -2,7 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\SqlException;
 use Revolt\EventLoop;
 
@@ -31,21 +30,6 @@ function postgresConnector(?PostgresConnector $connector = null): PostgresConnec
 function connect(PostgresConfig $config): PostgresConnection
 {
     return postgresConnector()->connect($config);
-}
-
-/**
- * Create a pool using the global Connector instance.
- *
- * @param positive-int $maxConnections
- * @param positive-int $idleTimeout
- */
-function pool(
-    PostgresConfig $config,
-    int $maxConnections = ConnectionPool::DEFAULT_MAX_CONNECTIONS,
-    int $idleTimeout = ConnectionPool::DEFAULT_IDLE_TIMEOUT,
-    bool $resetConnections = true
-): PostgresPool {
-    return new PostgresPool($config, $maxConnections, $idleTimeout, $resetConnections, postgresConnector());
 }
 
 /**

@@ -3,13 +3,13 @@
 
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
-use Amp\Postgres;
+use Amp\Postgres\PostgresConfig;
+use Amp\Postgres\PostgresPool;
 use function Amp\async;
 use function Amp\delay;
 
-$config = Postgres\PostgresConfig::fromString('host=localhost user=postgres');
-
-$pool = Postgres\pool($config);
+$config = PostgresConfig::fromString('host=localhost user=postgres');
+$pool = new PostgresPool($config);
 
 $channel = "test";
 

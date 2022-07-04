@@ -4,13 +4,15 @@
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Future;
-use Amp\Postgres;
+use Amp\Postgres\PostgresConfig;
+use Amp\Postgres\PostgresListener;
+use Amp\Postgres\PostgresNotification;
+use Amp\Postgres\PostgresPool;
 use function Amp\async;
 use function Amp\delay;
 
-$config = Postgres\PostgresConfig::fromString('host=localhost user=postgres');
-
-$pool = Postgres\pool($config);
+$config = PostgresConfig::fromString('host=localhost user=postgres');
+$pool = new PostgresPool($config);
 
 $channel1 = "test1";
 $channel2 = "test2";
@@ -49,7 +51,8 @@ async(function () use ($pool, $listener1, $listener2, $channel1, $channel2): voi
     $listener1->unlisten();
 });
 
-$consumer = function (Postgres\PostgresListener $listener): void {
+$consumer = function (PostgresListener $listener): void {
+    /** @var PostgresNotification $notification */
     foreach ($listener as $notification) {
         \printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",
