@@ -6,7 +6,7 @@ use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\SqlException;
 use Revolt\EventLoop;
 
-function connector(?PostgresConnector $connector = null): PostgresConnector
+function postgresConnector(?PostgresConnector $connector = null): PostgresConnector
 {
     static $map;
     $map ??= new \WeakMap();
@@ -30,7 +30,7 @@ function connector(?PostgresConnector $connector = null): PostgresConnector
  */
 function connect(PostgresConfig $config): PostgresConnection
 {
-    return connector()->connect($config);
+    return postgresConnector()->connect($config);
 }
 
 /**
@@ -45,7 +45,7 @@ function pool(
     int $idleTimeout = ConnectionPool::DEFAULT_IDLE_TIMEOUT,
     bool $resetConnections = true
 ): PostgresPool {
-    return new PostgresPool($config, $maxConnections, $idleTimeout, $resetConnections, connector());
+    return new PostgresPool($config, $maxConnections, $idleTimeout, $resetConnections, postgresConnector());
 }
 
 /**

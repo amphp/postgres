@@ -34,7 +34,7 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
         private readonly bool $resetConnections = true,
         ?PostgresConnector $connector = null,
     ) {
-        parent::__construct($config, $connector ?? connector(), $maxConnections, $idleTimeout);
+        parent::__construct($config, $connector ?? postgresConnector(), $maxConnections, $idleTimeout);
     }
 
     /**
