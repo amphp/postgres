@@ -7,6 +7,7 @@ use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\PostgresConnection;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PostgresListener;
+use Amp\Postgres\PostgresNotification;
 use Amp\Postgres\PostgresTransaction;
 use Amp\Postgres\QueryExecutionError;
 use Amp\Sql\QueryError;
@@ -566,8 +567,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $count = 0;
         EventLoop::delay(0.2, fn () => $listener->unlisten());
 
+        /** @var PostgresNotification $notification */
         foreach ($listener as $notification) {
-            $this->assertSame($notification->payload, (string) $count++);
+            $this->assertSame($notification->getPayload(), (string) $count++);
         }
 
         $this->assertSame(2, $count);
@@ -589,8 +591,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $count = 0;
         EventLoop::delay(0.2, fn () => $listener->unlisten());
 
+        /** @var PostgresNotification $notification */
         foreach ($listener as $notification) {
-            $this->assertSame($notification->payload, (string) $count++);
+            $this->assertSame($notification->getPayload(), (string) $count++);
         }
 
         $this->assertSame(2, $count);

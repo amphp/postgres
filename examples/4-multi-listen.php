@@ -56,9 +56,9 @@ $consumer = function (PostgresListener $listener): void {
     foreach ($listener as $notification) {
         \printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",
-            $notification->pid,
-            $notification->channel,
-            $notification->payload
+            $notification->getPid(),
+            $notification->getChannel(),
+            $notification->getPayload()
         );
     }
 };

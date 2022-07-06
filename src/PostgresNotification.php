@@ -10,9 +10,24 @@ final class PostgresNotification
      * @param string $payload Message payload.
      */
     public function __construct(
-        public readonly string $channel,
-        public readonly int $pid,
-        public readonly string $payload,
+        private readonly string $channel,
+        private readonly int $pid,
+        private readonly string $payload,
     ) {
+    }
+
+    public function getChannel(): string
+    {
+        return $this->channel;
+    }
+
+    public function getPid(): int
+    {
+        return $this->pid;
+    }
+
+    public function getPayload(): string
+    {
+        return $this->payload;
     }
 }
