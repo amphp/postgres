@@ -2,8 +2,6 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\Result;
-
 interface PostgresHandle extends PostgresReceiver, PostgresQuoter
 {
     public const STATEMENT_NAME_PREFIX = "amp_";
@@ -13,7 +11,7 @@ interface PostgresHandle extends PostgresReceiver, PostgresQuoter
      *
      * @param list<int|string> $params List of statement parameters, indexed starting at 0.
      */
-    public function statementExecute(string $name, array $params): Result;
+    public function statementExecute(string $name, array $params): PostgresResult;
 
     /**
      * Deallocate the statement with the given name.

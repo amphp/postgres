@@ -3,17 +3,21 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
+use Amp\Postgres\Internal\PostgresPooledResult;
 use Amp\Sql\Common\ConnectionPool;
-use Amp\Sql\Common\PooledStatement;
 use Amp\Sql\Common\StatementPool;
 use Amp\Sql\Pool;
 use Amp\Sql\Result;
+use Amp\Sql\SqlConnector;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction;
 use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 use function Amp\async;
 
+/**
+ * @extends ConnectionPool<PostgresConfig, PostgresConnection, PostgresResult, PostgresStatement, PostgresTransaction>
+ */
 final class PostgresPool extends ConnectionPool implements PostgresLink
 {
     /** @var Future<PostgresConnection>|null Connection used for notification listening. */
@@ -26,13 +30,14 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
      * @param positive-int $maxConnections
      * @param positive-int $idleTimeout
      * @param bool $resetConnections True to automatically execute DISCARD ALL on a connection before use.
+     * @param SqlConnector<PostgresConfig, PostgresConnection>|null $connector
      */
     public function __construct(
         PostgresConfig $config,
         int $maxConnections = self::DEFAULT_MAX_CONNECTIONS,
         int $idleTimeout = self::DEFAULT_IDLE_TIMEOUT,
         private readonly bool $resetConnections = true,
-        ?PostgresConnector $connector = null,
+        ?SqlConnector $connector = null,
     ) {
         parent::__construct($config, $connector ?? postgresConnector(), $maxConnections, $idleTimeout);
     }
@@ -40,14 +45,21 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
     /**
      * @param \Closure():void $release
      */
-    protected function createStatement(Statement $statement, \Closure $release): Statement
+    protected function createStatement(Statement $statement, \Closure $release): PostgresStatement
     {
-        return new PooledStatement($statement, $release);
+        \assert($statement instanceof PostgresStatement);
+        return new Internal\PostgresPooledStatement($statement, $release);
+    }
+
+    protected function createResult(Result $result, \Closure $release): PostgresResult
+    {
+        \assert($result instanceof PostgresResult);
+        return new PostgresPooledResult($result, $release);
     }
 
     protected function createStatementPool(Pool $pool, string $sql, \Closure $prepare): StatementPool
     {
-        return new StatementPool($pool, $sql, $prepare);
+        return new Internal\PostgresStatementPool($pool, $sql, $prepare);
     }
 
     protected function createTransaction(Transaction $transaction, \Closure $release): PostgresTransaction
@@ -58,8 +70,6 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
 
     /**
      * Changes return type to this library's Transaction type.
-     *
-     * @psalm-suppress LessSpecificReturnStatement, MoreSpecificReturnType
      */
     public function beginTransaction(
         TransactionIsolation $isolation = TransactionIsolationLevel::Committed
@@ -79,7 +89,31 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
         return $connection;
     }
 
-    public function notify(string $channel, string $payload = ""): Result
+    /**
+     * Changes return type to this library's Result type.
+     */
+    public function query(string $sql): PostgresResult
+    {
+        return parent::query($sql);
+    }
+
+    /**
+     * Changes return type to this library's Statement type.
+     */
+    public function prepare(string $sql): PostgresStatement
+    {
+        return parent::prepare($sql);
+    }
+
+    /**
+     * Changes return type to this library's Result type.
+     */
+    public function execute(string $sql, array $params = []): PostgresResult
+    {
+        return parent::execute($sql, $params);
+    }
+
+    public function notify(string $channel, string $payload = ""): PostgresResult
     {
         $connection = $this->pop();
 

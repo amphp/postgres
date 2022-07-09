@@ -2,10 +2,17 @@
 
 namespace Amp\Postgres;
 
+use Amp\Sql\Common\RetrySqlConnector;
+use Amp\Sql\SqlConnector;
 use Amp\Sql\SqlException;
 use Revolt\EventLoop;
 
-function postgresConnector(?PostgresConnector $connector = null): PostgresConnector
+/**
+ * @param SqlConnector<PostgresConfig, PostgresConnection>|null $connector
+ *
+ * @return SqlConnector<PostgresConfig, PostgresConnection>
+ */
+function postgresConnector(?SqlConnector $connector = null): SqlConnector
 {
     static $map;
     $map ??= new \WeakMap();
@@ -15,7 +22,7 @@ function postgresConnector(?PostgresConnector $connector = null): PostgresConnec
         return $map[$driver] = $connector;
     }
 
-    return $map[$driver] ??= new DefaultPostgresConnector;
+    return $map[$driver] ??= new RetrySqlConnector(new DefaultPostgresConnector());
 }
 
 /**

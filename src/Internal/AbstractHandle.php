@@ -5,6 +5,8 @@ namespace Amp\Postgres\Internal;
 use Amp\DeferredFuture;
 use Amp\Pipeline\Queue;
 use Amp\Postgres\PostgresHandle;
+use Amp\Postgres\PostgresResult;
+use Amp\Postgres\PostgresStatement;
 use Amp\Sql\ConnectionException;
 use Revolt\EventLoop;
 
@@ -19,6 +21,12 @@ abstract class AbstractHandle implements PostgresHandle
     protected array $listeners = [];
 
     protected int $lastUsedAt = 0;
+
+    abstract public function query(string $sql): PostgresResult;
+
+    abstract public function prepare(string $sql): PostgresStatement;
+
+    abstract public function execute(string $sql, array $params = []): PostgresResult;
 
     public function __construct(
         protected readonly string $poll,

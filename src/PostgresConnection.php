@@ -5,13 +5,10 @@ namespace Amp\Postgres;
 use Amp\Cancellation;
 use Amp\DeferredFuture;
 use Amp\Sql\ConnectionException;
-use Amp\Sql\Link;
-use Amp\Sql\Result;
-use Amp\Sql\Statement;
 use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 
-abstract class PostgresConnection implements Link, PostgresReceiver, PostgresQuoter
+abstract class PostgresConnection implements PostgresLink, PostgresQuoter, PostgresReceiver
 {
     private readonly PostgresHandle $handle;
 
@@ -78,25 +75,25 @@ abstract class PostgresConnection implements Link, PostgresReceiver, PostgresQuo
         $this->busy = null;
     }
 
-    final public function query(string $sql): Result
+    final public function query(string $sql): PostgresResult
     {
         $this->awaitPending();
         return $this->handle->query($sql);
     }
 
-    final public function execute(string $sql, array $params = []): Result
+    final public function execute(string $sql, array $params = []): PostgresResult
     {
         $this->awaitPending();
         return $this->handle->execute($sql, $params);
     }
 
-    final public function prepare(string $sql): Statement
+    final public function prepare(string $sql): PostgresStatement
     {
         $this->awaitPending();
         return $this->handle->prepare($sql);
     }
 
-    final public function notify(string $channel, string $payload = ""): Result
+    final public function notify(string $channel, string $payload = ""): PostgresResult
     {
         $this->awaitPending();
         return $this->handle->notify($channel, $payload);

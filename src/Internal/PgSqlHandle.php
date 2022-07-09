@@ -8,13 +8,12 @@ use Amp\Pipeline\Queue;
 use Amp\Postgres\PostgresHandle;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
+use Amp\Postgres\PostgresResult;
+use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\QueryExecutionError;
-use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\QueryError;
-use Amp\Sql\Result;
 use Amp\Sql\SqlException;
-use Amp\Sql\Statement;
 use Revolt\EventLoop;
 use function Amp\async;
 
@@ -143,25 +142,23 @@ final class PgSqlHandle extends AbstractHandle
         parent::__construct($poll, $await, $onClose);
 
         /** @psalm-suppress PropertyTypeCoercion */
-        $this->types = (self::$typeCache[$id] ??= $this->fetchTypes());
+        $this->types = (self::$typeCache[$id] ??= self::fetchTypes($handle));
     }
 
     /**
      * @return array<int, array{string, string, int}>
-     *
-     * @psalm-suppress LessSpecificReturnStatement, MoreSpecificReturnType
      */
-    private function fetchTypes(): array
+    private static function fetchTypes(\PgSql\Connection $handle): array
     {
-        \assert($this->handle !== null);
-
-        $result = \pg_query($this->handle, "SELECT t.oid, t.typcategory, t.typdelim, t.typelem
+        $result = \pg_query($handle, "SELECT t.oid, t.typcategory, t.typdelim, t.typelem
              FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON t.typnamespace=n.oid
              WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public')");
 
         $types = [];
         while ($row = \pg_fetch_array($result, null, \PGSQL_NUM)) {
             [$oid, $type, $delimiter, $element] = $row;
+            \assert(\is_numeric($oid) && \is_numeric($element), "OID and element type expected to be integers");
+            \assert(\is_string($type) && \is_string($delimiter), "Unexpected types in type catalog query results");
             $types[(int) $oid] = [$type, $delimiter, (int) $element];
         }
 
@@ -228,7 +225,7 @@ final class PgSqlHandle extends AbstractHandle
      * @throws SqlException
      * @throws QueryError
      */
-    private function createResult(\PgSql\Result $result, string $sql): Result
+    private function createResult(\PgSql\Result $result, string $sql): PostgresResult
     {
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
@@ -239,7 +236,10 @@ final class PgSqlHandle extends AbstractHandle
                 throw new QueryError("Empty query string");
 
             case \PGSQL_COMMAND_OK:
-                return new CommandResult(\pg_affected_rows($result), Future::complete($this->fetchNextResult($sql)));
+                return new PostgresCommandResult(
+                    \pg_affected_rows($result),
+                    Future::complete($this->fetchNextResult($sql)),
+                );
 
             case \PGSQL_TUPLES_OK:
                 return new PgSqlResultSet($result, $this->types, Future::complete($this->fetchNextResult($sql)));
@@ -271,7 +271,7 @@ final class PgSqlHandle extends AbstractHandle
     /**
      * @throws SqlException
      */
-    private function fetchNextResult(string $sql): ?Result
+    private function fetchNextResult(string $sql): ?PostgresResult
     {
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
@@ -284,7 +284,7 @@ final class PgSqlHandle extends AbstractHandle
         return null;
     }
 
-    public function statementExecute(string $name, array $params): Result
+    public function statementExecute(string $name, array $params): PostgresResult
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
         return $this->createResult($this->send(\pg_send_execute(...), $name, $params), $this->statements[$name]->sql);
@@ -319,7 +319,7 @@ final class PgSqlHandle extends AbstractHandle
         $storage->future->ignore();
     }
 
-    public function query(string $sql): Result
+    public function query(string $sql): PostgresResult
     {
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
@@ -328,7 +328,7 @@ final class PgSqlHandle extends AbstractHandle
         return $this->createResult($this->send(\pg_send_query(...), $sql), $sql);
     }
 
-    public function execute(string $sql, array $params = []): Result
+    public function execute(string $sql, array $params = []): PostgresResult
     {
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
@@ -340,7 +340,7 @@ final class PgSqlHandle extends AbstractHandle
         return $this->createResult($this->send(\pg_send_query_params(...), $sql, $params), $sql);
     }
 
-    public function prepare(string $sql): Statement
+    public function prepare(string $sql): PostgresStatement
     {
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
@@ -400,7 +400,7 @@ final class PgSqlHandle extends AbstractHandle
         return new PostgresConnectionStatement($this, $name, $sql, $names);
     }
 
-    public function notify(string $channel, string $payload = ""): Result
+    public function notify(string $channel, string $payload = ""): PostgresResult
     {
         if ($payload === "") {
             return $this->query(\sprintf("NOTIFY %s", $this->quoteName($channel)));

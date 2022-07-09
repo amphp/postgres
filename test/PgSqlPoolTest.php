@@ -40,7 +40,7 @@ class PgSqlPoolTest extends AbstractLinkTest
                 }
                 $handle = $this->handles[$count];
                 ++$count;
-                return $this->newConnection(PgsqlConnection::class, $handle, \pg_socket($handle));
+                return $this->newConnection(PgsqlConnection::class, $handle, \pg_socket($handle), 'mock-connection');
             }));
 
         $pool = new PostgresPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);

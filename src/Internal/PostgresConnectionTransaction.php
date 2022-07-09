@@ -4,12 +4,10 @@ namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Postgres\PostgresHandle;
+use Amp\Postgres\PostgresResult;
+use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Sql\Common\PooledResult;
-use Amp\Sql\Common\PooledStatement;
-use Amp\Sql\Result;
 use Amp\Sql\SqlException;
-use Amp\Sql\Statement;
 use Amp\Sql\TransactionError;
 use Amp\Sql\TransactionIsolation;
 use Revolt\EventLoop;
@@ -122,7 +120,7 @@ final class PostgresConnectionTransaction implements PostgresTransaction
     /**
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
-    public function query(string $sql): Result
+    public function query(string $sql): PostgresResult
     {
         $this->assertOpen();
 
@@ -134,13 +132,13 @@ final class PostgresConnectionTransaction implements PostgresTransaction
             throw $exception;
         }
 
-        return new PooledResult($result, $this->release);
+        return new PostgresPooledResult($result, $this->release);
     }
 
     /**
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
-    public function prepare(string $sql): Statement
+    public function prepare(string $sql): PostgresStatement
     {
         $this->assertOpen();
 
@@ -152,13 +150,13 @@ final class PostgresConnectionTransaction implements PostgresTransaction
             throw $exception;
         }
 
-        return new PooledStatement($statement, $this->release);
+        return new PostgresPooledStatement($statement, $this->release);
     }
 
     /**
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
-    public function execute(string $sql, array $params = []): Result
+    public function execute(string $sql, array $params = []): PostgresResult
     {
         $this->assertOpen();
 
@@ -170,13 +168,13 @@ final class PostgresConnectionTransaction implements PostgresTransaction
             throw $exception;
         }
 
-        return new PooledResult($result, $this->release);
+        return new PostgresPooledResult($result, $this->release);
     }
 
     /**
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
-    public function notify(string $channel, string $payload = ""): Result
+    public function notify(string $channel, string $payload = ""): PostgresResult
     {
         $this->assertOpen();
         return $this->handle->notify($channel, $payload);

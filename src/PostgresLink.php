@@ -6,7 +6,10 @@ use Amp\Sql\Link;
 use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 
-interface PostgresLink extends Link, PostgresReceiver
+/**
+ * @extends Link<PostgresResult, PostgresStatement, PostgresTransaction>
+ */
+interface PostgresLink extends Link
 {
     /**
      * @return PostgresTransaction Transaction object specific to this library.

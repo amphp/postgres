@@ -3,12 +3,12 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\Future;
-use Amp\Sql\Result;
+use Amp\Postgres\PostgresResult;
 use pq;
 use Revolt\EventLoop;
 
 /** @internal  */
-final class PqUnbufferedResultSet implements Result, \IteratorAggregate
+final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
 {
     private readonly \Generator $iterator;
 
@@ -17,7 +17,7 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
     /**
      * @param \Closure():(\pq\Result|null) $fetch Function to fetch next result row.
      * @param \pq\Result $result Initial pq\Result result object.
-     * @param Future<Result|null> $nextResult
+     * @param Future<PostgresResult|null> $nextResult
      */
     public function __construct(
         private readonly \Closure $fetch,
@@ -60,7 +60,7 @@ final class PqUnbufferedResultSet implements Result, \IteratorAggregate
         yield from $this->iterator;
     }
 
-    public function getNextResult(): ?Result
+    public function getNextResult(): ?PostgresResult
     {
         return $this->nextResult->await();
     }

@@ -8,13 +8,12 @@ use Amp\Pipeline\Queue;
 use Amp\Postgres\PostgresHandle;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
+use Amp\Postgres\PostgresResult;
+use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\QueryExecutionError;
-use Amp\Sql\Common\CommandResult;
 use Amp\Sql\ConnectionException;
 use Amp\Sql\QueryError;
-use Amp\Sql\Result;
 use Amp\Sql\SqlException;
-use Amp\Sql\Statement;
 use pq;
 use Revolt\EventLoop;
 use function Amp\async;
@@ -178,7 +177,7 @@ final class PqHandle extends AbstractHandle
     /**
      * @throws SqlException
      */
-    private function makeResult(pq\Result $result, ?string $sql): Result
+    private function makeResult(pq\Result $result, ?string $sql): PostgresResult
     {
         if (!$this->handle) {
             throw new ConnectionException("Connection closed");
@@ -189,7 +188,10 @@ final class PqHandle extends AbstractHandle
                 throw new QueryError("Empty query string");
 
             case pq\Result::COMMAND_OK:
-                return new CommandResult($result->affectedRows, Future::complete($this->fetchNextResult($sql)));
+                return new PostgresCommandResult(
+                    $result->affectedRows,
+                    Future::complete($this->fetchNextResult($sql)),
+                );
 
             case pq\Result::TUPLES_OK:
                 return new PqBufferedResultSet($result, Future::complete($this->fetchNextResult($sql)));
@@ -222,7 +224,7 @@ final class PqHandle extends AbstractHandle
     /**
      * @throws SqlException
      */
-    private function fetchNextResult(?string $sql): ?Result
+    private function fetchNextResult(?string $sql): ?PostgresResult
     {
         if (!$this->handle) {
             throw new ConnectionException("Connection closed");
@@ -287,7 +289,7 @@ final class PqHandle extends AbstractHandle
      *
      * @throws SqlException
      */
-    public function statementExecute(string $name, array $params): Result
+    public function statementExecute(string $name, array $params): PostgresResult
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
 
@@ -330,7 +332,7 @@ final class PqHandle extends AbstractHandle
         });
     }
 
-    public function query(string $sql): Result
+    public function query(string $sql): PostgresResult
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
@@ -339,7 +341,7 @@ final class PqHandle extends AbstractHandle
         return $this->send($sql, $this->handle->execAsync(...), $sql);
     }
 
-    public function execute(string $sql, array $params = []): Result
+    public function execute(string $sql, array $params = []): PostgresResult
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
@@ -351,7 +353,7 @@ final class PqHandle extends AbstractHandle
         return $this->send($sql, $this->handle->execParamsAsync(...), $sql, $params);
     }
 
-    public function prepare(string $sql): Statement
+    public function prepare(string $sql): PostgresStatement
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
@@ -394,7 +396,7 @@ final class PqHandle extends AbstractHandle
         return new PostgresConnectionStatement($this, $name, $sql, $names);
     }
 
-    public function notify(string $channel, string $payload = ""): Result
+    public function notify(string $channel, string $payload = ""): PostgresResult
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");

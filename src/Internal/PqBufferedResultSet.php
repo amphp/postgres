@@ -3,11 +3,11 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\Future;
-use Amp\Sql\Result;
+use Amp\Postgres\PostgresResult;
 use pq;
 
 /** @internal  */
-final class PqBufferedResultSet implements Result, \IteratorAggregate
+final class PqBufferedResultSet implements PostgresResult, \IteratorAggregate
 {
     private readonly \Generator $iterator;
 
@@ -16,7 +16,7 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
     private readonly int $columnCount;
 
     /**
-     * @param Future<Result|null> $nextResult Promise for next result set.
+     * @param Future<PostgresResult|null> $nextResult Promise for next result set.
      */
     public function __construct(
         pq\Result $result,
@@ -43,7 +43,7 @@ final class PqBufferedResultSet implements Result, \IteratorAggregate
         return $this->iterator;
     }
 
-    public function getNextResult(): ?Result
+    public function getNextResult(): ?PostgresResult
     {
         return $this->nextResult->await();
     }

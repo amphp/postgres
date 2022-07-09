@@ -5,11 +5,11 @@ namespace Amp\Postgres\Internal;
 use Amp\Future;
 use Amp\Postgres\Internal;
 use Amp\Postgres\ParseException;
-use Amp\Sql\Result;
+use Amp\Postgres\PostgresResult;
 use Amp\Sql\SqlException;
 
 /** @internal  */
-final class PgSqlResultSet implements Result, \IteratorAggregate
+final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
 {
     private static Internal\ArrayParser $parser;
 
@@ -21,7 +21,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
 
     /**
      * @param array<int, array{string, string, int}> $types
-     * @param Future<Result|null> $nextResult
+     * @param Future<PostgresResult|null> $nextResult
      */
     public function __construct(
         \PgSql\Result $handle,
@@ -71,7 +71,7 @@ final class PgSqlResultSet implements Result, \IteratorAggregate
         return $this->iterator;
     }
 
-    public function getNextResult(): ?Result
+    public function getNextResult(): ?PostgresResult
     {
         return $this->nextResult->await();
     }

@@ -7,6 +7,9 @@ use Amp\Sql\SqlConfig;
 use Amp\Sql\SqlConnector;
 use Amp\Sql\SqlException;
 
+/**
+ * @extends SqlConnector<PostgresConfig, PostgresConnection>
+ */
 interface PostgresConnector extends SqlConnector
 {
     /**
