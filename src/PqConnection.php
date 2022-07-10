@@ -24,42 +24,35 @@ final class PqConnection extends PostgresConnection implements PostgresLink
         $connection->unbuffered = true;
 
         $deferred = new DeferredFuture();
-        $callback = function (string $callbackId) use ($connection, $deferred): void {
-            if ($deferred->isComplete()) {
-                EventLoop::disable($callbackId);
-                return;
+        $callback = function () use (&$poll, &$await, $connection, $deferred): void {
+            if (!$deferred->isComplete()) {
+                switch ($result = $connection->poll()) {
+                    case pq\Connection::POLLING_READING:
+                    case pq\Connection::POLLING_WRITING:
+                        return; // Connection still reading or writing, so return and leave callback enabled.
+
+                    case pq\Connection::POLLING_FAILED:
+                        $deferred->error(new ConnectionException($connection->errorMessage));
+                        break;
+
+                    case pq\Connection::POLLING_OK:
+                        $deferred->complete(new self($connection));
+                        break;
+
+                    default:
+                        $deferred->error(new ConnectionException('Unexpected connection status value: ' . $result));
+                        break;
+                }
             }
 
-            switch ($poll = $connection->poll()) {
-                case pq\Connection::POLLING_READING:
-                case pq\Connection::POLLING_WRITING:
-                    return;
-
-                case pq\Connection::POLLING_FAILED:
-                    $deferred->error(new ConnectionException($connection->errorMessage));
-                    break;
-
-                case pq\Connection::POLLING_OK:
-                    $deferred->complete(new self($connection));
-                    break;
-
-                default:
-                    $deferred->error(new ConnectionException('Unexpected connection status value: ' . $poll));
-                    break;
-            }
-
-            EventLoop::disable($callbackId);
+            EventLoop::cancel($poll);
+            EventLoop::cancel($await);
         };
 
         $poll = EventLoop::onReadable($connection->socket, $callback);
         $await = EventLoop::onWritable($connection->socket, $callback);
 
-        try {
-            return $deferred->getFuture()->await($cancellation);
-        } finally {
-            EventLoop::cancel($poll);
-            EventLoop::cancel($await);
-        }
+        return $deferred->getFuture()->await($cancellation);
     }
 
     protected function __construct(pq\Connection $handle)

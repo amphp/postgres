@@ -36,42 +36,35 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
 
         $deferred = new DeferredFuture();
         /** @psalm-suppress MissingClosureParamType $resource is a resource and cannot be inferred in this context */
-        $callback = static function (string $callbackId, $resource) use ($connection, $deferred, $hash): void {
-            if ($deferred->isComplete()) {
-                EventLoop::disable($callbackId);
-                return;
+        $callback = static function (string $callbackId, $resource) use (&$poll, &$await, $connection, $deferred, $hash): void {
+            if (!$deferred->isComplete()) {
+                switch ($result = \pg_connect_poll($connection)) {
+                    case \PGSQL_POLLING_READING:
+                    case \PGSQL_POLLING_WRITING:
+                        return; // Connection still reading or writing, so return and leave callback enabled.
+
+                    case \PGSQL_POLLING_FAILED:
+                        $deferred->error(new ConnectionException(\pg_last_error($connection)));
+                        break;
+
+                    case \PGSQL_POLLING_OK:
+                        $deferred->complete(new self($connection, $resource, $hash));
+                        break;
+
+                    default:
+                        $deferred->error(new ConnectionException('Unexpected connection status value: ' . $result));
+                        break;
+                }
             }
 
-            switch ($poll = \pg_connect_poll($connection)) {
-                case \PGSQL_POLLING_READING:
-                case \PGSQL_POLLING_WRITING:
-                    return;
-
-                case \PGSQL_POLLING_FAILED:
-                    $deferred->error(new ConnectionException(\pg_last_error($connection)));
-                    break;
-
-                case \PGSQL_POLLING_OK:
-                    $deferred->complete(new self($connection, $resource, $hash));
-                    break;
-
-                default:
-                    $deferred->error(new ConnectionException('Unexpected connection status value: ' . $poll));
-                    break;
-            }
-
-            EventLoop::disable($callbackId);
+            EventLoop::cancel($poll);
+            EventLoop::cancel($await);
         };
 
         $poll = EventLoop::onReadable($socket, $callback);
         $await = EventLoop::onWritable($socket, $callback);
 
-        try {
-            return $deferred->getFuture()->await($cancellation);
-        } finally {
-            EventLoop::cancel($poll);
-            EventLoop::cancel($await);
-        }
+        return $deferred->getFuture()->await($cancellation);
     }
 
     /**
