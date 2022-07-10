@@ -3,9 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Cancellation;
-use Amp\CancelledException;
 use Amp\DeferredFuture;
-use Amp\NullCancellation;
 use Amp\Sql\ConnectionException;
 use Revolt\EventLoop;
 
@@ -34,49 +32,29 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
             throw new ConnectionException("Failed to access connection socket");
         }
 
-        $deferred = new DeferredFuture;
-        $id = \sha1($connectionConfig->getHost() . $connectionConfig->getPort() . $connectionConfig->getUser());
+        $hash = \sha1($connectionConfig->getHost() . $connectionConfig->getPort() . $connectionConfig->getUser());
 
+        $deferred = new DeferredFuture();
         /** @psalm-suppress MissingClosureParamType $resource is a resource and cannot be inferred in this context */
-        $callback = static function (string $watcher, $resource) use ($connection, $deferred, $id): void {
+        $callback = static function (string $watcher, $resource) use ($connection, $deferred, $hash): void {
             if ($deferred->isComplete()) {
                 return;
             }
 
-            switch (\pg_connect_poll($connection)) {
-                case \PGSQL_POLLING_READING: // Connection not ready, poll again.
-                case \PGSQL_POLLING_WRITING: // Still writing...
-                    return;
-
-                case \PGSQL_POLLING_FAILED:
-                    $deferred->error(new ConnectionException(\pg_last_error($connection)));
-                    return;
-
-                case \PGSQL_POLLING_OK:
-                    $deferred->complete(new self($connection, $resource, $id));
-                    return;
-            }
+            match ($poll = \pg_connect_poll($connection)) {
+                \PGSQL_POLLING_READING, \PGSQL_POLLING_WRITING => null, // Connection still reading or writing
+                \PGSQL_POLLING_FAILED => $deferred->error(new ConnectionException(\pg_last_error($connection))),
+                \PGSQL_POLLING_OK => $deferred->complete(new self($connection, $resource, $hash)),
+                default => $deferred->error(new ConnectionException('Unexpected connection status value: ' . $poll)),
+            };
         };
 
         $poll = EventLoop::onReadable($socket, $callback);
         $await = EventLoop::onWritable($socket, $callback);
 
-        $future = $deferred->getFuture();
-
-        $cancellation ??= new NullCancellation;
-        $id = $cancellation->subscribe(static function (CancelledException $exception) use ($deferred): void {
-            if (!$deferred->isComplete()) {
-                $deferred->error($exception);
-            }
-        });
-
         try {
-            return $future->await();
-        } catch (\Throwable $exception) {
-            \pg_close($connection);
-            throw $exception;
+            return $deferred->getFuture()->await($cancellation);
         } finally {
-            $cancellation->unsubscribe($id);
             EventLoop::cancel($poll);
             EventLoop::cancel($await);
         }

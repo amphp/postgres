@@ -3,9 +3,7 @@
 namespace Amp\Postgres;
 
 use Amp\Cancellation;
-use Amp\CancelledException;
 use Amp\DeferredFuture;
-use Amp\NullCancellation;
 use Amp\Sql\ConnectionException;
 use pq;
 use Revolt\EventLoop;
@@ -25,44 +23,26 @@ final class PqConnection extends PostgresConnection implements PostgresLink
         $connection->nonblocking = true;
         $connection->unbuffered = true;
 
-        $deferred = new DeferredFuture;
-
+        $deferred = new DeferredFuture();
         $callback = function () use ($connection, $deferred): void {
             if ($deferred->isComplete()) {
                 return;
             }
 
-            switch ($connection->poll()) {
-                case pq\Connection::POLLING_READING: // Connection not ready, poll again.
-                case pq\Connection::POLLING_WRITING: // Still writing...
-                    return;
-
-                case pq\Connection::POLLING_FAILED:
-                    $deferred->error(new ConnectionException($connection->errorMessage));
-                    return;
-
-                case pq\Connection::POLLING_OK:
-                    $deferred->complete(new self($connection));
-                    return;
-            }
+            match ($poll = $connection->poll()) {
+                pq\Connection::POLLING_READING, pq\Connection::POLLING_WRITING => null,
+                pq\Connection::POLLING_FAILED => $deferred->error(new ConnectionException($connection->errorMessage)),
+                pq\Connection::POLLING_OK => $deferred->complete(new self($connection)),
+                default => $deferred->error(new ConnectionException('Unexpected connection status value: ' . $poll)),
+            };
         };
 
         $poll = EventLoop::onReadable($connection->socket, $callback);
         $await = EventLoop::onWritable($connection->socket, $callback);
 
-        $future = $deferred->getFuture();
-
-        $cancellation ??= new NullCancellation;
-        $id = $cancellation->subscribe(static function (CancelledException $exception) use ($deferred): void {
-            if (!$deferred->isComplete()) {
-                $deferred->error($exception);
-            }
-        });
-
         try {
-            return $future->await();
+            return $deferred->getFuture()->await($cancellation);
         } finally {
-            $cancellation->unsubscribe($id);
             EventLoop::cancel($poll);
             EventLoop::cancel($await);
         }
