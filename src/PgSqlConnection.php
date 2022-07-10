@@ -37,24 +37,22 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
         $deferred = new DeferredFuture();
         /** @psalm-suppress MissingClosureParamType $resource is a resource and cannot be inferred in this context */
         $callback = static function (string $callbackId, $resource) use (&$poll, &$await, $connection, $deferred, $hash): void {
-            if (!$deferred->isComplete()) {
-                switch ($result = \pg_connect_poll($connection)) {
-                    case \PGSQL_POLLING_READING:
-                    case \PGSQL_POLLING_WRITING:
-                        return; // Connection still reading or writing, so return and leave callback enabled.
+            switch ($result = \pg_connect_poll($connection)) {
+                case \PGSQL_POLLING_READING:
+                case \PGSQL_POLLING_WRITING:
+                    return; // Connection still reading or writing, so return and leave callback enabled.
 
-                    case \PGSQL_POLLING_FAILED:
-                        $deferred->error(new ConnectionException(\pg_last_error($connection)));
-                        break;
+                case \PGSQL_POLLING_FAILED:
+                    $deferred->error(new ConnectionException(\pg_last_error($connection)));
+                    break;
 
-                    case \PGSQL_POLLING_OK:
-                        $deferred->complete(new self($connection, $resource, $hash));
-                        break;
+                case \PGSQL_POLLING_OK:
+                    $deferred->complete(new self($connection, $resource, $hash));
+                    break;
 
-                    default:
-                        $deferred->error(new ConnectionException('Unexpected connection status value: ' . $result));
-                        break;
-                }
+                default:
+                    $deferred->error(new ConnectionException('Unexpected connection status value: ' . $result));
+                    break;
             }
 
             EventLoop::cancel($poll);
