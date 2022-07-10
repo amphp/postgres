@@ -5,8 +5,6 @@ namespace Amp\Postgres;
 use Amp\Future;
 use Amp\Postgres\Internal\PostgresPooledResult;
 use Amp\Sql\Common\ConnectionPool;
-use Amp\Sql\Common\StatementPool;
-use Amp\Sql\Pool;
 use Amp\Sql\Result;
 use Amp\Sql\SqlConnector;
 use Amp\Sql\Statement;
@@ -57,9 +55,9 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
         return new PostgresPooledResult($result, $release);
     }
 
-    protected function createStatementPool(Pool $pool, string $sql, \Closure $prepare): StatementPool
+    protected function createStatementPool(string $sql, \Closure $prepare): PostgresStatement
     {
-        return new Internal\PostgresStatementPool($pool, $sql, $prepare);
+        return new Internal\PostgresStatementPool($this, $sql, $prepare);
     }
 
     protected function createTransaction(Transaction $transaction, \Closure $release): PostgresTransaction
@@ -80,7 +78,6 @@ final class PostgresPool extends ConnectionPool implements PostgresLink
     protected function pop(): PostgresConnection
     {
         $connection = parent::pop();
-        \assert($connection instanceof PostgresConnection);
 
         if ($this->resetConnections) {
             $connection->query("DISCARD ALL");

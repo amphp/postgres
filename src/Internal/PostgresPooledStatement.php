@@ -13,17 +13,6 @@ use Amp\Sql\Result;
  */
 final class PostgresPooledStatement extends PooledStatement implements PostgresStatement
 {
-    private readonly PostgresStatement $statement;
-
-    /**
-     * @param \Closure():void $release
-     */
-    public function __construct(PostgresStatement $statement, \Closure $release)
-    {
-        parent::__construct($statement, $release);
-        $this->statement = $statement;
-    }
-
     protected function createResult(Result $result, \Closure $release): PostgresResult
     {
         \assert($result instanceof PostgresResult);
@@ -35,6 +24,6 @@ final class PostgresPooledStatement extends PooledStatement implements PostgresS
      */
     public function execute(array $params = []): PostgresResult
     {
-        return $this->statement->execute($params);
+        return parent::execute($params);
     }
 }
