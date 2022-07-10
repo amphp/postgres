@@ -24,17 +24,31 @@ final class PqConnection extends PostgresConnection implements PostgresLink
         $connection->unbuffered = true;
 
         $deferred = new DeferredFuture();
-        $callback = function () use ($connection, $deferred): void {
+        $callback = function (string $callbackId) use ($connection, $deferred): void {
             if ($deferred->isComplete()) {
+                EventLoop::disable($callbackId);
                 return;
             }
 
-            match ($poll = $connection->poll()) {
-                pq\Connection::POLLING_READING, pq\Connection::POLLING_WRITING => null,
-                pq\Connection::POLLING_FAILED => $deferred->error(new ConnectionException($connection->errorMessage)),
-                pq\Connection::POLLING_OK => $deferred->complete(new self($connection)),
-                default => $deferred->error(new ConnectionException('Unexpected connection status value: ' . $poll)),
-            };
+            switch ($poll = $connection->poll()) {
+                case pq\Connection::POLLING_READING:
+                case pq\Connection::POLLING_WRITING:
+                    return;
+
+                case pq\Connection::POLLING_FAILED:
+                    $deferred->error(new ConnectionException($connection->errorMessage));
+                    break;
+
+                case pq\Connection::POLLING_OK:
+                    $deferred->complete(new self($connection));
+                    break;
+
+                default:
+                    $deferred->error(new ConnectionException('Unexpected connection status value: ' . $poll));
+                    break;
+            }
+
+            EventLoop::disable($callbackId);
         };
 
         $poll = EventLoop::onReadable($connection->socket, $callback);

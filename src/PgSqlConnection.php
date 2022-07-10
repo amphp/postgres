@@ -36,17 +36,31 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
 
         $deferred = new DeferredFuture();
         /** @psalm-suppress MissingClosureParamType $resource is a resource and cannot be inferred in this context */
-        $callback = static function (string $watcher, $resource) use ($connection, $deferred, $hash): void {
+        $callback = static function (string $callbackId, $resource) use ($connection, $deferred, $hash): void {
             if ($deferred->isComplete()) {
+                EventLoop::disable($callbackId);
                 return;
             }
 
-            match ($poll = \pg_connect_poll($connection)) {
-                \PGSQL_POLLING_READING, \PGSQL_POLLING_WRITING => null, // Connection still reading or writing
-                \PGSQL_POLLING_FAILED => $deferred->error(new ConnectionException(\pg_last_error($connection))),
-                \PGSQL_POLLING_OK => $deferred->complete(new self($connection, $resource, $hash)),
-                default => $deferred->error(new ConnectionException('Unexpected connection status value: ' . $poll)),
-            };
+            switch ($poll = \pg_connect_poll($connection)) {
+                case \PGSQL_POLLING_READING:
+                case \PGSQL_POLLING_WRITING:
+                    return;
+
+                case \PGSQL_POLLING_FAILED:
+                    $deferred->error(new ConnectionException(\pg_last_error($connection)));
+                    break;
+
+                case \PGSQL_POLLING_OK:
+                    $deferred->complete(new self($connection, $resource, $hash));
+                    break;
+
+                default:
+                    $deferred->error(new ConnectionException('Unexpected connection status value: ' . $poll));
+                    break;
+            }
+
+            EventLoop::disable($callbackId);
         };
 
         $poll = EventLoop::onReadable($socket, $callback);
