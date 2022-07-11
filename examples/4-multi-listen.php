@@ -7,12 +7,12 @@ use Amp\Future;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
-use Amp\Postgres\PostgresPool;
+use Amp\Postgres\PostgresConnectionPool;
 use function Amp\async;
 use function Amp\delay;
 
 $config = PostgresConfig::fromString('host=localhost user=postgres');
-$pool = new PostgresPool($config);
+$pool = new PostgresConnectionPool($config);
 
 $channel1 = "test1";
 $channel2 = "test2";

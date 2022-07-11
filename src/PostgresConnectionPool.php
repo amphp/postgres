@@ -16,7 +16,7 @@ use function Amp\async;
 /**
  * @extends ConnectionPool<PostgresConfig, PostgresConnection, PostgresResult, PostgresStatement, PostgresTransaction>
  */
-final class PostgresPool extends ConnectionPool implements PostgresLink
+final class PostgresConnectionPool extends ConnectionPool implements PostgresLink
 {
     /** @var Future<PostgresConnection>|null Connection used for notification listening. */
     private Future|null $listeningConnection = null;

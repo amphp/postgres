@@ -4,10 +4,10 @@
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres\PostgresConfig;
-use Amp\Postgres\PostgresPool;
+use Amp\Postgres\PostgresConnectionPool;
 
 $config = PostgresConfig::fromString('host=localhost user=postgres');
-$pool = new PostgresPool($config);
+$pool = new PostgresConnectionPool($config);
 
 $pool->query('DROP TABLE IF EXISTS test');
 

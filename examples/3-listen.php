@@ -4,12 +4,12 @@
 require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres\PostgresConfig;
-use Amp\Postgres\PostgresPool;
+use Amp\Postgres\PostgresConnectionPool;
 use function Amp\async;
 use function Amp\delay;
 
 $config = PostgresConfig::fromString('host=localhost user=postgres');
-$pool = new PostgresPool($config);
+$pool = new PostgresConnectionPool($config);
 
 $channel = "test";
 

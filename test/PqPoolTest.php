@@ -3,9 +3,9 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\PostgresConfig;
+use Amp\Postgres\PostgresConnectionPool;
 use Amp\Postgres\PostgresConnector;
 use Amp\Postgres\PostgresLink;
-use Amp\Postgres\PostgresPool;
 use Amp\Postgres\PqConnection;
 use Amp\Sql\Common\ConnectionPool;
 use function Amp\Postgres\cast;
@@ -40,7 +40,7 @@ class PqPoolTest extends AbstractLinkTest
                 return $this->newConnection(PqConnection::class, $handle);
             }));
 
-        $pool = new PostgresPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
+        $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
         $handle = \reset($this->handles);
 

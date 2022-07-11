@@ -90,7 +90,7 @@ function encode(array $array): string
                 }
 
                 $value = (string) $value;
-            // no break
+                // no break
 
             case "string":
                 return '"' . \str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';

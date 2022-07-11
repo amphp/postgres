@@ -264,7 +264,7 @@ final class PgSqlHandle extends AbstractHandle
                 // @codeCoverageIgnoreStart
                 $this->close();
                 throw new SqlException("Unknown result status");
-                // @codeCoverageIgnoreEnd
+            // @codeCoverageIgnoreEnd
         }
     }
 
