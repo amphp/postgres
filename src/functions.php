@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres;
 
+use Amp\Cancellation;
 use Amp\Sql\Common\RetrySqlConnector;
 use Amp\Sql\SqlConnector;
 use Amp\Sql\SqlException;
@@ -31,12 +32,10 @@ function postgresConnector(?SqlConnector $connector = null): SqlConnector
  * @throws SqlException If connecting fails.
  *
  * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
- *
- * @codeCoverageIgnore
  */
-function connect(PostgresConfig $config): PostgresConnection
+function connect(PostgresConfig $config, ?Cancellation $cancellation = null): PostgresConnection
 {
-    return postgresConnector()->connect($config);
+    return postgresConnector()->connect($config, $cancellation);
 }
 
 /**

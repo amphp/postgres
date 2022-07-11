@@ -2,10 +2,11 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\CancelledException;
+use Amp\DeferredCancellation;
 use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnection;
-use Amp\Sql\SqlException;
 use function Amp\Postgres\connect;
 
 class FunctionsTest extends AsyncTestCase
@@ -25,10 +26,19 @@ class FunctionsTest extends AsyncTestCase
         $this->assertInstanceOf(PostgresConnection::class, $connection);
     }
 
-    public function testConnectInvalidUser()
+    /**
+     * @depends testConnect
+     */
+    public function testCancelConnect()
     {
-        $this->expectException(SqlException::class);
+        $this->expectException(CancelledException::class);
 
-        connect(PostgresConfig::fromString('host=localhost user=invalid password=invalid'));
+        $deferredCancellation = new DeferredCancellation();
+        $deferredCancellation->cancel();
+
+        connect(
+            PostgresConfig::fromString('host=localhost user=postgres password=postgres'),
+            $deferredCancellation->getCancellation(),
+        );
     }
 }
