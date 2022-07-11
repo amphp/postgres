@@ -43,14 +43,19 @@ final class PqConnection extends PostgresConnection implements PostgresLink
                     break;
             }
 
-            EventLoop::cancel($poll);
-            EventLoop::cancel($await);
+            EventLoop::disable($poll);
+            EventLoop::disable($await);
         };
 
         $poll = EventLoop::onReadable($connection->socket, $callback);
         $await = EventLoop::onWritable($connection->socket, $callback);
 
-        return $deferred->getFuture()->await($cancellation);
+        try {
+            return $deferred->getFuture()->await($cancellation);
+        } finally {
+            EventLoop::cancel($poll);
+            EventLoop::cancel($await);
+        }
     }
 
     protected function __construct(pq\Connection $handle)

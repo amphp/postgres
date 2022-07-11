@@ -55,14 +55,19 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
                     break;
             }
 
-            EventLoop::cancel($poll);
-            EventLoop::cancel($await);
+            EventLoop::disable($poll);
+            EventLoop::disable($await);
         };
 
         $poll = EventLoop::onReadable($socket, $callback);
         $await = EventLoop::onWritable($socket, $callback);
 
-        return $deferred->getFuture()->await($cancellation);
+        try {
+            return $deferred->getFuture()->await($cancellation);
+        } finally {
+            EventLoop::cancel($poll);
+            EventLoop::cancel($await);
+        }
     }
 
     /**
