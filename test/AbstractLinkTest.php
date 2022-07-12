@@ -317,7 +317,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $statement1 = async(fn () => $this->link->prepare($sql));
         $statement2 = async(fn () => $this->link->prepare($sql));
 
-        [$statement1, $statement2] = Future\all([$statement1, $statement2]);
+        [$statement1, $statement2] = Future\await([$statement1, $statement2]);
 
         $data = $this->getData()[0];
 
@@ -338,7 +338,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $statement2 = async(fn () => $this->link->prepare("SELECT * FROM test WHERE domain=:domain"));
 
-        [$statement1, $statement2] = Future\all([$statement1, $statement2]);
+        [$statement1, $statement2] = Future\await([$statement1, $statement2]);
 
         $this->assertInstanceOf(Statement::class, $statement1);
         $this->assertInstanceOf(Statement::class, $statement2);
@@ -435,7 +435,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             }
         });
 
-        Future\all([$callback(0), $callback(1)]);
+        Future\await([$callback(0), $callback(1)]);
     }
 
     /**
@@ -490,7 +490,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $this->verifyResult($result, $data);
         });
 
-        Future\all($promises);
+        Future\await($promises);
     }
 
     public function testSimultaneousPrepareAndExecute()
@@ -508,7 +508,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $this->verifyResult($result, $data);
         });
 
-        Future\all($promises);
+        Future\await($promises);
     }
 
     public function testTransaction()
@@ -608,7 +608,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->expectExceptionMessage('Already listening on channel');
 
         $channel = "test";
-        Future\all([$this->link->listen($channel), $this->link->listen($channel)]);
+        Future\await([$this->link->listen($channel), $this->link->listen($channel)]);
     }
 
     public function testQueryAfterErroredQuery()
