@@ -35,7 +35,7 @@ final class PgSqlHandle extends AbstractHandle
         \PGSQL_DIAG_SOURCE_FUNCTION => "source_function",
     ];
 
-    /** @var array<string, array<int, array{string, string}>> */
+    /** @var array<string, array<int, array{string, string, int}>> */
     private static array $typeCache;
 
     /** @var \PgSql\Connection PostgreSQL connection handle. */
@@ -141,7 +141,6 @@ final class PgSqlHandle extends AbstractHandle
 
         parent::__construct($poll, $await, $onClose);
 
-        /** @psalm-suppress PropertyTypeCoercion */
         $this->types = (self::$typeCache[$id] ??= self::fetchTypes($handle));
     }
 
