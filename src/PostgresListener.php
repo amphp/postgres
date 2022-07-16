@@ -8,7 +8,7 @@ namespace Amp\Postgres;
 interface PostgresListener extends \Traversable
 {
     /**
-     * @return string Channel name.
+     * @return non-empty-string Channel name.
      */
     public function getChannel(): string;
 

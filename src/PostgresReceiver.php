@@ -9,7 +9,7 @@ use Amp\Sql\SqlException;
 interface PostgresReceiver extends PostgresExecutor
 {
     /**
-     * @param string $channel Channel name.
+     * @param non-empty-string $channel Channel name.
      *
      * @throws SqlException If the operation fails due to unexpected condition.
      * @throws ConnectionException If the connection to the database is lost.

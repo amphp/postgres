@@ -17,7 +17,7 @@ abstract class AbstractHandle implements PostgresHandle
 {
     protected ?DeferredFuture $pendingOperation = null;
 
-    /** @var array<string, Queue> */
+    /** @var array<non-empty-string, Queue> */
     protected array $listeners = [];
 
     protected int $lastUsedAt = 0;
@@ -62,7 +62,7 @@ abstract class AbstractHandle implements PostgresHandle
     }
 
     /**
-     * @param array<string, Queue> $listeners
+     * @param array<non-empty-string, Queue> $listeners
      */
     protected static function shutdown(
         array &$listeners,

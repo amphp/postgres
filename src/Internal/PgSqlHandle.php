@@ -44,7 +44,7 @@ final class PgSqlHandle extends AbstractHandle
     /** @var array<int, array{string, string, int}> */
     private readonly array $types;
 
-    /** @var array<string, StatementStorage<string>> */
+    /** @var array<non-empty-string, StatementStorage<string>> */
     private array $statements = [];
 
     /**

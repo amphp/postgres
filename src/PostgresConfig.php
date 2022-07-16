@@ -47,9 +47,9 @@ final class PostgresConfig extends SqlConfig
     public function __construct(
         string $host,
         int $port = self::DEFAULT_PORT,
-        string $user = null,
-        string $password = null,
-        string $database = null
+        ?string $user = null,
+        ?string $password = null,
+        ?string $database = null
     ) {
         parent::__construct($host, $port, $user, $password, $database);
     }

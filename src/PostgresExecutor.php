@@ -27,7 +27,7 @@ interface PostgresExecutor extends Executor
     public function execute(string $sql, array $params = []): PostgresResult;
 
     /**
-     * @param string $channel Channel name.
+     * @param non-empty-string $channel Channel name.
      * @param string $payload Notification payload.
      *
      * @throws SqlException If the operation fails due to unexpected condition.

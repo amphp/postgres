@@ -4,18 +4,18 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
-use Revolt\EventLoop;
+use function Amp\async;
 
 /** @internal  */
 final class PostgresConnectionListener implements PostgresListener, \IteratorAggregate
 {
-    /** @var null|\Closure(string):void */
+    /** @var null|\Closure(non-empty-string):void */
     private ?\Closure $unlisten;
 
     /**
-     * @param \Traversable $source Traversable of notifications on the channel.
-     * @param string $channel Channel name.
-     * @param \Closure(string):void $unlisten Function invoked to stop listening on the channel.
+     * @param \Traversable<int, PostgresNotification> $source Traversable of notifications on the channel.
+     * @param non-empty-string $channel Channel name.
+     * @param \Closure(non-empty-string):void $unlisten Function invoked to stop listening on the channel.
      */
     public function __construct(
         private readonly \Traversable $source,
@@ -27,7 +27,10 @@ final class PostgresConnectionListener implements PostgresListener, \IteratorAgg
 
     public function __destruct()
     {
-        $this->unlisten();
+        if ($this->unlisten) {
+            async($this->unlisten, $this->channel);
+            $this->unlisten = null;
+        }
     }
 
     /**
@@ -39,9 +42,6 @@ final class PostgresConnectionListener implements PostgresListener, \IteratorAgg
         yield from $this->source;
     }
 
-    /**
-     * @return string Channel name.
-     */
     public function getChannel(): string
     {
         return $this->channel;
@@ -63,7 +63,9 @@ final class PostgresConnectionListener implements PostgresListener, \IteratorAgg
             return;
         }
 
-        EventLoop::queue($this->unlisten, $this->channel);
+        $unlisten = $this->unlisten;
         $this->unlisten = null;
+
+        $unlisten($this->channel);
     }
 }

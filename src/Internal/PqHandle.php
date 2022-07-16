@@ -25,7 +25,7 @@ final class PqHandle extends AbstractHandle
 
     private ?DeferredFuture $busy = null;
 
-    /** @var array<string, StatementStorage<pq\Statement>> */
+    /** @var array<non-empty-string, StatementStorage<pq\Statement>> */
     private array $statements = [];
 
     public function __construct(pq\Connection $handle)
@@ -422,7 +422,10 @@ final class PqHandle extends AbstractHandle
                 null,
                 $this->handle->listenAsync(...),
                 $channel,
-                /** @param positive-int $pid */
+                /**
+                 * @param non-empty-string $channel
+                 * @param positive-int $pid
+                 */
                 static function (string $channel, string $message, int $pid) use ($source): void {
                     $notification = new PostgresNotification($channel, $pid, $message);
                     $source->pushAsync($notification)->ignore();
