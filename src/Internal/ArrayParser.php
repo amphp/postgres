@@ -14,15 +14,15 @@ final class ArrayParser
      * @param \Closure(string):mixed $cast Callback to cast parsed values.
      * @param string $delimiter Delimiter used to separate values.
      *
-     * @return array Parsed column data.
+     * @return list<mixed> Parsed column data.
      *
      * @throws ParseException
      */
-    public function parse(string $data, \Closure $cast, string $delimiter = ','): array
+    public static function parse(string $data, \Closure $cast, string $delimiter = ','): array
     {
         $data = \trim($data);
 
-        $parser = $this->parser($data, $cast, $delimiter);
+        $parser = (new self($data, $cast, $delimiter))->parser();
         $data = \iterator_to_array($parser);
 
         if ($parser->getReturn() !== '') {
@@ -33,71 +33,79 @@ final class ArrayParser
     }
 
     /**
-     * Recursive generator parser yielding array values.
-     *
-     * @param string $data Remaining buffer data.
+     * @param string $data String representation of PostgresSQL array.
      * @param \Closure(string):mixed $cast Callback to cast parsed values.
      * @param string $delimiter Delimiter used to separate values.
+     */
+    private function __construct(
+        private string $data,
+        private readonly \Closure $cast,
+        private readonly string $delimiter = ',',
+    ) {
+    }
+
+    /**
+     * Recursive generator parser yielding array values.
      *
      * @throws ParseException
      */
-    private function parser(string $data, \Closure $cast, string $delimiter = ','): \Generator
+    private function parser(): \Generator
     {
-        if ($data === '') {
+        if ($this->data === '') {
             throw new ParseException("Unexpected end of data");
         }
 
-        if ($data[0] !== '{') {
+        if ($this->data[0] !== '{') {
             throw new ParseException("Missing opening bracket");
         }
 
-        $data = \ltrim(\substr($data, 1));
+        $this->data = \ltrim(\substr($this->data, 1));
 
         do {
-            if ($data === '') {
+            if ($this->data === '') {
                 throw new ParseException("Unexpected end of data");
             }
 
-            if ($data[0] === '}') { // Empty array
-                return \ltrim(\substr($data, 1));
+            if ($this->data[0] === '}') { // Empty array
+                return \ltrim(\substr($this->data, 1));
             }
 
-            if ($data[0] === '{') { // Array
-                $parser = $this->parser($data, $cast, $delimiter);
+            if ($this->data[0] === '{') { // Array
+                $parser = (new self($this->data, $this->cast, $this->delimiter))->parser();
                 yield \iterator_to_array($parser);
-                $data = $parser->getReturn();
-                $end = $this->trim($data, 0, $delimiter);
+                $this->data = $parser->getReturn();
+                $end = $this->trim(0);
                 continue;
             }
 
-            if ($data[0] === '"') { // Quoted value
-                for ($position = 1; isset($data[$position]); ++$position) {
-                    if ($data[$position] === '\\') {
+            if ($this->data[0] === '"') { // Quoted value
+                for ($position = 1; isset($this->data[$position]); ++$position) {
+                    if ($this->data[$position] === '\\') {
                         ++$position; // Skip next character
                         continue;
                     }
 
-                    if ($data[$position] === '"') {
+                    if ($this->data[$position] === '"') {
                         break;
                     }
                 }
 
-                if (!isset($data[$position])) {
+                if (!isset($this->data[$position])) {
                     throw new ParseException("Could not find matching quote in quoted value");
                 }
 
-                $yield = \stripslashes(\substr($data, 1, $position - 1));
+                $yield = \stripslashes(\substr($this->data, 1, $position - 1));
 
-                $end = $this->trim($data, $position + 1, $delimiter);
+                $end = $this->trim($position + 1);
             } else { // Unquoted value
                 $position = 0;
-                while (isset($data[$position]) && $data[$position] !== $delimiter && $data[$position] !== '}') {
+                while (isset($this->data[$position]) && $this->data[$position] !== $this->delimiter && $this->data[$position] !== '}') {
                     ++$position;
                 }
 
-                $yield = \trim(\substr($data, 0, $position));
+                $yield = \trim(\substr($this->data, 0, $position));
 
-                $end = $this->trim($data, $position, $delimiter);
+                $end = $this->trim($position);
 
                 if (\strcasecmp($yield, "NULL") === 0) { // Literal NULL is always unquoted.
                     yield null;
@@ -105,36 +113,34 @@ final class ArrayParser
                 }
             }
 
-            yield $cast($yield);
+            yield ($this->cast)($yield);
         } while ($end !== '}');
 
-        return $data;
+        return $this->data;
     }
 
     /**
-     * @param string $data Data trimmed past next delimiter and any whitespace to the right of the delimiter.
      * @param int $position Position to start search for delimiter.
-     * @param string $delimiter Delimiter used to separate values.
      *
      * @return string First non-whitespace character after given position.
      *
      * @throws ParseException
      */
-    private function trim(string &$data, int $position, string $delimiter): string
+    private function trim(int $position): string
     {
-        $data = \ltrim(\substr($data, $position));
+        $this->data = \ltrim(\substr($this->data, $position));
 
-        if ($data === '') {
+        if ($this->data === '') {
             throw new ParseException("Unexpected end of data");
         }
 
-        $end = $data[0];
+        $end = $this->data[0];
 
-        if ($end !== $delimiter && $end !== '}') {
+        if ($end !== $this->delimiter && $end !== '}') {
             throw new ParseException("Invalid delimiter");
         }
 
-        $data = \ltrim(\substr($data, 1));
+        $this->data = \ltrim(\substr($this->data, 1));
 
         return $end;
     }
