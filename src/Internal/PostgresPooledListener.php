@@ -38,6 +38,7 @@ final class PostgresPooledListener implements PostgresListener, \IteratorAggrega
                     EventLoop::queue($release);
                 }
             });
+            $this->release = null;
         }
     }
 
