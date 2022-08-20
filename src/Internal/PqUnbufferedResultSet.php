@@ -10,7 +10,7 @@ use Revolt\EventLoop;
 /** @internal  */
 final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
 {
-    private readonly \Generator $iterator;
+    private readonly \Generator $generator;
 
     private readonly int $columnCount;
 
@@ -20,13 +20,13 @@ final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
      * @param Future<PostgresResult|null> $nextResult
      */
     public function __construct(
-        private readonly \Closure $fetch,
+        \Closure $fetch,
         pq\Result $result,
         private readonly Future $nextResult,
     ) {
         $this->columnCount = $result->numCols;
 
-        $this->iterator = self::generate($fetch, $result);
+        $this->generator = self::generate($fetch, $result);
     }
 
     private static function generate(\Closure $fetch, pq\Result $result): \Generator
@@ -40,24 +40,25 @@ final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
 
     public function __destruct()
     {
-        if ($this->iterator->valid()) {
-            $fetch = $this->fetch;
-            EventLoop::queue(static function () use ($fetch): void {
-                try {
-                    while ($fetch() instanceof pq\Result) {
-                        // Discard remaining rows in the result set.
-                    }
-                } catch (\Throwable) {
-                    // Ignore errors while discarding result.
-                }
-            });
+        EventLoop::queue(self::dispose(...), $this->generator);
+    }
+
+    private static function dispose(\Generator $generator): void
+    {
+        try {
+            // Discard remaining rows in the result set.
+            while ($generator->valid()) {
+                $generator->next();
+            }
+        } catch (\Throwable) {
+            // Ignore errors while discarding result.
         }
     }
 
     public function getIterator(): \Traversable
     {
         // Using a Generator to keep a reference to $this.
-        yield from $this->iterator;
+        yield from $this->generator;
     }
 
     public function getNextResult(): ?PostgresResult
