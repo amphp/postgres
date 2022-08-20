@@ -10,6 +10,7 @@ final class PostgresPooledListener implements PostgresListener, \IteratorAggrega
 {
     private readonly PostgresListener $listener;
 
+    /** @var null|\Closure():void  */
     private ?\Closure $release;
 
     /**
@@ -29,16 +30,20 @@ final class PostgresPooledListener implements PostgresListener, \IteratorAggrega
     public function __destruct()
     {
         if ($this->listener->isListening() && $this->release) {
-            $listener = $this->listener;
-            $release = $this->release;
-            EventLoop::queue(static function () use ($listener, $release): void {
-                try {
-                    $listener->unlisten();
-                } finally {
-                    EventLoop::queue($release);
-                }
-            });
+            EventLoop::queue(self::dispose(...), $this->listener, $this->release);
             $this->release = null;
+        }
+    }
+
+    /**
+     * @param \Closure():void $release
+     */
+    private static function dispose(PostgresListener $listener, \Closure $release): void
+    {
+        try {
+            $listener->unlisten();
+        } finally {
+            EventLoop::queue($release);
         }
     }
 
