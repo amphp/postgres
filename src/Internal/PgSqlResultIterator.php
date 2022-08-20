@@ -9,7 +9,7 @@ use Amp\Sql\SqlException;
 final class PgSqlResultIterator implements \IteratorAggregate
 {
     /**
-     * @param array<int, array{string, string, int}> $types
+     * @param array<int, PgsqlType> $types
      */
     public static function iterate(\PgSql\Result $handle, array $types): \Traversable
     {
@@ -17,7 +17,7 @@ final class PgSqlResultIterator implements \IteratorAggregate
     }
 
     /**
-     * @param array<int, array{string, string, int}> $types
+     * @param array<int, PgsqlType> $types
      */
     private function __construct(
         private readonly \PgSql\Result $handle,
@@ -66,13 +66,13 @@ final class PgSqlResultIterator implements \IteratorAggregate
             return null;
         }
 
-        [$type, $delimiter, $element] = $this->types[$oid] ?? ['S', ',', 0];
+        $type = $this->types[$oid] ?? PgsqlType::getDefaultType();
 
-        return match ($type) {
+        return match ($type->type) {
             'A' => ArrayParser::parse( // Array
                 $value,
-                fn (string $data) => $this->cast($element, $data),
-                $delimiter,
+                fn (string $data) => $this->cast($type->element, $data),
+                $type->delimiter,
             ),
             'B' => $value === 't', // Boolean
             'N' => match ($oid) { // Numeric

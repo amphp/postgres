@@ -20,7 +20,7 @@ use function Amp\async;
 /** @internal  */
 final class PgSqlHandle extends AbstractHandle
 {
-    const DIAGNOSTIC_CODES = [
+    private const DIAGNOSTIC_CODES = [
         \PGSQL_DIAG_SEVERITY => "severity",
         \PGSQL_DIAG_SQLSTATE => "sqlstate",
         \PGSQL_DIAG_MESSAGE_PRIMARY => "message_primary",
@@ -35,13 +35,13 @@ final class PgSqlHandle extends AbstractHandle
         \PGSQL_DIAG_SOURCE_FUNCTION => "source_function",
     ];
 
-    /** @var array<string, array<int, array{string, string, int}>> */
+    /** @var array<string, array<int, PgsqlType>> */
     private static array $typeCache;
 
     /** @var \PgSql\Connection PostgreSQL connection handle. */
     private ?\PgSql\Connection $handle;
 
-    /** @var array<int, array{string, string, int}> */
+    /** @var array<int, PgsqlType> */
     private readonly array $types;
 
     /** @var array<non-empty-string, StatementStorage<string>> */
@@ -145,20 +145,20 @@ final class PgSqlHandle extends AbstractHandle
     }
 
     /**
-     * @return array<int, array{string, string, int}>
+     * @return array<int, PgsqlType>
      */
     private static function fetchTypes(\PgSql\Connection $handle): array
     {
         $result = \pg_query($handle, "SELECT t.oid, t.typcategory, t.typdelim, t.typelem
              FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON t.typnamespace=n.oid
-             WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public')");
+             WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public') ORDER BY t.oid");
 
         $types = [];
         while ($row = \pg_fetch_array($result, null, \PGSQL_NUM)) {
             [$oid, $type, $delimiter, $element] = $row;
             \assert(\is_numeric($oid) && \is_numeric($element), "OID and element type expected to be integers");
             \assert(\is_string($type) && \is_string($delimiter), "Unexpected types in type catalog query results");
-            $types[(int) $oid] = [$type, $delimiter, (int) $element];
+            $types[(int) $oid] = new PgsqlType($type, $delimiter, (int) $element);
         }
 
         return $types;

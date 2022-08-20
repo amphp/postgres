@@ -15,7 +15,7 @@ final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
     private readonly int $columnCount;
 
     /**
-     * @param array<int, array{string, string, int}> $types
+     * @param array<int, PgsqlType> $types
      * @param Future<PostgresResult|null> $nextResult
      */
     public function __construct(
