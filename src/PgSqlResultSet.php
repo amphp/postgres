@@ -130,9 +130,11 @@ final class PgSqlResultSet implements ResultSet
                 switch ($oid) {
                     case 700: // float4
                     case 701: // float8
-                    case 790: // money
                     case 1700: // numeric
                         return (float) $value;
+
+                    case 790:
+                        return $value; // money includes currency symbol as string.
 
                     default: // Cast all other numeric types to an integer.
                         return (int) $value;
