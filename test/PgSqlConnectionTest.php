@@ -5,7 +5,7 @@ namespace Amp\Postgres\Test;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\PostgresLink;
 use Revolt\EventLoop;
-use function Amp\Postgres\cast;
+use function Amp\Postgres\Internal\cast;
 
 /**
  * @requires extension pgsql

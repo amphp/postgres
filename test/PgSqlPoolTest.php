@@ -9,7 +9,7 @@ use Amp\Postgres\PostgresLink;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\SqlConnector;
 use Revolt\EventLoop;
-use function Amp\Postgres\cast;
+use function Amp\Postgres\Internal\cast;
 
 /**
  * @requires extension pgsql

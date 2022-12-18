@@ -6,7 +6,7 @@ use Amp\Postgres\Internal\PqBufferedResultSet;
 use Amp\Postgres\Internal\PqUnbufferedResultSet;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PqConnection;
-use function Amp\Postgres\cast;
+use function Amp\Postgres\Internal\cast;
 
 /**
  * @requires extension pq

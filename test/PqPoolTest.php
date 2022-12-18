@@ -8,7 +8,7 @@ use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PqConnection;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\SqlConnector;
-use function Amp\Postgres\cast;
+use function Amp\Postgres\Internal\cast;
 
 /**
  * @requires extension pq

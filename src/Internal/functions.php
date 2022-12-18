@@ -2,8 +2,6 @@
 
 namespace Amp\Postgres\Internal;
 
-use function Amp\Postgres\cast;
-
 /** @internal */
 const STATEMENT_PARAM_REGEX = <<<'REGEX'
 [
@@ -91,4 +89,54 @@ function replaceNamedParams(array $params, array $names): array
     }
 
     return $values;
+}
+
+/**
+ * @internal
+ *
+ * Casts a PHP value to a representation that is understood by Postgres, including encoding arrays.
+ *
+ * @throws \Error If $value is an object which is not a BackedEnum or Stringable, a resource, or an unknown type.
+ */
+function cast(mixed $value): string|int|float|null
+{
+    return match (\gettype($value)) {
+        "NULL", "integer", "double", "string" => $value,
+        "boolean" => $value ? 't' : 'f',
+        "array" => '{' . \implode(',', \array_map(encodeArrayItem(...), $value)) . '}',
+        "object" => match (true) {
+            $value instanceof \BackedEnum => $value->value,
+            $value instanceof \Stringable => (string) $value,
+            default => throw new \ValueError(
+                "An object in parameter values must be a BackedEnum or implement Stringable; got instance of "
+                . \get_debug_type($value)
+            ),
+        },
+        default => throw new \ValueError(\sprintf(
+            "Invalid value type '%s' in parameter values",
+            \get_debug_type($value),
+        )),
+    };
+}
+
+/**
+ * @internal
+ *
+ * Wraps string in double-quotes for inclusion in an array.
+ */
+function encodeArrayItem(mixed $value): mixed
+{
+    return match (\gettype($value)) {
+        "NULL" => "NULL",
+        "string" => '"' . \str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"',
+        "object" => match (true) {
+            $value instanceof \BackedEnum => encodeArrayItem($value->value),
+            $value instanceof \Stringable => encodeArrayItem((string) $value),
+            default => throw new \ValueError(
+                "An object in parameter arrays must be a BackedEnum or implement Stringable; "
+                . "got instance of " . \get_debug_type($value)
+            ),
+        },
+        default => cast($value),
+    };
 }
