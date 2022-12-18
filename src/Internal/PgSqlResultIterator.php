@@ -76,7 +76,8 @@ final class PgSqlResultIterator implements \IteratorAggregate
             ),
             'B' => $value === 't', // Boolean
             'N' => match ($oid) { // Numeric
-                700, 701, 790, 1700 => (float) $value, // float4, float8, money, and numeric to float
+                700, 701, 1700 => (float) $value, // float4, float8, and numeric to float
+                790 => $value, // money includes currency symbol as string
                 default => (int) $value, // All other numeric types cast to an integer
             },
             default => $value, // Return a string for all other types
