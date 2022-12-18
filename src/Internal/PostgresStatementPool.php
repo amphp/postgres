@@ -4,12 +4,13 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
+use Amp\Postgres\PostgresTransaction;
 use Amp\Sql\Common\StatementPool as SqlStatementPool;
 use Amp\Sql\Result as SqlResult;
 
 /**
  * @internal
- * @extends SqlStatementPool<PostgresResult, PostgresStatement>
+ * @extends SqlStatementPool<PostgresResult, PostgresStatement, PostgresTransaction>
  */
 final class PostgresStatementPool extends SqlStatementPool implements PostgresStatement
 {

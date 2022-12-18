@@ -14,7 +14,7 @@ use Amp\Sql\TransactionIsolationLevel;
 use function Amp\async;
 
 /**
- * @extends ConnectionPool<PostgresConfig, PostgresConnection, PostgresResult, PostgresStatement, PostgresTransaction>
+ * @extends ConnectionPool<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction, PostgresConnection>
  */
 final class PostgresConnectionPool extends ConnectionPool implements PostgresLink, PostgresReceiver
 {

@@ -23,6 +23,10 @@ function postgresConnector(?SqlConnector $connector = null): SqlConnector
         return $map[$driver] = $connector;
     }
 
+    /**
+     * @psalm-suppress InvalidArgument
+     * @var SqlConnector<PostgresConfig, PostgresConnection>
+     */
     return $map[$driver] ??= new RetrySqlConnector(new DefaultPostgresConnector());
 }
 
