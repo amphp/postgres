@@ -8,7 +8,7 @@ use Amp\Postgres\PostgresResult;
 /** @internal  */
 final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
 {
-    private readonly \Traversable $iterator;
+    private readonly \Iterator $iterator;
 
     private readonly int $rowCount;
 
@@ -27,6 +27,17 @@ final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
         $this->columnCount = \pg_num_fields($handle);
 
         $this->iterator = PgSqlResultIterator::iterate($handle, $types);
+    }
+
+    public function fetchRow(): ?array
+    {
+        if (!$this->iterator->valid()) {
+            return null;
+        }
+
+        $current = $this->iterator->current();
+        $this->iterator->next();
+        return $current;
     }
 
     public function getIterator(): \Traversable

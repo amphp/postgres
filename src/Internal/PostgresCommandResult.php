@@ -20,6 +20,11 @@ final class PostgresCommandResult implements PostgresResult, \IteratorAggregate
         $this->delegate = new CommandResult($affectedRows, $nextResult);
     }
 
+    public function fetchRow(): ?array
+    {
+        return $this->delegate->fetchRow();
+    }
+
     public function getIterator(): \Traversable
     {
         return $this->delegate->getIterator();

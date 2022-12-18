@@ -55,6 +55,17 @@ final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
         }
     }
 
+    public function fetchRow(): ?array
+    {
+        if (!$this->generator->valid()) {
+            return null;
+        }
+
+        $current = $this->generator->current();
+        $this->generator->next();
+        return $current;
+    }
+
     public function getIterator(): \Traversable
     {
         // Using a Generator to keep a reference to $this.

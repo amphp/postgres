@@ -38,6 +38,17 @@ final class PqBufferedResultSet implements PostgresResult, \IteratorAggregate
         }
     }
 
+    public function fetchRow(): ?array
+    {
+        if (!$this->iterator->valid()) {
+            return null;
+        }
+
+        $current = $this->iterator->current();
+        $this->iterator->next();
+        return $current;
+    }
+
     public function getIterator(): \Traversable
     {
         return $this->iterator;

@@ -48,7 +48,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     protected function verifyResult(Result $result, array $data): void
     {
-        //$this->assertSame(self::FIELD_COUNT, $result->getFieldCount());
+        $this->assertSame(self::FIELD_COUNT, $result->getColumnCount());
 
         $i = 0;
         foreach ($result as $row) {
@@ -95,6 +95,18 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         parent::tearDown();
         $this->link->close();
+    }
+
+    public function testQueryFetchRow(): void
+    {
+        $result = $this->link->query("SELECT * FROM test");
+
+        $data = $this->getData();
+        while ($row = $result->fetchRow()) {
+            self::assertSame(\array_shift($data), \array_values($row));
+        }
+
+        self::assertEmpty($data);
     }
 
     public function testQueryWithTupleResult()

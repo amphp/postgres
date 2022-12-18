@@ -11,7 +11,7 @@ final class PgSqlResultIterator implements \IteratorAggregate
     /**
      * @param array<int, PgsqlType> $types
      */
-    public static function iterate(\PgSql\Result $handle, array $types): \Traversable
+    public static function iterate(\PgSql\Result $handle, array $types): \Iterator
     {
         return (new self($handle, $types))->getIterator();
     }
@@ -25,7 +25,7 @@ final class PgSqlResultIterator implements \IteratorAggregate
     ) {
     }
 
-    public function getIterator(): \Traversable
+    public function getIterator(): \Iterator
     {
         $fieldNames = [];
         $fieldTypes = [];
