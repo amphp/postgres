@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Amp\Postgres\Internal;
 
@@ -263,7 +263,7 @@ final class PgSqlHandle extends AbstractHandle
                 // @codeCoverageIgnoreStart
                 $this->close();
                 throw new SqlException("Unknown result status");
-            // @codeCoverageIgnoreEnd
+                // @codeCoverageIgnoreEnd
         }
     }
 
@@ -382,7 +382,7 @@ final class PgSqlHandle extends AbstractHandle
                 default:
                     // @codeCoverageIgnoreStart
                     throw new SqlException("Unknown result status");
-                // @codeCoverageIgnoreEnd
+                    // @codeCoverageIgnoreEnd
             }
         });
 

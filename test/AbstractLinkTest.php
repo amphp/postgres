@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Amp\Postgres\Test;
 
@@ -56,7 +56,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $this->assertSame($data[$i][1], $row['tld']);
             $this->assertSame($data[$i][2], $row['keys']);
             $this->assertSame($data[$i][3], $row['enabled']);
-            $this->assertIsFloat($data[$i][4], $row['number']);
+            $this->assertEqualsWithDelta($data[$i][4], $row['number'], 0.001);
             $this->assertNull($row['nullable']);
             ++$i;
         }
