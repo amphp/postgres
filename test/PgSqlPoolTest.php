@@ -5,9 +5,9 @@ namespace Amp\Postgres\Test;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
-use Amp\Postgres\PostgresConnector;
 use Amp\Postgres\PostgresLink;
 use Amp\Sql\Common\ConnectionPool;
+use Amp\Sql\SqlConnector;
 use Revolt\EventLoop;
 use function Amp\Postgres\cast;
 
@@ -31,7 +31,7 @@ class PgSqlPoolTest extends AbstractLinkTest
             $this->handles[] = \pg_connect($connectionString, \PGSQL_CONNECT_FORCE_NEW);
         }
 
-        $connector = $this->createMock(PostgresConnector::class);
+        $connector = $this->createMock(SqlConnector::class);
         $connector->method('connect')
             ->will($this->returnCallback(function (): PgSqlConnection {
                 static $count = 0;

@@ -4,14 +4,18 @@ namespace Amp\Postgres;
 
 use Amp\Cancellation;
 use Amp\Sql\SqlConfig;
+use Amp\Sql\SqlConnector;
 use Amp\Sql\SqlException;
 
-final class DefaultPostgresConnector implements PostgresConnector
+/**
+ * @implements SqlConnector<PostgresConfig, PostgresConnection>
+ */
+final class DefaultPostgresConnector implements SqlConnector
 {
     /**
      * @throws SqlException If connecting fails.
      *
-     * @throws \Error If neither ext-pgsql or pecl-pq is loaded.
+     * @throws \Error If neither ext-pgsql nor pecl-pq is loaded.
      */
     public function connect(SqlConfig $config, ?Cancellation $cancellation = null): PostgresConnection
     {

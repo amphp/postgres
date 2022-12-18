@@ -4,10 +4,10 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
-use Amp\Postgres\PostgresConnector;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PqConnection;
 use Amp\Sql\Common\ConnectionPool;
+use Amp\Sql\SqlConnector;
 use function Amp\Postgres\cast;
 
 /**
@@ -28,7 +28,7 @@ class PqPoolTest extends AbstractLinkTest
             $handle->unbuffered = true;
         }
 
-        $connector = $this->createMock(PostgresConnector::class);
+        $connector = $this->createMock(SqlConnector::class);
         $connector->method('connect')
             ->will($this->returnCallback(function (): PqConnection {
                 static $count = 0;
