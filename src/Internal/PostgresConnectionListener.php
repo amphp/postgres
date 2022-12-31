@@ -6,7 +6,10 @@ use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
 use function Amp\async;
 
-/** @internal  */
+/**
+ * @internal
+ * @implements \IteratorAggregate<int, PostgresNotification>
+ */
 final class PostgresConnectionListener implements PostgresListener, \IteratorAggregate
 {
     /** @var null|\Closure(non-empty-string):void */
@@ -33,9 +36,6 @@ final class PostgresConnectionListener implements PostgresListener, \IteratorAgg
         }
     }
 
-    /**
-     * @return \Traversable<int, PostgresNotification>
-     */
     public function getIterator(): \Traversable
     {
         // Using a Generator to keep a reference to $this.

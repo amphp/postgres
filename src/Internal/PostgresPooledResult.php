@@ -8,7 +8,8 @@ use Amp\Sql\Result;
 
 /**
  * @internal
- * @extends PooledResult<PostgresResult>
+ * @psalm-import-type TFieldType from PostgresResult
+ * @extends PooledResult<TFieldType, PostgresResult>
  */
 final class PostgresPooledResult extends PooledResult implements PostgresResult
 {

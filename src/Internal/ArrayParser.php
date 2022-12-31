@@ -23,7 +23,7 @@ final class ArrayParser
         $data = \trim($data);
 
         $parser = (new self($data, $cast, $delimiter))->parser();
-        $data = \iterator_to_array($parser);
+        $data = \iterator_to_array($parser, false);
 
         if ($parser->getReturn() !== '') {
             throw new ParseException("Data left in buffer after parsing");
@@ -72,7 +72,7 @@ final class ArrayParser
 
             if ($this->data[0] === '{') { // Array
                 $parser = (new self($this->data, $this->cast, $this->delimiter))->parser();
-                yield \iterator_to_array($parser);
+                yield \iterator_to_array($parser, false);
                 $this->data = $parser->getReturn();
                 $end = $this->trim(0);
                 continue;

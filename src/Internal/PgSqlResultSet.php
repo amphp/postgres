@@ -5,7 +5,11 @@ namespace Amp\Postgres\Internal;
 use Amp\Future;
 use Amp\Postgres\PostgresResult;
 
-/** @internal  */
+/**
+ * @internal
+ * @psalm-import-type TRowType from PostgresResult
+ * @implements \IteratorAggregate<int, TRowType>
+ */
 final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
 {
     private readonly \Iterator $iterator;

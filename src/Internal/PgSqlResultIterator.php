@@ -3,13 +3,19 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\ParseException;
+use Amp\Postgres\PostgresResult;
 use Amp\Sql\SqlException;
 
-/** @internal */
-final class PgSqlResultIterator implements \IteratorAggregate
+/**
+ * @internal
+ * @psalm-import-type TRowType from PostgresResult
+ */
+final class PgSqlResultIterator
 {
     /**
      * @param array<int, PgsqlType> $types
+     *
+     * @return \Iterator<int, TRowType>
      */
     public static function iterate(\PgSql\Result $handle, array $types): \Iterator
     {
@@ -25,7 +31,7 @@ final class PgSqlResultIterator implements \IteratorAggregate
     ) {
     }
 
-    public function getIterator(): \Iterator
+    private function getIterator(): \Iterator
     {
         $fieldNames = [];
         $fieldTypes = [];
@@ -58,9 +64,11 @@ final class PgSqlResultIterator implements \IteratorAggregate
      * @see https://github.com/postgres/postgres/blob/REL_14_STABLE/src/include/catalog/pg_type.dat for OID types.
      * @see https://www.postgresql.org/docs/14/catalog-pg-type.html for pg_type catalog docs.
      *
+     * @return list<mixed>|bool|int|float|string|null
+     *
      * @throws ParseException
      */
-    private function cast(int $oid, ?string $value): string|int|bool|array|float|null
+    private function cast(int $oid, ?string $value): array|bool|int|float|string|null
     {
         if ($value === null) {
             return null;

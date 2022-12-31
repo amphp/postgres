@@ -3,9 +3,13 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\PostgresListener;
+use Amp\Postgres\PostgresNotification;
 use Revolt\EventLoop;
 
-/** @internal  */
+/**
+ * @internal
+ * @implements \IteratorAggregate<int, PostgresNotification>
+ */
 final class PostgresPooledListener implements PostgresListener, \IteratorAggregate
 {
     private readonly PostgresListener $listener;

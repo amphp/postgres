@@ -6,7 +6,11 @@ use Amp\Future;
 use Amp\Postgres\PostgresResult;
 use pq;
 
-/** @internal  */
+/**
+ * @internal
+ * @psalm-import-type TRowType from PostgresResult
+ * @implements \IteratorAggregate<int, TRowType>
+ */
 final class PqBufferedResultSet implements PostgresResult, \IteratorAggregate
 {
     private readonly \Generator $iterator;

@@ -6,10 +6,14 @@ use Amp\Future;
 use Amp\Postgres\PostgresResult;
 use Amp\Sql\Common\CommandResult;
 
-/** @internal */
+/**
+ * @internal
+ * @psalm-import-type TFieldType from PostgresResult
+ * @implements \IteratorAggregate<int, never>
+ */
 final class PostgresCommandResult implements PostgresResult, \IteratorAggregate
 {
-    /** @var CommandResult<PostgresResult> */
+    /** @var CommandResult<TFieldType, PostgresResult> */
     private readonly CommandResult $delegate;
 
     /**

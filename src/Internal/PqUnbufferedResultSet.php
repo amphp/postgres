@@ -7,7 +7,11 @@ use Amp\Postgres\PostgresResult;
 use pq;
 use Revolt\EventLoop;
 
-/** @internal  */
+/**
+ * @internal
+ * @psalm-import-type TRowType from PostgresResult
+ * @implements \IteratorAggregate<int, TRowType>
+ */
 final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
 {
     private readonly \Generator $generator;
