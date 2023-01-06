@@ -11,22 +11,22 @@ class ConnectionConfigTest extends TestCase
     {
         $config = PostgresConfig::fromString("host=localhost port=5434 user=postgres password=test db=test");
 
-        $this->assertSame($config->getHost(), "localhost");
-        $this->assertSame($config->getPort(), 5434);
-        $this->assertSame($config->getUser(), "postgres");
-        $this->assertSame($config->getPassword(), "test");
-        $this->assertSame($config->getDatabase(), "test");
+        $this->assertSame("localhost", $config->getHost());
+        $this->assertSame(5434, $config->getPort());
+        $this->assertSame("postgres", $config->getUser());
+        $this->assertSame("test", $config->getPassword());
+        $this->assertSame("test", $config->getDatabase());
     }
 
     public function testAlternativeSyntax(): void
     {
         $config = PostgresConfig::fromString("host=localhost;port=5434;user=postgres;password=test;db=test");
 
-        $this->assertSame($config->getHost(), "localhost");
-        $this->assertSame($config->getPort(), 5434);
-        $this->assertSame($config->getUser(), "postgres");
-        $this->assertSame($config->getPassword(), "test");
-        $this->assertSame($config->getDatabase(), "test");
+        $this->assertSame("localhost", $config->getHost());
+        $this->assertSame(5434, $config->getPort());
+        $this->assertSame("postgres", $config->getUser());
+        $this->assertSame("test", $config->getPassword());
+        $this->assertSame("test", $config->getDatabase());
     }
 
     public function testNoHost(): void
