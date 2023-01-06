@@ -43,6 +43,7 @@ class PqConnectionTest extends AbstractConnectionTest
 
     public function tearDown(): void
     {
+         $this->handle->reset();
         $this->handle->exec("ROLLBACK");
         $this->handle->exec(self::DROP_QUERY);
 

@@ -44,6 +44,7 @@ class PgSqlConnectionTest extends AbstractConnectionTest
 
     public function tearDown(): void
     {
+         \pg_cancel_query($this->handle); // Cancel any outstanding query.
         \pg_get_result($this->handle); // Consume any leftover results from test.
         \pg_query($this->handle, "ROLLBACK");
         \pg_query($this->handle, self::DROP_QUERY);
