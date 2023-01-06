@@ -195,6 +195,7 @@ final class PgSqlHandle implements Handle
     public function close(): void
     {
         if ($this->handle instanceof \PgSql\Connection || \is_resource($this->handle)) {
+            \pg_cancel_query($this->handle);
             \pg_close($this->handle);
             $this->handle = null;
         }

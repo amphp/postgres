@@ -66,4 +66,16 @@ abstract class AbstractConnectTest extends AsyncTestCase
 
         return $this->connect(PostgresConnectionConfig::fromString('host=localhost user=invalid'), new TimeoutCancellationToken(100));
     }
+
+    public function testConnectionClose(): \Generator
+    {
+        $connection = yield $this->connect(PostgresConnectionConfig::fromString('host=localhost user=postgres'));
+        $this->assertInstanceOf(Connection::class, $connection);
+
+        $connection->execute('SELECT pg_sleep(10)');
+
+        $start = microtime(true);
+        $connection->close();
+        $this->assertEquals(0, round(microtime(true) - $start));
+    }
 }
