@@ -4,6 +4,7 @@ namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
 use Amp\Pipeline\Queue;
+use Amp\Postgres\ByteA;
 use Amp\Postgres\PostgresHandle;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
@@ -84,5 +85,14 @@ abstract class AbstractHandle implements PostgresHandle
         if (!$onClose->isComplete()) {
             $onClose->complete();
         }
+    }
+
+    protected function escapeParams(array $params): array
+    {
+        return \array_map(fn (mixed $param) => match (true) {
+            $param instanceof ByteA => $this->escapeByteA($param->getData()),
+            \is_array($param) => $this->escapeParams($param),
+            default => $param,
+        }, $params);
     }
 }

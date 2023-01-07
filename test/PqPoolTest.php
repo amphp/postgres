@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\ByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
 use Amp\Postgres\PostgresLink;
@@ -30,7 +31,7 @@ class PqPoolTest extends AbstractLinkTest
 
         $connector = $this->createMock(SqlConnector::class);
         $connector->method('connect')
-            ->will($this->returnCallback(function (): PqConnection {
+            ->willReturnCallback(function (): PqConnection {
                 static $count = 0;
                 if (!isset($this->handles[$count])) {
                     $this->fail("createConnection called too many times");
@@ -38,7 +39,7 @@ class PqPoolTest extends AbstractLinkTest
                 $handle = $this->handles[$count];
                 ++$count;
                 return $this->newConnection(PqConnection::class, $handle);
-            }));
+            });
 
         $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
@@ -52,8 +53,8 @@ class PqPoolTest extends AbstractLinkTest
             $this->fail('Could not create test table.');
         }
 
-        foreach ($this->getData() as $row) {
-            $result = $handle->execParams(self::INSERT_QUERY, \array_map(cast(...), $row));
+        foreach ($this->getParams() as $row) {
+            $result = $handle->execParams(self::INSERT_QUERY, \array_map(fn ($data) => $this->cast($handle, $data), $row));
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -61,6 +62,11 @@ class PqPoolTest extends AbstractLinkTest
         }
 
         return $pool;
+    }
+
+    private function cast(\pq\Connection $connection, mixed $param): mixed
+    {
+        return $param instanceof ByteA ? $connection->escapeBytea($param->getData()) : cast($param);
     }
 
     public function tearDown(): void

@@ -300,7 +300,11 @@ final class PqHandle extends AbstractHandle
             throw new SqlException('Statement unexpectedly closed before being executed');
         }
 
-        return $this->send($storage->sql, $statement->execAsync(...), $params);
+        return $this->send(
+            $storage->sql,
+            $statement->execAsync(...),
+            \array_map(cast(...), $this->escapeParams($params)),
+        );
     }
 
     /**
@@ -332,6 +336,15 @@ final class PqHandle extends AbstractHandle
         });
     }
 
+    public function escapeByteA(string $data): string
+    {
+        if (!$this->handle) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
+        return $this->handle->escapeBytea($data);
+    }
+
     public function query(string $sql): PostgresResult
     {
         if (!$this->handle) {
@@ -350,7 +363,12 @@ final class PqHandle extends AbstractHandle
         $sql = parseNamedParams($sql, $names);
         $params = replaceNamedParams($params, $names);
 
-        return $this->send($sql, $this->handle->execParamsAsync(...), $sql, $params);
+        return $this->send(
+            $sql,
+            $this->handle->execParamsAsync(...),
+            $sql,
+            \array_map(cast(...), $this->escapeParams($params)),
+        );
     }
 
     public function prepare(string $sql): PostgresStatement

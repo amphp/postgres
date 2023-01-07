@@ -37,7 +37,7 @@ final class PqBufferedResultSet implements PostgresResult, \IteratorAggregate
         $position = 0;
 
         while (++$position <= $result->numRows) {
-            $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
+            $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY | pq\Result::CONV_BYTEA;
             yield $result->fetchRow(pq\Result::FETCH_ASSOC);
         }
     }

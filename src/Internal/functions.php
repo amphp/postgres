@@ -85,7 +85,7 @@ function replaceNamedParams(array $params, array $names): array
             throw new \Error($message);
         }
 
-        $values[] = cast($params[$name]);
+        $values[] = $params[$name];
     }
 
     return $values;

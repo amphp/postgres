@@ -4,6 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Future;
 use Amp\PHPUnit\AsyncTestCase;
+use Amp\Postgres\ByteA;
 use Amp\Postgres\PostgresConnection;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PostgresListener;
@@ -26,24 +27,35 @@ abstract class AbstractLinkTest extends AsyncTestCase
                                                        enabled BOOLEAN NOT NULL, 
                                                        number DOUBLE PRECISION NOT NULL,
                                                        nullable CHAR(1) DEFAULT NULL,
+                                                       bytea BYTEA DEFAULT NULL,
                                                        PRIMARY KEY (domain, tld))";
     protected const DROP_QUERY = "DROP TABLE IF EXISTS test";
-    protected const INSERT_QUERY = 'INSERT INTO test VALUES ($1, $2, $3, $4, $5, $6)';
-    protected const FIELD_COUNT = 6;
+    protected const INSERT_QUERY = 'INSERT INTO test VALUES ($1, $2, $3, $4, $5, $6, $7)';
+    protected const FIELD_COUNT = 7;
 
     protected PostgresLink $link;
+
+    private ?array $data = null;
+
+    protected function getParams(): array
+    {
+        return $this->data ??= [
+            ['amphp', 'org', [1], true, 3.14159, null, new ByteA(\random_bytes(10))],
+            ['github', 'com', [1, 2, 3, 4, 5], false, 2.71828, null, new ByteA(\str_repeat("\0", 10))],
+            ['google', 'com', [1, 2, 3, 4], true, 1.61803, null, new ByteA(\random_bytes(42))],
+            ['php', 'net', [1, 2], false, 0.0, null, null],
+        ];
+    }
 
     /**
      * @return array Start test data for database.
      */
-    public function getData(): array
+    protected function getData(): array
     {
-        return [
-            ['amphp', 'org', [1], true, 3.14159, null],
-            ['github', 'com', [1, 2, 3, 4, 5], false, 2.71828, null],
-            ['google', 'com', [1, 2, 3, 4], true, 1.61803, null],
-            ['php', 'net', [1, 2], false, 0.0, null],
-        ];
+        return \array_map(fn (array $params) => \array_map(
+            fn (mixed $param) => $param instanceof ByteA ? $param->getData() : $param,
+            $params,
+        ), $this->getParams());
     }
 
     protected function verifyResult(Result $result, array $data): void
@@ -634,5 +646,61 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $result = $this->link->query("INSERT INTO test VALUES ('gitlab', 'com', '{1, 2, 3}', true, 4.2)");
 
         $this->assertSame(1, $result->getRowCount());
+    }
+
+    public function provideInsertParameters(): iterable {
+        $data = \str_repeat("\0", 10);
+
+        yield [
+            "INSERT INTO test
+                (domain, tld, keys, enabled, number, bytea)
+                VALUES (:domain, :tld, :keys, :enabled, :number, :bytea)",
+            "SELECT bytea FROM test WHERE domain = :domain",
+            [
+                'domain' => 'gitlab',
+                'tld' => 'com',
+                'keys' => [1, 2, 3],
+                'enabled' => false,
+                'number' => 2.718,
+                'bytea' => new ByteA($data),
+            ],
+            ['bytea' => $data],
+        ];
+    }
+
+    /**
+     * @dataProvider provideInsertParameters
+     */
+    public function testStatementInsertByteA(
+        string $insertSql,
+        string $selectSql,
+        array $params,
+        array $expected
+    ): void {
+        $statement = $this->link->prepare($insertSql);
+
+        $result = $statement->execute($params);
+
+        $this->assertSame(1, $result->getRowCount());
+
+        $result = $this->link->execute($selectSql, $params);
+        $this->assertSame($expected, $result->fetchRow());
+    }
+
+    /**
+     * @dataProvider provideInsertParameters
+     */
+    public function testExecuteInsertByteA(
+        string $insertSql,
+        string $selectSql,
+        array $params,
+        array $expected
+    ): void {
+        $result = $this->link->execute($insertSql, $params);
+
+        $this->assertSame(1, $result->getRowCount());
+
+        $result = $this->link->execute($selectSql, $params);
+        $this->assertSame($expected, $result->fetchRow());
     }
 }

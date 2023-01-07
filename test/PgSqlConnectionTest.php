@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\ByteA;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\PostgresLink;
 use Revolt\EventLoop;
@@ -12,7 +13,7 @@ use function Amp\Postgres\Internal\cast;
  */
 class PgSqlConnectionTest extends AbstractConnectionTest
 {
-    /** @var resource PostgreSQL connection resource. */
+    /** @var \PgSql\Connection PostgreSQL connection resource. */
     protected $handle;
 
     public function createLink(string $connectionString): PostgresLink
@@ -32,19 +33,24 @@ class PgSqlConnectionTest extends AbstractConnectionTest
             $this->fail('Could not create test table.');
         }
 
-        foreach ($this->getData() as $row) {
-            $result = \pg_query_params($this->handle, self::INSERT_QUERY, \array_map(cast(...), $row));
+        foreach ($this->getParams() as $row) {
+            $result = \pg_query_params($this->handle, self::INSERT_QUERY, \array_map($this->cast(...), $row));
             if (!$result) {
                 $this->fail('Could not insert test data.');
             }
         }
 
-        return $this->newConnection(PgsqlConnection::class, $this->handle, $socket, 'mock-connection');
+        return $this->newConnection(PgSqlConnection::class, $this->handle, $socket, 'mock-connection');
+    }
+
+    private function cast(mixed $param): mixed
+    {
+        return $param instanceof ByteA ? \pg_escape_bytea($this->handle, $param->getData()) : cast($param);
     }
 
     public function tearDown(): void
     {
-         \pg_cancel_query($this->handle); // Cancel any outstanding query.
+        \pg_cancel_query($this->handle); // Cancel any outstanding query.
         \pg_get_result($this->handle); // Consume any leftover results from test.
         \pg_query($this->handle, "ROLLBACK");
         \pg_query($this->handle, self::DROP_QUERY);

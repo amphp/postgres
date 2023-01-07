@@ -129,4 +129,9 @@ abstract class PostgresConnection implements PostgresLink, PostgresQuoter, Postg
     {
         return $this->handle->quoteName($name);
     }
+
+    final public function escapeByteA(string $data): string
+    {
+        return $this->handle->escapeByteA($data);
+    }
 }
