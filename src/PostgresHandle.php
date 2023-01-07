@@ -9,7 +9,7 @@ interface PostgresHandle extends PostgresReceiver, PostgresQuoter
     /**
      * Execute the statement with the given name and parameters.
      *
-     * @param list<int|float|string|null> $params List of statement parameters, indexed starting at 0.
+     * @param list<mixed> $params List of statement parameters, indexed starting at 0.
      */
     public function statementExecute(string $name, array $params): PostgresResult;
 
