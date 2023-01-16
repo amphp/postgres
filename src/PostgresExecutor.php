@@ -9,7 +9,7 @@ use Amp\Sql\SqlException;
 /**
  * @extends Executor<PostgresResult, PostgresStatement>
  */
-interface PostgresExecutor extends Executor
+interface PostgresExecutor extends Executor, PostgresQuoter
 {
     /**
      * @return PostgresResult Result object specific to this library.

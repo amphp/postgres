@@ -8,7 +8,7 @@ use Amp\Sql\ConnectionException;
 use Amp\Sql\TransactionIsolation;
 use Amp\Sql\TransactionIsolationLevel;
 
-abstract class PostgresConnection implements PostgresLink, PostgresQuoter, PostgresReceiver
+abstract class PostgresConnection implements PostgresLink, PostgresReceiver
 {
     private readonly PostgresHandle $handle;
 

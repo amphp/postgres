@@ -3,7 +3,6 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
-use Amp\Postgres\Internal\PostgresPooledResult;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Result;
 use Amp\Sql\SqlConnector;
@@ -52,7 +51,7 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresLin
     protected function createResult(Result $result, \Closure $release): PostgresResult
     {
         \assert($result instanceof PostgresResult);
-        return new PostgresPooledResult($result, $release);
+        return new Internal\PostgresPooledResult($result, $release);
     }
 
     protected function createStatementPool(string $sql, \Closure $prepare): PostgresStatement
@@ -145,5 +144,27 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresLin
                 $this->push($connection);
             }
         });
+    }
+
+    public function quoteString(string $data): string
+    {
+        $connection = $this->pop();
+
+        try {
+            return $connection->quoteString($data);
+        } finally {
+            $this->push($connection);
+        }
+    }
+
+    public function quoteName(string $name): string
+    {
+        $connection = $this->pop();
+
+        try {
+            return $connection->quoteName($name);
+        } finally {
+            $this->push($connection);
+        }
     }
 }

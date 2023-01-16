@@ -9,7 +9,7 @@ use Amp\Sql\TransactionIsolationLevel;
 /**
  * @extends Link<PostgresResult, PostgresStatement, PostgresTransaction>
  */
-interface PostgresLink extends Link
+interface PostgresLink extends Link, PostgresQuoter
 {
     /**
      * @return PostgresTransaction Transaction object specific to this library.

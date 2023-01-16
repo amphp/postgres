@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-interface PostgresHandle extends PostgresReceiver, PostgresQuoter
+interface PostgresHandle extends PostgresReceiver
 {
     public const STATEMENT_NAME_PREFIX = "amp_";
 
