@@ -5,13 +5,13 @@ namespace Amp\Postgres\Internal;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Sql\Common\PooledTransaction;
+use Amp\Sql\Common\NestedTransaction;
 
 /**
  * @internal
- * @extends PooledTransaction<PostgresResult, PostgresStatement, PostgresTransaction>
+ * @extends NestedTransaction<PostgresResult, PostgresStatement, PostgresTransaction>
  */
-final class PostgresPooledTransaction extends PooledTransaction implements PostgresTransaction
+final class PostgresNestedTransaction extends NestedTransaction implements PostgresTransaction
 {
     use PostgresTransactionDelegate;
 
