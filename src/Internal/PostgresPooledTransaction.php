@@ -15,8 +15,6 @@ use Amp\Sql\Statement;
  */
 final class PostgresPooledTransaction extends PooledTransaction implements PostgresTransaction
 {
-    private readonly PostgresTransaction $transaction;
-
     protected function createStatement(Statement $statement, \Closure $release): PostgresStatement
     {
         \assert($statement instanceof PostgresStatement);
@@ -32,10 +30,9 @@ final class PostgresPooledTransaction extends PooledTransaction implements Postg
     /**
      * @param \Closure():void $release
      */
-    public function __construct(PostgresTransaction $transaction, \Closure $release)
+    public function __construct(private readonly PostgresTransaction $transaction, \Closure $release)
     {
         parent::__construct($transaction, $release);
-        $this->transaction = $transaction;
     }
 
     /**

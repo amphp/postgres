@@ -12,4 +12,12 @@
             <directory name="vendor" />
         </ignoreFiles>
     </projectFiles>
+
+    <issueHandlers>
+        <MethodSignatureMismatch>
+            <errorLevel type="suppress">
+                <file name="src/Internal/AbstractHandle.php"/>
+            </errorLevel>
+        </MethodSignatureMismatch>
+    </issueHandlers>
 </psalm>

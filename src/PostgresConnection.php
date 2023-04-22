@@ -10,8 +10,6 @@ use Amp\Sql\TransactionIsolationLevel;
 
 abstract class PostgresConnection implements PostgresLink, PostgresReceiver
 {
-    private readonly PostgresHandle $handle;
-
     /** @var DeferredFuture|null Used to only allow one transaction at a time. */
     private ?DeferredFuture $busy = null;
 
@@ -23,9 +21,8 @@ abstract class PostgresConnection implements PostgresLink, PostgresReceiver
         ?Cancellation $cancellation = null,
     ): self;
 
-    protected function __construct(PostgresHandle $handle)
+    protected function __construct(private readonly PostgresHandle $handle)
     {
-        $this->handle = $handle;
     }
 
     final public function getLastUsedAt(): int

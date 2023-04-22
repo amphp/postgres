@@ -154,7 +154,7 @@ final class PgSqlHandle extends AbstractHandle
              WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public') ORDER BY t.oid");
 
         $types = [];
-        while ($row = \pg_fetch_array($result, null, \PGSQL_NUM)) {
+        while ($row = \pg_fetch_array($result, mode: \PGSQL_NUM)) {
             [$oid, $type, $delimiter, $element] = $row;
             \assert(\is_numeric($oid) && \is_numeric($element), "OID and element type expected to be integers");
             \assert(\is_string($type) && \is_string($delimiter), "Unexpected types in type catalog query results");

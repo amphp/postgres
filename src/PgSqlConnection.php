@@ -75,7 +75,7 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
      * @param resource $socket PostgreSQL connection stream socket.
      * @param string $id Connection identifier for determining which cached type table to use.
      */
-    protected function __construct($handle, $socket, string $id)
+    protected function __construct(\PgSql\Connection $handle, $socket, string $id)
     {
         parent::__construct(new Internal\PgSqlHandle($handle, $socket, $id));
     }

@@ -46,7 +46,7 @@ final class PgSqlResultIterator
         try {
             while (++$position <= \pg_num_rows($this->handle)) {
                 /** @var list<string|null>|false $result */
-                $result = \pg_fetch_array($this->handle, null, \PGSQL_NUM);
+                $result = \pg_fetch_array($this->handle, mode: \PGSQL_NUM);
 
                 if ($result === false) {
                     throw new SqlException(\pg_result_error($this->handle));

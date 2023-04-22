@@ -6,14 +6,21 @@ use Amp\Sql\QueryError;
 
 class QueryExecutionError extends QueryError
 {
-    private readonly array $diagnostics;
-
-    public function __construct(string $message, array $diagnostics, string $query, \Throwable $previous = null)
-    {
+    /**
+     * @param array<non-empty-string, scalar|null> $diagnostics
+     */
+    public function __construct(
+        string $message,
+        private readonly array $diagnostics,
+        string $query,
+        \Throwable $previous = null,
+    ) {
         parent::__construct($message, $query, $previous);
-        $this->diagnostics = $diagnostics;
     }
 
+    /**
+     * @return array<non-empty-string, scalar|null>
+     */
     public function getDiagnostics(): array
     {
         return $this->diagnostics;

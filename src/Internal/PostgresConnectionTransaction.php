@@ -15,10 +15,6 @@ use Revolt\EventLoop;
 /** @internal  */
 final class PostgresConnectionTransaction implements PostgresTransaction
 {
-    private readonly PostgresHandle $handle;
-
-    private readonly TransactionIsolation $isolation;
-
     /** @var \Closure():void */
     private readonly \Closure $release;
 
@@ -32,13 +28,10 @@ final class PostgresConnectionTransaction implements PostgresTransaction
      * @throws \Error If the isolation level is invalid.
      */
     public function __construct(
-        PostgresHandle $handle,
+        private readonly PostgresHandle $handle,
         \Closure $release,
-        TransactionIsolation $isolation
+        private readonly TransactionIsolation $isolation
     ) {
-        $this->handle = $handle;
-        $this->isolation = $isolation;
-
         $refCount =& $this->refCount;
         $this->release = static function () use (&$refCount, $release): void {
             if (--$refCount === 0) {
