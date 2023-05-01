@@ -648,7 +648,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->assertSame(1, $result->getRowCount());
     }
 
-    public function provideInsertParameters(): iterable {
+    public function provideInsertParameters(): iterable
+    {
         $data = \str_repeat("\0", 10);
 
         yield [
