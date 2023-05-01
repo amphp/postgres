@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\ByteA;
 use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
@@ -18,7 +19,7 @@ class PgSqlPoolTest extends AbstractLinkTest
 {
     const POOL_SIZE = 3;
 
-    /** @var resource[] PostgreSQL connection resources. */
+    /** @var \PgSql\Connection[] PostgreSQL connection resources. */
     protected array $handles = [];
 
     public function createLink(string $connectionString): PostgresLink
@@ -33,15 +34,15 @@ class PgSqlPoolTest extends AbstractLinkTest
 
         $connector = $this->createMock(SqlConnector::class);
         $connector->method('connect')
-            ->will($this->returnCallback(function (): PgSqlConnection {
+            ->willReturnCallback(function (): PgSqlConnection {
                 static $count = 0;
                 if (!isset($this->handles[$count])) {
                     $this->fail("createConnection called too many times");
                 }
                 $handle = $this->handles[$count];
                 ++$count;
-                return $this->newConnection(PgsqlConnection::class, $handle, \pg_socket($handle), 'mock-connection');
-            }));
+                return $this->newConnection(PgSqlConnection::class, $handle, \pg_socket($handle), 'mock-connection');
+            });
 
         $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
@@ -55,8 +56,8 @@ class PgSqlPoolTest extends AbstractLinkTest
             $this->fail('Could not create test table.');
         }
 
-        foreach ($this->getData() as $row) {
-            $result = \pg_query_params($handle, self::INSERT_QUERY, \array_map(cast(...), $row));
+        foreach ($this->getParams() as $row) {
+            $result = \pg_query_params($handle, self::INSERT_QUERY, \array_map(fn ($data) => $this->cast($handle, $data), $row));
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -64,6 +65,11 @@ class PgSqlPoolTest extends AbstractLinkTest
         }
 
         return $pool;
+    }
+
+    private function cast(\PgSql\Connection $handle, mixed $param): mixed
+    {
+        return $param instanceof ByteA ? \pg_escape_bytea($handle, $param->getData()) : cast($param);
     }
 
     public function tearDown(): void

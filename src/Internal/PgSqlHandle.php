@@ -286,7 +286,8 @@ final class PgSqlHandle extends AbstractHandle
     public function statementExecute(string $name, array $params): PostgresResult
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
-        return $this->createResult($this->send(\pg_send_execute(...), $name, $params), $this->statements[$name]->sql);
+        $result = $this->send(\pg_send_execute(...), $name, \array_map(cast(...), $this->escapeParams($params)));
+        return $this->createResult($result, $this->statements[$name]->sql);
     }
 
     /**
@@ -318,6 +319,15 @@ final class PgSqlHandle extends AbstractHandle
         $storage->future->ignore();
     }
 
+    public function escapeByteA(string $data): string
+    {
+        if ($this->handle === null) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
+        return \pg_escape_bytea($this->handle, $data);
+    }
+
     public function query(string $sql): PostgresResult
     {
         if ($this->handle === null) {
@@ -336,7 +346,13 @@ final class PgSqlHandle extends AbstractHandle
         $sql = parseNamedParams($sql, $names);
         $params = replaceNamedParams($params, $names);
 
-        return $this->createResult($this->send(\pg_send_query_params(...), $sql, $params), $sql);
+        $result = $this->send(
+            pg_send_query_params(...),
+            $sql,
+            \array_map(cast(...), $this->escapeParams($params))
+        );
+
+        return $this->createResult($result, $sql);
     }
 
     public function prepare(string $sql): PostgresStatement

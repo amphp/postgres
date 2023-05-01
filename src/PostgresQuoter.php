@@ -26,4 +26,9 @@ interface PostgresQuoter
      * @throws \Error If the connection to the database has been closed.
      */
     public function quoteName(string $name): string;
+
+    /**
+     * Escapes a binary string to be used as BYTEA data.
+     */
+    public function escapeByteA(string $data): string;
 }

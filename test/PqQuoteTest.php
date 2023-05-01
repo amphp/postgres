@@ -9,9 +9,9 @@ use Amp\Postgres\PqConnection;
 /**
  * @requires extension pq
  */
-class PqConnectTest extends AbstractConnectTest
+class PqQuoteTest extends AbstractQuoteTest
 {
-    public function connect(PostgresConfig $connectionConfig, Cancellation $cancellation = null): PqConnection
+    public function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): PqConnection
     {
         return PqConnection::connect($connectionConfig, $cancellation);
     }

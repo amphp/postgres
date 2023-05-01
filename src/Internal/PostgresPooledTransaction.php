@@ -73,4 +73,9 @@ final class PostgresPooledTransaction extends PooledTransaction implements Postg
     {
         return $this->transaction->quoteName($name);
     }
+
+    public function escapeByteA(string $data): string
+    {
+        return $this->transaction->escapeByteA($data);
+    }
 }

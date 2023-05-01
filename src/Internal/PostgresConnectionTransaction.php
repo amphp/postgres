@@ -250,4 +250,13 @@ final class PostgresConnectionTransaction implements PostgresTransaction
         $this->assertOpen();
         return $this->handle->quoteName($name);
     }
+
+    /**
+     * @throws TransactionError If the transaction has been committed or rolled back.
+     */
+    public function escapeByteA(string $data): string
+    {
+        $this->assertOpen();
+        return $this->handle->escapeByteA($data);
+    }
 }

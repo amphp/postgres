@@ -10,9 +10,9 @@ use Revolt\EventLoop;
 /**
  * @requires extension pgsql
  */
-class PgSqlConnectTest extends AbstractConnectTest
+class PgSqlCreateConnectionTest extends AbstractCreateConnectionTest
 {
-    public function connect(PostgresConfig $connectionConfig, Cancellation $cancellation = null): PgSqlConnection
+    public function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): PgSqlConnection
     {
         if (EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
             $this->markTestSkipped("ext-pgsql is not compatible with pecl-ev");

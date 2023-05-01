@@ -88,7 +88,10 @@ final class PgSqlResultIterator
                 790 => $value, // money includes currency symbol as string
                 default => (int) $value, // All other numeric types cast to an integer
             },
-            default => $value, // Return a string for all other types
+            default => match ($oid) { // String
+                17 => \pg_unescape_bytea($value),
+                default => $value, // Return a string for all other types
+            },
         };
     }
 }

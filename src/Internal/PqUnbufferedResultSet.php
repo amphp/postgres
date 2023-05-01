@@ -36,7 +36,7 @@ final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
     private static function generate(\Closure $fetch, pq\Result $result): \Generator
     {
         do {
-            $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY;
+            $result->autoConvert = pq\Result::CONV_SCALAR | pq\Result::CONV_ARRAY | pq\Result::CONV_BYTEA;
             yield $result->fetchRow(pq\Result::FETCH_ASSOC);
             $result = $fetch();
         } while ($result instanceof pq\Result);
