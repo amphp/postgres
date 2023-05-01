@@ -167,4 +167,15 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresLin
             $this->push($connection);
         }
     }
+
+    public function escapeByteA(string $data): string
+    {
+        $connection = $this->pop();
+
+        try {
+            return $connection->escapeByteA($data);
+        } finally {
+            $this->push($connection);
+        }
+    }
 }
