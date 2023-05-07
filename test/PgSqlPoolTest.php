@@ -15,7 +15,7 @@ use function Amp\Postgres\Internal\cast;
 /**
  * @requires extension pgsql
  */
-class PgSqlPoolTest extends AbstractLinkTest
+class PgSqlPoolTest extends AbstractConnectionTest
 {
     const POOL_SIZE = 3;
 

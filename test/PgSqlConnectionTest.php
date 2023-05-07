@@ -13,8 +13,7 @@ use function Amp\Postgres\Internal\cast;
  */
 class PgSqlConnectionTest extends AbstractConnectionTest
 {
-    /** @var \PgSql\Connection PostgreSQL connection resource. */
-    protected $handle;
+    protected ?\PgSql\Connection $handle = null;
 
     public function createLink(string $connectionString): PostgresLink
     {
