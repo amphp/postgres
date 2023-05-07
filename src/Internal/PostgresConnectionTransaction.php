@@ -22,20 +22,23 @@ final class PostgresConnectionTransaction implements PostgresTransaction
 
     private readonly DeferredFuture $onClose;
 
+    /** @var array<int, PostgresStatement> Reference statements so de-allocation occurs after commit/rollback. */
+    private array $statements = [];
+
     /**
      * @param \Closure():void $release
-     *
-     * @throws \Error If the isolation level is invalid.
      */
     public function __construct(
         private readonly PostgresHandle $handle,
         \Closure $release,
         private readonly TransactionIsolation $isolation
     ) {
-        $refCount =& $this->refCount;
-        $this->release = static function () use (&$refCount, $release): void {
+        $refCount = &$this->refCount;
+        $statements = &$this->statements;
+        $this->release = static function () use (&$refCount, &$statements, $release): void {
             if (--$refCount === 0) {
                 $release();
+                $statements = [];
             }
         };
 
@@ -142,6 +145,8 @@ final class PostgresConnectionTransaction implements PostgresTransaction
             EventLoop::queue($this->release);
             throw $exception;
         }
+
+        $this->statements[\spl_object_id($statement)] ??= $statement;
 
         return new PostgresPooledStatement($statement, $this->release);
     }
