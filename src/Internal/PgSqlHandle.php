@@ -38,6 +38,8 @@ final class PgSqlHandle extends AbstractHandle
     /** @var array<string, array<int, PgsqlType>> */
     private static array $typeCache;
 
+    private static ?\Closure $errorHandler = null;
+
     /** @var \PgSql\Connection PostgreSQL connection handle. */
     private ?\PgSql\Connection $handle;
 
@@ -62,7 +64,7 @@ final class PgSqlHandle extends AbstractHandle
         $listeners = &$this->listeners;
         $onClose = new DeferredFuture();
 
-        $poll = EventLoop::onReadable($socket, static function ($watcher) use (
+        $poll = EventLoop::onReadable($socket, static function (string $watcher) use (
             &$deferred,
             &$lastUsedAt,
             &$listeners,
@@ -70,6 +72,8 @@ final class PgSqlHandle extends AbstractHandle
             $onClose,
         ): void {
             $lastUsedAt = \time();
+
+            \set_error_handler(self::getErrorHandler());
 
             try {
                 if (\pg_connection_status($handle) !== \PGSQL_CONNECTION_OK) {
@@ -79,60 +83,68 @@ final class PgSqlHandle extends AbstractHandle
                 if (!\pg_consume_input($handle)) {
                     throw new ConnectionException(\pg_last_error($handle));
                 }
+
+                while ($result = \pg_get_notify($handle, \PGSQL_ASSOC)) {
+                    $channel = $result["message"];
+
+                    if (!isset($listeners[$channel])) {
+                        continue;
+                    }
+
+                    $notification = new PostgresNotification($channel, $result["pid"], $result["payload"]);
+                    $listeners[$channel]->pushAsync($notification)->ignore();
+                }
+
+                if ($deferred === null) {
+                    return; // No active query, only notification listeners.
+                }
+
+                if (\pg_connection_busy($handle)) {
+                    return;
+                }
+
+                $deferred->complete(\pg_get_result($handle));
+                $deferred = null;
+
+                if (empty($listeners)) {
+                    EventLoop::unreference($watcher);
+                }
             } catch (ConnectionException $exception) {
                 $handle = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
                 self::shutdown($listeners, $deferred, $onClose, $exception);
-
-                return;
-            }
-
-            while ($result = \pg_get_notify($handle, \PGSQL_ASSOC)) {
-                $channel = $result["message"];
-
-                if (!isset($listeners[$channel])) {
-                    continue;
-                }
-
-                $notification = new PostgresNotification($channel, $result["pid"], $result["payload"]);
-                $listeners[$channel]->pushAsync($notification)->ignore();
-            }
-
-            if ($deferred === null) {
-                return; // No active query, only notification listeners.
-            }
-
-            if (\pg_connection_busy($handle)) {
-                return;
-            }
-
-            $deferred->complete(\pg_get_result($handle));
-            $deferred = null;
-
-            if (empty($listeners)) {
-                EventLoop::unreference($watcher);
+            } finally {
+                \restore_error_handler();
             }
         });
 
-        $await = EventLoop::onWritable($socket, static function ($watcher) use (
+        $await = EventLoop::onWritable($socket, static function (string $watcher) use (
             &$deferred,
             &$listeners,
             &$handle,
             $onClose,
         ): void {
-            $flush = \pg_flush($handle);
-            if ($flush === 0) {
-                return; // Not finished sending data, listen again.
-            }
+            \set_error_handler(self::getErrorHandler());
 
-            EventLoop::disable($watcher);
+            try {
+                $flush = \pg_flush($handle);
+                if ($flush === 0) {
+                    return; // Not finished sending data, listen again.
+                }
 
-            if ($flush === false) {
-                $exception = new ConnectionException(\pg_last_error($handle));
+                EventLoop::disable($watcher);
+
+                if ($flush === false) {
+                    throw new ConnectionException(\pg_last_error($handle));
+                }
+            } catch (ConnectionException $exception) {
                 $handle = null; // Marks connection as dead.
+                EventLoop::disable($watcher);
 
                 self::shutdown($listeners, $deferred, $onClose, $exception);
+            } finally {
+                \restore_error_handler();
             }
         });
 
@@ -162,6 +174,13 @@ final class PgSqlHandle extends AbstractHandle
         }
 
         return $types;
+    }
+
+    private static function getErrorHandler(): \Closure
+    {
+        return self::$errorHandler ??= static function (int $code, string $message): never {
+            throw new ConnectionException($message, $code);
+        };
     }
 
     public function close(): void
@@ -230,7 +249,7 @@ final class PgSqlHandle extends AbstractHandle
             throw new \Error("The connection to the database has been closed");
         }
 
-        switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
+        switch (\pg_result_status($result)) {
             case \PGSQL_EMPTY_QUERY:
                 throw new QueryError("Empty query string");
 
@@ -250,10 +269,15 @@ final class PgSqlHandle extends AbstractHandle
                     $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                 }
                 $message = \pg_result_error($result);
-                while (\pg_connection_busy($this->handle) && \pg_get_result($this->handle)) {
-                    // Clear all outstanding result rows from the connection
+                \set_error_handler(self::getErrorHandler());
+                try {
+                    while (\pg_connection_busy($this->handle) && \pg_get_result($this->handle)) {
+                        // Clear all outstanding result rows from the connection
+                    }
+                } finally {
+                    \restore_error_handler();
+                    throw new QueryExecutionError($message, $diagnostics, $sql);
                 }
-                throw new QueryExecutionError($message, $diagnostics, $sql);
 
             case \PGSQL_BAD_RESPONSE:
                 $this->close();
@@ -347,7 +371,7 @@ final class PgSqlHandle extends AbstractHandle
         $params = replaceNamedParams($params, $names);
 
         $result = $this->send(
-            pg_send_query_params(...),
+            \pg_send_query_params(...),
             $sql,
             \array_map(cast(...), $this->escapeParams($params))
         );
