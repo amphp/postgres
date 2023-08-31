@@ -9,7 +9,7 @@ use Amp\Postgres\PostgresTransaction;
 use Amp\Postgres\PqConnection;
 
 /**
- * @requires extension pgsql
+ * @requires extension pq
  */
 class PqNestedTransactionTest extends AbstractLinkTest
 {
