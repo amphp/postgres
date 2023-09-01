@@ -78,9 +78,7 @@ final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
 
     public function getNextResult(): ?PostgresResult
     {
-        if ($this->generator->valid()) {
-            throw new \Error('Consume entire current result before requesting next result');
-        }
+        self::dispose($this->generator);
 
         return $this->nextResult->await();
     }
