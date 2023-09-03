@@ -117,7 +117,7 @@ class CastTest extends TestCase
 
     public function testUnitEnum(): void
     {
-        $this->expectException(\ValueError::class);
+        $this->expectException(\TypeError::class);
         $this->expectExceptionMessage('An object in parameter values must be');
 
         cast(UnitEnum::Case);
@@ -125,7 +125,7 @@ class CastTest extends TestCase
 
     public function testUnitEnumInArray(): void
     {
-        $this->expectException(\ValueError::class);
+        $this->expectException(\TypeError::class);
         $this->expectExceptionMessage('An object in parameter arrays must be');
 
         cast([UnitEnum::Case]);
@@ -133,7 +133,7 @@ class CastTest extends TestCase
 
     public function testObjectWithoutToStringMethod(): void
     {
-        $this->expectException(\ValueError::class);
+        $this->expectException(\TypeError::class);
         $this->expectExceptionMessage('An object in parameter values must be');
 
         cast(new \stdClass);
@@ -141,7 +141,7 @@ class CastTest extends TestCase
 
     public function testObjectWithoutToStringMethodInArray(): void
     {
-        $this->expectException(\ValueError::class);
+        $this->expectException(\TypeError::class);
         $this->expectExceptionMessage('An object in parameter arrays must be');
 
         cast([new \stdClass]);

@@ -107,12 +107,12 @@ function cast(mixed $value): string|int|float|null
         "object" => match (true) {
             $value instanceof \BackedEnum => $value->value,
             $value instanceof \Stringable => (string) $value,
-            default => throw new \ValueError(
+            default => throw new \TypeError(
                 "An object in parameter values must be a BackedEnum or implement Stringable; got instance of "
                 . \get_debug_type($value)
             ),
         },
-        default => throw new \ValueError(\sprintf(
+        default => throw new \TypeError(\sprintf(
             "Invalid value type '%s' in parameter values",
             \get_debug_type($value),
         )),
@@ -132,7 +132,7 @@ function encodeArrayItem(mixed $value): mixed
         "object" => match (true) {
             $value instanceof \BackedEnum => encodeArrayItem($value->value),
             $value instanceof \Stringable => encodeArrayItem((string) $value),
-            default => throw new \ValueError(
+            default => throw new \TypeError(
                 "An object in parameter arrays must be a BackedEnum or implement Stringable; "
                 . "got instance of " . \get_debug_type($value)
             ),
