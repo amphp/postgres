@@ -93,10 +93,9 @@ class PqConnectionTest extends AbstractConnectionTest
     {
         $result = $this->link->query("SELECT * FROM test; SELECT * FROM test;");
 
-        $this->expectException(\Error::class);
-        $this->expectExceptionMessage('Consume entire current result before requesting next result');
+        $result = $result->getNextResult();
 
-        $result->getNextResult();
+        $this->verifyResult($result, $this->getData());
     }
 
     public function testUnconsumedMultiResult()
