@@ -25,10 +25,11 @@ abstract class AbstractLinkTest extends AsyncTestCase
                                                        number DOUBLE PRECISION NOT NULL,
                                                        nullable CHAR(1) DEFAULT NULL,
                                                        bytea BYTEA DEFAULT NULL,
+                                                       json JSON DEFAULT NULL,
                                                        PRIMARY KEY (domain, tld))";
     protected const DROP_QUERY = "DROP TABLE IF EXISTS test";
-    protected const INSERT_QUERY = 'INSERT INTO test VALUES ($1, $2, $3, $4, $5, $6, $7)';
-    protected const FIELD_COUNT = 7;
+    protected const INSERT_QUERY = 'INSERT INTO test VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';
+    protected const FIELD_COUNT = 8;
 
     protected PostgresLink $link;
 
@@ -37,10 +38,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
     protected function getParams(): array
     {
         return $this->data ??= [
-            ['amphp', 'org', [1], true, 3.14159, null, new ByteA(\random_bytes(10))],
-            ['github', 'com', [1, 2, 3, 4, 5], false, 2.71828, null, new ByteA(\str_repeat("\0", 10))],
-            ['google', 'com', [1, 2, 3, 4], true, 1.61803, null, new ByteA(\random_bytes(42))],
-            ['php', 'net', [1, 2], false, 0.0, null, null],
+            ['amphp', 'org', [1], true, 3.14159, null, new ByteA(\random_bytes(10)), \json_encode('string')],
+            ['github', 'com', [1, 2, 3, 4, 5], false, 2.71828, null, new ByteA(\str_repeat("\0", 10)), \json_encode([1, 2, 3])],
+            ['google', 'com', [1, 2, 3, 4], true, 1.61803, null, new ByteA(\random_bytes(42)), \json_encode(null)],
+            ['php', 'net', [1, 2], false, 0.0, null, null, \json_encode((object) ['value' => 1])],
         ];
     }
 
@@ -67,6 +68,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $this->assertSame($data[$i][3], $row['enabled']);
             $this->assertEqualsWithDelta($data[$i][4], $row['number'], 0.001);
             $this->assertNull($row['nullable']);
+            $this->assertEquals(\json_decode($data[$i][7]), \json_decode($row['json']));
             ++$i;
         }
     }
@@ -148,7 +150,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testMultipleQueryWithCommandResultFirst()
     {
-        $result = $this->link->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2); SELECT * FROM test");
+        $result = $this->link->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2, null, null, '3.1415926'); SELECT * FROM test");
 
         $this->assertSame(1, $result->getRowCount());
 
@@ -157,7 +159,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->assertInstanceOf(Result::class, $result);
 
         $data = $this->getData();
-        $data[] = ['canon', 'jp', [1], true, 4.2]; // Add inserted row to expected data.
+        $data[] = ['canon', 'jp', [1], true, 4.2, null, null, \json_encode(3.1415926)]; // Add inserted row to expected data.
 
         $this->verifyResult($result, $data);
 
@@ -234,6 +236,32 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $result = $statement->execute([$data[0]]);
 
         $this->verifyResult($result, [$data]);
+    }
+
+    public function testPrepareWithCommandResult()
+    {
+        $query = "INSERT INTO test (domain, tld, keys, enabled, number, json) VALUES (:domain, :tld, :keys, :enabled, :number, :json)";
+
+        $statement = $this->link->prepare($query);
+
+        $fields = [
+            'domain' => 'canon',
+            'tld' => 'jp',
+            'keys' => [1],
+            'enabled' => true,
+            'number' => 1,
+            'nullable' => null,
+            'bytea' => null,
+            'json' => '[1,2,3]',
+        ];
+
+        $result = $statement->execute($fields);
+
+        $this->assertSame(1, $result->getRowCount());
+
+        $result = $this->link->execute('SELECT * FROM test WHERE domain=? AND tld=?', ['canon', 'jp']);
+
+        $this->verifyResult($result, [\array_values($fields)]);
     }
 
     /**
