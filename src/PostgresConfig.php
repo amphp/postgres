@@ -49,7 +49,8 @@ final class PostgresConfig extends SqlConfig
         int $port = self::DEFAULT_PORT,
         ?string $user = null,
         ?string $password = null,
-        ?string $database = null
+        ?string $database = null,
+        private readonly ?string $application_name = null
     ) {
         parent::__construct($host, $port, $user, $password, $database);
     }
@@ -113,6 +114,10 @@ final class PostgresConfig extends SqlConfig
 
         if ($this->sslMode !== null) {
             $chunks[] = "sslmode=" . $this->sslMode;
+        }
+
+        if ($this->application_name !== null) {
+            $chunks[] = "application_name='" . addslashes($this->application_name) . "'";
         }
 
         return $this->connectionString = \implode(" ", $chunks);
