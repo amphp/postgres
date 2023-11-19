@@ -5,7 +5,7 @@ namespace Amp\Postgres\Internal;
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Pipeline\Queue;
-use Amp\Postgres\PostgresHandle;
+use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
 use Amp\Postgres\PostgresResult;
@@ -28,7 +28,7 @@ final class PqHandle extends AbstractHandle
     /** @var array<non-empty-string, StatementStorage<pq\Statement>> */
     private array $statements = [];
 
-    public function __construct(pq\Connection $handle)
+    public function __construct(pq\Connection $handle, PostgresConfig $config)
     {
         $this->handle = $handle;
 
@@ -103,7 +103,7 @@ final class PqHandle extends AbstractHandle
         EventLoop::unreference($poll);
         EventLoop::disable($await);
 
-        parent::__construct($poll, $await, $onClose);
+        parent::__construct($config, $poll, $await, $onClose);
     }
 
     public function isClosed(): bool

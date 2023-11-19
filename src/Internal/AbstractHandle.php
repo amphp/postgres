@@ -5,7 +5,7 @@ namespace Amp\Postgres\Internal;
 use Amp\DeferredFuture;
 use Amp\Pipeline\Queue;
 use Amp\Postgres\ByteA;
-use Amp\Postgres\PostgresHandle;
+use Amp\Postgres\PostgresConfig;
 use Amp\Sql\ConnectionException;
 use Revolt\EventLoop;
 
@@ -22,6 +22,7 @@ abstract class AbstractHandle implements PostgresHandle
     protected int $lastUsedAt = 0;
 
     public function __construct(
+        private readonly PostgresConfig $config,
         protected readonly string $poll,
         protected readonly string $await,
         private readonly DeferredFuture $onClose,
@@ -34,6 +35,11 @@ abstract class AbstractHandle implements PostgresHandle
         if (!$this->isClosed()) {
             $this->close();
         }
+    }
+
+    public function getConfig(): PostgresConfig
+    {
+        return $this->config;
     }
 
     public function getLastUsedAt(): int
@@ -86,5 +92,20 @@ abstract class AbstractHandle implements PostgresHandle
             \is_array($param) => $this->escapeParams($param),
             default => $param,
         }, $params);
+    }
+
+    public function createSavepoint(string $identifier): void
+    {
+        $this->query("SAVEPOINT " . $this->quoteName($identifier));
+    }
+
+    public function rollbackTo(string $identifier): void
+    {
+        $this->query("ROLLBACK TO " . $this->quoteName($identifier));
+    }
+
+    public function releaseSavepoint(string $identifier): void
+    {
+        $this->query("RELEASE SAVEPOINT " . $this->quoteName($identifier));
     }
 }

@@ -8,14 +8,14 @@ use Amp\Sql\ConnectionException;
 use pq;
 use Revolt\EventLoop;
 
-final class PqConnection extends PostgresConnection implements PostgresLink
+final class PqConnection extends Internal\PostgresHandleConnection implements PostgresConnection
 {
     private readonly Internal\PqHandle $handle;
 
-    public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self
+    public static function connect(PostgresConfig $config, ?Cancellation $cancellation = null): self
     {
         try {
-            $connection = new pq\Connection($connectionConfig->getConnectionString(), pq\Connection::ASYNC);
+            $connection = new pq\Connection($config->getConnectionString(), pq\Connection::ASYNC);
         } catch (pq\Exception $exception) {
             throw new ConnectionException("Could not connect to PostgreSQL server", 0, $exception);
         }
@@ -24,7 +24,7 @@ final class PqConnection extends PostgresConnection implements PostgresLink
         $connection->unbuffered = true;
 
         $deferred = new DeferredFuture();
-        $callback = function () use (&$poll, &$await, $connection, $deferred): void {
+        $callback = function () use (&$poll, &$await, $connection, $config, $deferred): void {
             switch ($result = $connection->poll()) {
                 case pq\Connection::POLLING_READING:
                 case pq\Connection::POLLING_WRITING:
@@ -35,7 +35,7 @@ final class PqConnection extends PostgresConnection implements PostgresLink
                     break;
 
                 case pq\Connection::POLLING_OK:
-                    $deferred->complete(new self($connection));
+                    $deferred->complete(new self($connection, $config));
                     break;
 
                 default:
@@ -58,9 +58,9 @@ final class PqConnection extends PostgresConnection implements PostgresLink
         }
     }
 
-    protected function __construct(pq\Connection $handle)
+    protected function __construct(pq\Connection $handle, PostgresConfig $config)
     {
-        $this->handle = new Internal\PqHandle($handle);
+        $this->handle = new Internal\PqHandle($handle, $config);
         parent::__construct($this->handle);
     }
 

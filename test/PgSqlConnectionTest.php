@@ -4,6 +4,7 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\ByteA;
 use Amp\Postgres\PgSqlConnection;
+use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresLink;
 use Revolt\EventLoop;
 use function Amp\Postgres\Internal\cast;
@@ -39,7 +40,13 @@ class PgSqlConnectionTest extends AbstractConnectionTest
             }
         }
 
-        return $this->newConnection(PgSqlConnection::class, $this->handle, $socket, 'mock-connection');
+        return $this->newConnection(
+            PgSqlConnection::class,
+            $this->handle,
+            $socket,
+            'mock-connection',
+            PostgresConfig::fromString($connectionString),
+        );
     }
 
     private function cast(mixed $param): mixed

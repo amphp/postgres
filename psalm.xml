@@ -20,6 +20,13 @@
             </errorLevel>
         </MethodSignatureMismatch>
 
+        <MissingClosureReturnType>
+            <errorLevel type="suppress">
+                <directory name="src"/>
+                <directory name="test"/>
+            </errorLevel>
+        </MissingClosureReturnType>
+
         <UnsupportedPropertyReferenceUsage>
             <errorLevel type="suppress">
                 <directory name="src"/>

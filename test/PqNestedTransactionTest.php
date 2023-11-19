@@ -3,40 +3,16 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\PostgresConfig;
-use Amp\Postgres\PostgresLink;
-use Amp\Postgres\PostgresNestableTransaction;
-use Amp\Postgres\PostgresTransaction;
+use Amp\Postgres\PostgresConnection;
 use Amp\Postgres\PqConnection;
 
 /**
  * @requires extension pq
  */
-class PqNestedTransactionTest extends AbstractLinkTest
+class PqNestedTransactionTest extends AbstractNestedTransactionTest
 {
-    protected PostgresTransaction $transaction;
-
-    public function createLink(string $connectionString): PostgresLink
+    public function connect(PostgresConfig $connectionConfig): PostgresConnection
     {
-        $connectionConfig = PostgresConfig::fromString($connectionString);
-        $connection = PqConnection::connect($connectionConfig);
-
-        $connection->query(self::DROP_QUERY);
-
-        $connection->query(self::CREATE_QUERY);
-
-        foreach ($this->getParams() as $row) {
-            $connection->execute(self::INSERT_QUERY, $row);
-        }
-
-        $this->transaction = $connection->beginTransaction();
-
-        return new PostgresNestableTransaction($this->transaction);
-    }
-
-    public function tearDown(): void
-    {
-        //$this->transaction->rollback();
-
-        parent::tearDown();
+        return PqConnection::connect($connectionConfig);
     }
 }

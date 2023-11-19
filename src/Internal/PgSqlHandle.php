@@ -5,7 +5,7 @@ namespace Amp\Postgres\Internal;
 use Amp\DeferredFuture;
 use Amp\Future;
 use Amp\Pipeline\Queue;
-use Amp\Postgres\PostgresHandle;
+use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
 use Amp\Postgres\PostgresResult;
@@ -54,8 +54,12 @@ final class PgSqlHandle extends AbstractHandle
      * @param resource $socket PostgreSQL connection stream socket.
      * @param string $id Connection identifier for determining which cached type table to use.
      */
-    public function __construct(\PgSql\Connection $handle, $socket, string $id)
-    {
+    public function __construct(
+        \PgSql\Connection $handle,
+        $socket,
+        string $id,
+        PostgresConfig $config,
+    ) {
         $this->handle = $handle;
 
         $handle = &$this->handle;
@@ -151,7 +155,7 @@ final class PgSqlHandle extends AbstractHandle
         EventLoop::unreference($poll);
         EventLoop::disable($await);
 
-        parent::__construct($poll, $await, $onClose);
+        parent::__construct($config, $poll, $await, $onClose);
 
         $this->types = (self::$typeCache[$id] ??= self::fetchTypes($handle));
     }

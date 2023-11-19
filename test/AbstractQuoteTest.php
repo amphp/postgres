@@ -2,12 +2,12 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\Internal\PostgresHandleConnection;
 use Amp\Postgres\PostgresConfig;
-use Amp\Postgres\PostgresConnection;
 
 abstract class AbstractQuoteTest extends AbstractConnectTest
 {
-    private PostgresConnection $connection;
+    private PostgresHandleConnection $connection;
 
     public function setUp(): void
     {

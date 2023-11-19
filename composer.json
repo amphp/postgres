@@ -22,18 +22,18 @@
         "php": ">=8.1",
         "amphp/amp": "^3",
         "amphp/pipeline": "^1",
-        "amphp/sql": "^2",
-        "amphp/sql-common": "^2"
+        "amphp/sql": "dev-refactor-transactions as 2.0",
+        "amphp/sql-common": "dev-refactor-transactions as 2.0"
     },
     "require-dev": {
         "ext-pgsql": "*",
         "ext-pq": "*",
         "amphp/phpunit-util": "^3",
         "phpunit/phpunit": "^9",
-        "amphp/php-cs-fixer-config": "^2-dev",
-        "psalm/phar": "^5.4"
+        "amphp/php-cs-fixer-config": "^2",
+        "psalm/phar": "^5.11"
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "beta",
     "prefer-stable": true,
     "autoload": {
         "psr-4": {

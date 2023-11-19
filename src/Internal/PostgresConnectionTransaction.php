@@ -3,7 +3,6 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
-use Amp\Postgres\PostgresHandle;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
@@ -22,6 +21,8 @@ final class PostgresConnectionTransaction implements PostgresTransaction
 
     private readonly DeferredFuture $onClose;
 
+    private ?DeferredFuture $busy = null;
+
     /** @var array<int, PostgresStatement> Reference statements so de-allocation occurs after commit/rollback. */
     private array $statements = [];
 
@@ -31,11 +32,15 @@ final class PostgresConnectionTransaction implements PostgresTransaction
     public function __construct(
         private readonly PostgresHandle $handle,
         \Closure $release,
-        private readonly TransactionIsolation $isolation
+        private readonly TransactionIsolation $isolation,
     ) {
+        $busy = &$this->busy;
         $refCount = &$this->refCount;
         $statements = &$this->statements;
-        $this->release = static function () use (&$refCount, &$statements, $release): void {
+        $this->release = static function () use (&$busy, &$refCount, &$statements, $release): void {
+            $busy?->complete();
+            $busy = null;
+
             if (--$refCount === 0) {
                 $release();
                 $statements = [];
@@ -71,6 +76,11 @@ final class PostgresConnectionTransaction implements PostgresTransaction
     public function getLastUsedAt(): int
     {
         return $this->handle->getLastUsedAt();
+    }
+
+    public function isNestedTransaction(): bool
+    {
+        return false;
     }
 
     private function assertOpen(): void
@@ -118,7 +128,7 @@ final class PostgresConnectionTransaction implements PostgresTransaction
      */
     public function query(string $sql): PostgresResult
     {
-        $this->assertOpen();
+        $this->awaitPendingNestedTransaction();
 
         ++$this->refCount;
         try {
@@ -136,7 +146,7 @@ final class PostgresConnectionTransaction implements PostgresTransaction
      */
     public function prepare(string $sql): PostgresStatement
     {
-        $this->assertOpen();
+        $this->awaitPendingNestedTransaction();
 
         ++$this->refCount;
         try {
@@ -156,7 +166,7 @@ final class PostgresConnectionTransaction implements PostgresTransaction
      */
     public function execute(string $sql, array $params = []): PostgresResult
     {
-        $this->assertOpen();
+        $this->awaitPendingNestedTransaction();
 
         ++$this->refCount;
         try {
@@ -169,12 +179,29 @@ final class PostgresConnectionTransaction implements PostgresTransaction
         return new PostgresPooledResult($result, $this->release);
     }
 
+    public function beginTransaction(): PostgresTransaction
+    {
+        $this->awaitPendingNestedTransaction();
+
+        ++$this->refCount;
+        $this->busy = new DeferredFuture();
+        try {
+            $identifier = \bin2hex(\random_bytes(8));
+            $this->handle->createSavepoint($identifier);
+        } catch (\Throwable $exception) {
+            EventLoop::queue($this->release);
+            throw $exception;
+        }
+
+        return new PostgresNestedTransaction($this, $this->handle, $identifier, $this->release);
+    }
+
     /**
      * @throws TransactionError If the transaction has been committed or rolled back.
      */
     public function notify(string $channel, string $payload = ""): PostgresResult
     {
-        $this->assertOpen();
+        $this->awaitPendingNestedTransaction();
         return $this->handle->notify($channel, $payload);
     }
 
@@ -185,7 +212,7 @@ final class PostgresConnectionTransaction implements PostgresTransaction
      */
     public function commit(): void
     {
-        $this->assertOpen();
+        $this->awaitPendingNestedTransaction();
         $this->onClose->complete();
         $this->handle->query("COMMIT");
     }
@@ -197,45 +224,19 @@ final class PostgresConnectionTransaction implements PostgresTransaction
      */
     public function rollback(): void
     {
-        $this->assertOpen();
+        $this->awaitPendingNestedTransaction();
         $this->onClose->complete();
         $this->handle->query("ROLLBACK");
     }
 
-    /**
-     * Creates a savepoint with the given identifier.
-     *
-     * @param string $identifier Savepoint identifier.
-     *
-     * @throws TransactionError If the transaction has been committed or rolled back.
-     */
-    public function createSavepoint(string $identifier): void
+    public function onCommit(\Closure $onCommit): void
     {
-        $this->query("SAVEPOINT " . $this->quoteName($identifier));
+        // TODO: Implement onCommit() method.
     }
 
-    /**
-     * Rolls back to the savepoint with the given identifier.
-     *
-     * @param string $identifier Savepoint identifier.
-     *
-     * @throws TransactionError If the transaction has been committed or rolled back.
-     */
-    public function rollbackTo(string $identifier): void
+    public function onRollback(\Closure $onRollback): void
     {
-        $this->query("ROLLBACK TO " . $this->quoteName($identifier));
-    }
-
-    /**
-     * Releases the savepoint with the given identifier.
-     *
-     * @param string $identifier Savepoint identifier.
-     *
-     * @throws TransactionError If the transaction has been committed or rolled back.
-     */
-    public function releaseSavepoint(string $identifier): void
-    {
-        $this->query("RELEASE SAVEPOINT " . $this->quoteName($identifier));
+        // TODO: Implement onRollback() method.
     }
 
     /**
@@ -263,5 +264,14 @@ final class PostgresConnectionTransaction implements PostgresTransaction
     {
         $this->assertOpen();
         return $this->handle->escapeByteA($data);
+    }
+
+    private function awaitPendingNestedTransaction(): void
+    {
+        while ($this->busy) {
+            $this->busy->getFuture()->await();
+        }
+
+        $this->assertOpen();
     }
 }

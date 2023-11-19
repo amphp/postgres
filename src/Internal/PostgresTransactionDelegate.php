@@ -56,6 +56,14 @@ trait PostgresTransactionDelegate
     }
 
     /**
+     * Changes return type to this library's Transaction type.
+     */
+    public function beginTransaction(): PostgresTransaction
+    {
+        return parent::beginTransaction();
+    }
+
+    /**
      * @param non-empty-string $channel
      */
     public function notify(string $channel, string $payload = ""): PostgresResult

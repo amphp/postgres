@@ -29,16 +29,18 @@ class PqPoolTest extends AbstractConnectionTest
             $handle->unbuffered = true;
         }
 
+        $config = PostgresConfig::fromString($connectionString);
+
         $connector = $this->createMock(SqlConnector::class);
         $connector->method('connect')
-            ->willReturnCallback(function (): PqConnection {
+            ->willReturnCallback(function () use ($config): PqConnection {
                 static $count = 0;
                 if (!isset($this->handles[$count])) {
                     $this->fail("createConnection called too many times");
                 }
                 $handle = $this->handles[$count];
                 ++$count;
-                return $this->newConnection(PqConnection::class, $handle);
+                return $this->newConnection(PqConnection::class, $handle, $config);
             });
 
         $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);

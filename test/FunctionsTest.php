@@ -5,8 +5,8 @@ namespace Amp\Postgres\Test;
 use Amp\CancelledException;
 use Amp\DeferredCancellation;
 use Amp\PHPUnit\AsyncTestCase;
+use Amp\Postgres\Internal\PostgresHandleConnection;
 use Amp\Postgres\PostgresConfig;
-use Amp\Postgres\PostgresConnection;
 use function Amp\Postgres\connect;
 
 class FunctionsTest extends AsyncTestCase
@@ -23,7 +23,7 @@ class FunctionsTest extends AsyncTestCase
     public function testConnect()
     {
         $connection = connect(PostgresConfig::fromString('host=localhost user=postgres password=postgres'));
-        $this->assertInstanceOf(PostgresConnection::class, $connection);
+        $this->assertInstanceOf(PostgresHandleConnection::class, $connection);
     }
 
     /**

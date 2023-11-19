@@ -5,7 +5,8 @@ namespace Amp\Postgres\Test;
 use Amp\Future;
 use Amp\PHPUnit\AsyncTestCase;
 use Amp\Postgres\ByteA;
-use Amp\Postgres\PostgresConnection;
+use Amp\Postgres\Internal\PostgresHandleConnection;
+use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PostgresTransaction;
 use Amp\Postgres\QueryExecutionError;
@@ -13,7 +14,6 @@ use Amp\Sql\QueryError;
 use Amp\Sql\Result;
 use Amp\Sql\Statement;
 use Amp\Sql\TransactionError;
-use Amp\Sql\TransactionIsolationLevel;
 use function Amp\async;
 
 abstract class AbstractLinkTest extends AsyncTestCase
@@ -31,7 +31,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     protected const INSERT_QUERY = 'INSERT INTO test VALUES ($1, $2, $3, $4, $5, $6, $7, $8)';
     protected const FIELD_COUNT = 8;
 
-    protected PostgresLink $link;
+    protected PostgresExecutor $executor;
 
     private ?array $data = null;
 
@@ -74,12 +74,12 @@ abstract class AbstractLinkTest extends AsyncTestCase
     }
 
     /**
-     * @return PostgresLink Connection or Link object to be tested.
+     * @return PostgresLink Executor object to be tested.
      */
     abstract public function createLink(string $connectionString): PostgresLink;
 
     /**
-     * Helper method to invoke the protected constructor of classes extending {@see PostgresConnection}.
+     * Helper method to invoke the protected constructor of classes extending {@see PostgresHandleConnection}.
      *
      * @template T extends Connection
      *
@@ -88,7 +88,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
      *
      * @return T
      */
-    protected function newConnection(string $className, mixed ...$args): PostgresConnection
+    protected function newConnection(string $className, mixed ...$args): PostgresHandleConnection
     {
         $reflection = new \ReflectionClass($className);
         $connection = $reflection->newInstanceWithoutConstructor();
@@ -99,18 +99,18 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function setUp(): void
     {
         parent::setUp();
-        $this->link = $this->createLink('host=localhost user=postgres password=postgres');
+        $this->executor = $this->createLink('host=localhost user=postgres password=postgres');
     }
 
     public function tearDown(): void
     {
         parent::tearDown();
-        $this->link->close();
+        $this->executor->close();
     }
 
     public function testQueryFetchRow(): void
     {
-        $result = $this->link->query("SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test");
 
         $data = $this->getData();
         while ($row = $result->fetchRow()) {
@@ -122,7 +122,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testQueryWithTupleResult()
     {
-        $result = $this->link->query("SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test");
 
         $data = $this->getData();
 
@@ -133,7 +133,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testMultipleQueryWithTupleResult()
     {
-        $result = $this->link->query("SELECT * FROM test; SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test; SELECT * FROM test");
 
         $data = $this->getData();
 
@@ -150,7 +150,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testMultipleQueryWithCommandResultFirst()
     {
-        $result = $this->link->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2, null, null, '3.1415926'); SELECT * FROM test");
+        $result = $this->executor->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2, null, null, '3.1415926'); SELECT * FROM test");
 
         $this->assertSame(1, $result->getRowCount());
 
@@ -168,7 +168,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testMultipleQueryWithCommandResultSecond()
     {
-        $result = $this->link->query("SELECT * FROM test; INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2)");
+        $result = $this->executor->query("SELECT * FROM test; INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2)");
 
         $data = $this->getData();
 
@@ -183,13 +183,13 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testQueryWithUnconsumedTupleResult()
     {
-        $result = $this->link->query("SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test");
 
         $this->assertInstanceOf(Result::class, $result);
 
         unset($result); // Force destruction of result object.
 
-        $result = $this->link->query("SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test");
 
         $this->assertInstanceOf(Result::class, $result);
 
@@ -200,7 +200,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testQueryWithCommandResult(): void
     {
-        $result = $this->link->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2)");
+        $result = $this->executor->query("INSERT INTO test VALUES ('canon', 'jp', '{1}', true, 4.2)");
 
         $this->assertSame(1, $result->getRowCount());
     }
@@ -208,14 +208,14 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function testQueryWithEmptyQuery(): void
     {
         $this->expectException(QueryError::class);
-        $this->link->query('');
+        $this->executor->query('');
     }
 
     public function testQueryWithSyntaxError()
     {
         /** @var Result $result */
         try {
-            $result = $this->link->query("SELECT & FROM test");
+            $result = $this->executor->query("SELECT & FROM test");
             $this->fail(\sprintf("An instance of %s was expected to be thrown", QueryExecutionError::class));
         } catch (QueryExecutionError $exception) {
             $diagnostics = $exception->getDiagnostics();
@@ -227,7 +227,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $query = "SELECT * FROM test WHERE domain=\$1";
 
-        $statement = $this->link->prepare($query);
+        $statement = $this->executor->prepare($query);
 
         $this->assertSame($query, $statement->getQuery());
 
@@ -242,7 +242,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $query = "INSERT INTO test (domain, tld, keys, enabled, number, json) VALUES (:domain, :tld, :keys, :enabled, :number, :json)";
 
-        $statement = $this->link->prepare($query);
+        $statement = $this->executor->prepare($query);
 
         $fields = [
             'domain' => 'canon',
@@ -259,7 +259,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertSame(1, $result->getRowCount());
 
-        $result = $this->link->execute('SELECT * FROM test WHERE domain=? AND tld=?', ['canon', 'jp']);
+        $result = $this->executor->execute('SELECT * FROM test WHERE domain=? AND tld=?', ['canon', 'jp']);
 
         $this->verifyResult($result, [\array_values($fields)]);
     }
@@ -271,7 +271,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $query = "SELECT * FROM test WHERE domain=:domain AND tld=:tld";
 
-        $statement = $this->link->prepare($query);
+        $statement = $this->executor->prepare($query);
 
         $data = $this->getData()[0];
 
@@ -289,7 +289,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $query = "SELECT * FROM test WHERE domain=? AND tld=?";
 
-        $statement = $this->link->prepare($query);
+        $statement = $this->executor->prepare($query);
 
         $data = $this->getData()[0];
 
@@ -307,7 +307,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $query = "SELECT * FROM test WHERE domain=:domain OR domain=':domain'";
 
-        $statement = $this->link->prepare($query);
+        $statement = $this->executor->prepare($query);
 
         $data = $this->getData()[0];
 
@@ -328,7 +328,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $query = "SELECT * FROM test WHERE invalid=\$1";
 
-        $statement = $this->link->prepare($query);
+        $statement = $this->executor->prepare($query);
 
         $statement->execute(['param']);
     }
@@ -340,9 +340,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $sql = "SELECT * FROM test WHERE domain=\$1";
 
-        $statement1 = $this->link->prepare($sql);
+        $statement1 = $this->executor->prepare($sql);
 
-        $statement2 = $this->link->prepare($sql);
+        $statement2 = $this->executor->prepare($sql);
 
         $this->assertInstanceOf(Statement::class, $statement1);
         $this->assertInstanceOf(Statement::class, $statement2);
@@ -363,8 +363,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $sql = "SELECT * FROM test WHERE domain=\$1";
 
-        $statement1 = async(fn () => $this->link->prepare($sql));
-        $statement2 = async(fn () => $this->link->prepare($sql));
+        $statement1 = async(fn () => $this->executor->prepare($sql));
+        $statement2 = async(fn () => $this->executor->prepare($sql));
 
         [$statement1, $statement2] = Future\await([$statement1, $statement2]);
 
@@ -383,9 +383,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testPrepareSimilarQueryReturnsDifferentStatements()
     {
-        $statement1 = async(fn () => $this->link->prepare("SELECT * FROM test WHERE domain=\$1"));
+        $statement1 = async(fn () => $this->executor->prepare("SELECT * FROM test WHERE domain=\$1"));
 
-        $statement2 = async(fn () => $this->link->prepare("SELECT * FROM test WHERE domain=:domain"));
+        $statement2 = async(fn () => $this->executor->prepare("SELECT * FROM test WHERE domain=:domain"));
 
         [$statement1, $statement2] = Future\await([$statement1, $statement2]);
 
@@ -412,7 +412,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testPrepareThenExecuteWithUnconsumedTupleResult()
     {
-        $statement = $this->link->prepare("SELECT * FROM test");
+        $statement = $this->executor->prepare("SELECT * FROM test");
 
         $result = $statement->execute();
 
@@ -429,7 +429,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $data = $this->getData()[0];
 
-        $result = $this->link->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
+        $result = $this->executor->execute("SELECT * FROM test WHERE domain=\$1", [$data[0]]);
 
         $this->verifyResult($result, [$data]);
     }
@@ -441,7 +441,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $data = $this->getData()[0];
 
-        $result = $this->link->execute(
+        $result = $this->executor->execute(
             "SELECT * FROM test WHERE domain=:domain",
             ['domain' => $data[0]]
         );
@@ -457,7 +457,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->expectException(\Error::class);
         $this->expectExceptionMessage("Value for unnamed parameter at position 0 missing");
 
-        $this->link->execute("SELECT * FROM test WHERE domain=\$1");
+        $this->executor->execute("SELECT * FROM test WHERE domain=\$1");
     }
 
     /**
@@ -468,7 +468,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->expectException(\Error::class);
         $this->expectExceptionMessage("Value for named parameter 'domain' missing");
 
-        $this->link->execute("SELECT * FROM test WHERE domain=:domain", ['tld' => 'com']);
+        $this->executor->execute("SELECT * FROM test WHERE domain=:domain", ['tld' => 'com']);
     }
 
     /**
@@ -477,7 +477,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function testSimultaneousQuery()
     {
         $callback = fn (int $value) => async(function () use ($value): void {
-            $result = $this->link->query("SELECT {$value} as value");
+            $result = $this->executor->query("SELECT {$value} as value");
 
             foreach ($result as $row) {
                 $this->assertEquals($value, $row['value']);
@@ -493,7 +493,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function testSimultaneousQueryWithOneFailing()
     {
         $callback = fn (string $query) => async(function () use ($query): Result {
-            $result = $this->link->query($query);
+            $result = $this->executor->query($query);
 
             $data = $this->getData();
 
@@ -527,13 +527,13 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $promises = [];
         $promises[] = async(function () {
-            $result = $this->link->query("SELECT * FROM test");
+            $result = $this->executor->query("SELECT * FROM test");
             $data = $this->getData();
             $this->verifyResult($result, $data);
         });
 
         $promises[] = async(function () {
-            $statement = ($this->link->prepare("SELECT * FROM test"));
+            $statement = ($this->executor->prepare("SELECT * FROM test"));
             $result = $statement->execute();
             $data = $this->getData();
             $this->verifyResult($result, $data);
@@ -545,14 +545,14 @@ abstract class AbstractLinkTest extends AsyncTestCase
     public function testSimultaneousPrepareAndExecute()
     {
         $promises[] = async(function () {
-            $statement = $this->link->prepare("SELECT * FROM test");
+            $statement = $this->executor->prepare("SELECT * FROM test");
             $result = $statement->execute();
             $data = $this->getData();
             $this->verifyResult($result, $data);
         });
 
         $promises[] = async(function () {
-            $result = $this->link->execute("SELECT * FROM test");
+            $result = $this->executor->execute("SELECT * FROM test");
             $data = $this->getData();
             $this->verifyResult($result, $data);
         });
@@ -562,9 +562,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testTransaction()
     {
-        $isolation = TransactionIsolationLevel::Committed;
-
-        $transaction = $this->link->beginTransaction($isolation);
+        $transaction = $this->executor->beginTransaction();
 
         $this->assertInstanceOf(PostgresTransaction::class, $transaction);
 
@@ -572,20 +570,19 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $this->assertFalse($transaction->isClosed());
         $this->assertTrue($transaction->isActive());
-        $this->assertSame($isolation, $transaction->getIsolationLevel());
 
-        $transaction->createSavepoint('test');
+        $nested = $transaction->beginTransaction();
 
-        $statement = $transaction->prepare("SELECT * FROM test WHERE domain=:domain");
+        $statement = $nested->prepare("SELECT * FROM test WHERE domain=:domain");
         $result = $statement->execute(['domain' => $data[0]]);
 
+        unset($result, $statement); // Force destruction of result object.
+
+        $result = $nested->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
+
         unset($result); // Force destruction of result object.
 
-        $result = $transaction->execute("SELECT * FROM test WHERE domain=\$1 FOR UPDATE", [$data[0]]);
-
-        unset($result); // Force destruction of result object.
-
-        $transaction->rollbackTo('test');
+        $nested->rollback();
 
         $transaction->commit();
 
@@ -630,13 +627,13 @@ abstract class AbstractLinkTest extends AsyncTestCase
         array $params,
         array $expected
     ): void {
-        $statement = $this->link->prepare($insertSql);
+        $statement = $this->executor->prepare($insertSql);
 
         $result = $statement->execute($params);
 
         $this->assertSame(1, $result->getRowCount());
 
-        $result = $this->link->execute($selectSql, $params);
+        $result = $this->executor->execute($selectSql, $params);
         $this->assertSame($expected, $result->fetchRow());
     }
 
@@ -649,11 +646,11 @@ abstract class AbstractLinkTest extends AsyncTestCase
         array $params,
         array $expected
     ): void {
-        $result = $this->link->execute($insertSql, $params);
+        $result = $this->executor->execute($insertSql, $params);
 
         $this->assertSame(1, $result->getRowCount());
 
-        $result = $this->link->execute($selectSql, $params);
+        $result = $this->executor->execute($selectSql, $params);
         $this->assertSame($expected, $result->fetchRow());
     }
 }

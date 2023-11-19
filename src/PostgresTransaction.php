@@ -7,8 +7,8 @@ use Amp\Sql\Transaction;
 /**
  * Note that notifications sent during a transaction are not delivered until the transaction has been committed.
  *
- * @extends Transaction<PostgresResult, PostgresStatement>
+ * @extends Transaction<PostgresResult, PostgresStatement, PostgresTransaction>
  */
-interface PostgresTransaction extends PostgresExecutor, Transaction
+interface PostgresTransaction extends Transaction, PostgresLink
 {
 }

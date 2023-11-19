@@ -3,21 +3,20 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
+use Amp\Postgres\Internal\PostgresHandleConnection;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Result;
 use Amp\Sql\SqlConnector;
 use Amp\Sql\Statement;
 use Amp\Sql\Transaction;
-use Amp\Sql\TransactionIsolation;
-use Amp\Sql\TransactionIsolationLevel;
 use function Amp\async;
 
 /**
- * @extends ConnectionPool<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction, PostgresConnection>
+ * @extends ConnectionPool<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction, PostgresHandleConnection>
  */
-final class PostgresConnectionPool extends ConnectionPool implements PostgresLink, PostgresReceiver
+final class PostgresConnectionPool extends ConnectionPool implements PostgresConnection
 {
-    /** @var Future<PostgresConnection>|null Connection used for notification listening. */
+    /** @var Future<PostgresHandleConnection>|null Connection used for notification listening. */
     private Future|null $listeningConnection = null;
 
     /** @var int Number of listeners on listening connection. */
@@ -27,7 +26,7 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresLin
      * @param positive-int $maxConnections
      * @param positive-int $idleTimeout
      * @param bool $resetConnections True to automatically execute DISCARD ALL on a connection before use.
-     * @param SqlConnector<PostgresConfig, PostgresConnection>|null $connector
+     * @param SqlConnector<PostgresConfig, PostgresHandleConnection>|null $connector
      */
     public function __construct(
         PostgresConfig $config,
@@ -65,16 +64,7 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresLin
         return new Internal\PostgresPooledTransaction($transaction, $release);
     }
 
-    /**
-     * Changes return type to this library's Transaction type.
-     */
-    public function beginTransaction(
-        TransactionIsolation $isolation = TransactionIsolationLevel::Committed
-    ): PostgresTransaction {
-        return parent::beginTransaction($isolation);
-    }
-
-    protected function pop(): PostgresConnection
+    protected function pop(): PostgresHandleConnection
     {
         $connection = parent::pop();
 
@@ -107,6 +97,22 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresLin
     public function execute(string $sql, array $params = []): PostgresResult
     {
         return parent::execute($sql, $params);
+    }
+
+    /**
+     * Changes return type to this library's Transaction type.
+     */
+    public function beginTransaction(): PostgresTransaction
+    {
+        return parent::beginTransaction();
+    }
+
+    /**
+     * Changes return type to this library's configuration type.
+     */
+    public function getConfig(): PostgresConfig
+    {
+        return parent::getConfig();
     }
 
     public function notify(string $channel, string $payload = ""): PostgresResult

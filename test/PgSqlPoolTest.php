@@ -32,16 +32,24 @@ class PgSqlPoolTest extends AbstractConnectionTest
             $this->handles[] = \pg_connect($connectionString, \PGSQL_CONNECT_FORCE_NEW);
         }
 
+        $config = PostgresConfig::fromString($connectionString);
+
         $connector = $this->createMock(SqlConnector::class);
         $connector->method('connect')
-            ->willReturnCallback(function (): PgSqlConnection {
+            ->willReturnCallback(function () use ($config): PgSqlConnection {
                 static $count = 0;
                 if (!isset($this->handles[$count])) {
                     $this->fail("createConnection called too many times");
                 }
                 $handle = $this->handles[$count];
                 ++$count;
-                return $this->newConnection(PgSqlConnection::class, $handle, \pg_socket($handle), 'mock-connection');
+                return $this->newConnection(
+                    PgSqlConnection::class,
+                    $handle,
+                    \pg_socket($handle),
+                    'mock-connection',
+                    $config,
+                );
             });
 
         $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);

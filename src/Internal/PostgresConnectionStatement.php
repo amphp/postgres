@@ -3,7 +3,6 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
-use Amp\Postgres\PostgresHandle;
 use Amp\Postgres\PostgresStatement;
 use Amp\Sql\Result;
 use Amp\Sql\SqlException;

@@ -5,6 +5,7 @@ namespace Amp\Postgres\Test;
 use Amp\Postgres\ByteA;
 use Amp\Postgres\Internal\PqBufferedResultSet;
 use Amp\Postgres\Internal\PqUnbufferedResultSet;
+use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PqConnection;
 use function Amp\Postgres\Internal\cast;
@@ -39,7 +40,7 @@ class PqConnectionTest extends AbstractConnectionTest
             }
         }
 
-        return $this->newConnection(PqConnection::class, $this->handle);
+        return $this->newConnection(PqConnection::class, $this->handle, PostgresConfig::fromString($connectionString));
     }
 
     private function cast(mixed $param): mixed
@@ -60,12 +61,12 @@ class PqConnectionTest extends AbstractConnectionTest
 
     public function testBufferedResults(): void
     {
-        \assert($this->link instanceof PqConnection);
-        $this->link->shouldBufferResults();
+        \assert($this->executor instanceof PqConnection);
+        $this->executor->shouldBufferResults();
 
-        $this->assertTrue($this->link->isBufferingResults());
+        $this->assertTrue($this->executor->isBufferingResults());
 
-        $result = $this->link->query("SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test");
         \assert($result instanceof PqBufferedResultSet);
 
         $data = $this->getData();
@@ -77,12 +78,12 @@ class PqConnectionTest extends AbstractConnectionTest
      */
     public function testUnbufferedResults(): void
     {
-        \assert($this->link instanceof PqConnection);
-        $this->link->shouldNotBufferResults();
+        \assert($this->executor instanceof PqConnection);
+        $this->executor->shouldNotBufferResults();
 
-        $this->assertFalse($this->link->isBufferingResults());
+        $this->assertFalse($this->executor->isBufferingResults());
 
-        $result = $this->link->query("SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test");
         \assert($result instanceof PqUnbufferedResultSet);
 
         $data = $this->getData();
@@ -91,7 +92,7 @@ class PqConnectionTest extends AbstractConnectionTest
 
     public function testNextResultBeforeConsumption()
     {
-        $result = $this->link->query("SELECT * FROM test; SELECT * FROM test;");
+        $result = $this->executor->query("SELECT * FROM test; SELECT * FROM test;");
 
         $result = $result->getNextResult();
 
@@ -100,11 +101,11 @@ class PqConnectionTest extends AbstractConnectionTest
 
     public function testUnconsumedMultiResult()
     {
-        $result = $this->link->query("SELECT * FROM test; SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test; SELECT * FROM test");
 
         unset($result);
 
-        $result = $this->link->query("SELECT * FROM test; SELECT * FROM test");
+        $result = $this->executor->query("SELECT * FROM test; SELECT * FROM test");
 
         $this->verifyResult($result, $this->getData());
 

@@ -7,12 +7,12 @@ use Amp\DeferredFuture;
 use Amp\Sql\ConnectionException;
 use Revolt\EventLoop;
 
-final class PgSqlConnection extends PostgresConnection implements PostgresLink
+final class PgSqlConnection extends Internal\PostgresHandleConnection implements PostgresConnection
 {
     /**
      * @throws \Error If pecl-ev is used as a loop extension.
      */
-    public static function connect(PostgresConfig $connectionConfig, ?Cancellation $cancellation = null): self
+    public static function connect(PostgresConfig $config, ?Cancellation $cancellation = null): self
     {
         // @codeCoverageIgnoreStart
         /** @psalm-suppress UndefinedClass */
@@ -20,7 +20,7 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
             throw new \Error('ext-pgsql is not compatible with pecl-ev; use pecl-pq or a different loop extension');
         } // @codeCoverageIgnoreEnd
 
-        if (!$connection = \pg_connect($connectionConfig->getConnectionString(), \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
+        if (!$connection = \pg_connect($config->getConnectionString(), \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
             throw new ConnectionException("Failed to create connection resource");
         }
 
@@ -32,11 +32,11 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
             throw new ConnectionException("Failed to access connection socket");
         }
 
-        $hash = \sha1($connectionConfig->getHost() . $connectionConfig->getPort() . $connectionConfig->getUser());
+        $hash = \sha1($config->getHost() . $config->getPort() . $config->getUser());
 
         $deferred = new DeferredFuture();
         /** @psalm-suppress MissingClosureParamType $resource is a resource and cannot be inferred in this context */
-        $callback = static function (string $callbackId, $resource) use (&$poll, &$await, $connection, $deferred, $hash): void {
+        $callback = static function (string $callbackId, $resource) use (&$poll, &$await, $connection, $config, $deferred, $hash): void {
             switch ($result = \pg_connect_poll($connection)) {
                 case \PGSQL_POLLING_READING:
                 case \PGSQL_POLLING_WRITING:
@@ -47,7 +47,7 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
                     break;
 
                 case \PGSQL_POLLING_OK:
-                    $deferred->complete(new self($connection, $resource, $hash));
+                    $deferred->complete(new self($connection, $resource, $hash, $config));
                     break;
 
                 default:
@@ -75,8 +75,8 @@ final class PgSqlConnection extends PostgresConnection implements PostgresLink
      * @param resource $socket PostgreSQL connection stream socket.
      * @param string $id Connection identifier for determining which cached type table to use.
      */
-    protected function __construct(\PgSql\Connection $handle, $socket, string $id)
+    protected function __construct(\PgSql\Connection $handle, $socket, string $id, PostgresConfig $config)
     {
-        parent::__construct(new Internal\PgSqlHandle($handle, $socket, $id));
+        parent::__construct(new Internal\PgSqlHandle($handle, $socket, $id, $config));
     }
 }

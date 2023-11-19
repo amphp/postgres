@@ -16,13 +16,13 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
 {
     public function testIsClosed()
     {
-        $this->assertFalse($this->link->isClosed());
+        $this->assertFalse($this->executor->isClosed());
     }
 
     public function testConnectionCloseDuringQuery(): void
     {
-        $query = async($this->link->execute(...), 'SELECT pg_sleep(10)');
-        $close = async($this->link->close(...));
+        $query = async($this->executor->execute(...), 'SELECT pg_sleep(10)');
+        $close = async($this->executor->close(...));
 
         $start = \microtime(true);
 
@@ -41,14 +41,14 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
     public function testListen()
     {
         $channel = "test";
-        $listener = $this->link->listen($channel);
+        $listener = $this->executor->listen($channel);
 
         $this->assertInstanceOf(PostgresListener::class, $listener);
         $this->assertSame($channel, $listener->getChannel());
 
         EventLoop::delay(0.1, function () use ($channel): void {
-            $this->link->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
-            $this->link->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
+            $this->executor->query(\sprintf("NOTIFY %s, '%s'", $channel, '0'));
+            $this->executor->query(\sprintf("NOTIFY %s, '%s'", $channel, '1'));
         });
 
         $count = 0;
@@ -68,11 +68,11 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
     public function testNotify()
     {
         $channel = "test";
-        $listener = $this->link->listen($channel);
+        $listener = $this->executor->listen($channel);
 
         EventLoop::delay(0.1, function () use ($channel) {
-            $this->link->notify($channel, '0');
-            $this->link->notify($channel, '1');
+            $this->executor->notify($channel, '0');
+            $this->executor->notify($channel, '1');
         });
 
         $count = 0;
@@ -95,18 +95,18 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
         $this->expectExceptionMessage('Already listening on channel');
 
         $channel = "test";
-        Future\await([$this->link->listen($channel), $this->link->listen($channel)]);
+        Future\await([$this->executor->listen($channel), $this->executor->listen($channel)]);
     }
 
     public function testQueryAfterErroredQuery()
     {
         try {
-            $result = $this->link->query("INSERT INTO test VALUES ('github', 'com', '{1, 2, 3}', true, 4.2)");
+            $result = $this->executor->query("INSERT INTO test VALUES ('github', 'com', '{1, 2, 3}', true, 4.2)");
         } catch (QueryExecutionError $exception) {
             // Expected exception due to duplicate key.
         }
 
-        $result = $this->link->query("INSERT INTO test VALUES ('gitlab', 'com', '{1, 2, 3}', true, 4.2)");
+        $result = $this->executor->query("INSERT INTO test VALUES ('gitlab', 'com', '{1, 2, 3}', true, 4.2)");
 
         $this->assertSame(1, $result->getRowCount());
     }
