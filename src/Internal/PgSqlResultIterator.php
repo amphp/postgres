@@ -13,7 +13,7 @@ use Amp\Sql\SqlException;
 final class PgSqlResultIterator
 {
     /**
-     * @param array<int, PgsqlType> $types
+     * @param array<int, PgSqlType> $types
      *
      * @return \Iterator<int, TRowType>
      */
@@ -23,7 +23,7 @@ final class PgSqlResultIterator
     }
 
     /**
-     * @param array<int, PgsqlType> $types
+     * @param array<int, PgSqlType> $types
      */
     private function __construct(
         private readonly \PgSql\Result $handle,
@@ -74,7 +74,7 @@ final class PgSqlResultIterator
             return null;
         }
 
-        $type = $this->types[$oid] ?? PgsqlType::getDefaultType();
+        $type = $this->types[$oid] ?? PgSqlType::getDefaultType();
 
         return match ($type->type) {
             'A' => ArrayParser::parse( // Array

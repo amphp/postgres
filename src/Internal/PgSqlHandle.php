@@ -35,7 +35,7 @@ final class PgSqlHandle extends AbstractHandle
         \PGSQL_DIAG_SOURCE_FUNCTION => "source_function",
     ];
 
-    /** @var array<string, array<int, PgsqlType>> */
+    /** @var array<string, array<int, PgSqlType>> */
     private static array $typeCache;
 
     private static ?\Closure $errorHandler = null;
@@ -43,7 +43,7 @@ final class PgSqlHandle extends AbstractHandle
     /** @var \PgSql\Connection PostgreSQL connection handle. */
     private ?\PgSql\Connection $handle;
 
-    /** @var array<int, PgsqlType> */
+    /** @var array<int, PgSqlType> */
     private readonly array $types;
 
     /** @var array<non-empty-string, StatementStorage<string>> */
@@ -161,7 +161,7 @@ final class PgSqlHandle extends AbstractHandle
     }
 
     /**
-     * @return array<int, PgsqlType>
+     * @return array<int, PgSqlType>
      */
     private static function fetchTypes(\PgSql\Connection $handle): array
     {
@@ -174,7 +174,7 @@ final class PgSqlHandle extends AbstractHandle
             [$oid, $type, $delimiter, $element] = $row;
             \assert(\is_numeric($oid) && \is_numeric($element), "OID and element type expected to be integers");
             \assert(\is_string($type) && \is_string($delimiter), "Unexpected types in type catalog query results");
-            $types[(int) $oid] = new PgsqlType($type, $delimiter, (int) $element);
+            $types[(int) $oid] = new PgSqlType($type, $delimiter, (int) $element);
         }
 
         return $types;

@@ -3,7 +3,7 @@
 namespace Amp\Postgres\Internal;
 
 /** @internal */
-final class PgsqlType
+final class PgSqlType
 {
     private static ?self $default = null;
 
