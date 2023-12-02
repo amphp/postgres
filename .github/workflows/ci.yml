@@ -12,6 +12,9 @@ jobs:
           - operating-system: 'ubuntu-latest'
             php-version: '8.1'
 
+          - operating-system: 'ubuntu-latest'
+            php-version: '8.2'
+
     name: PHP ${{ matrix.php-version }} ${{ matrix.job-description }}
 
     runs-on: ${{ matrix.operating-system }}
@@ -35,7 +38,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: pq
+          extensions: raphf, pq
 
       - name: Get Composer cache directory
         id: composer-cache
