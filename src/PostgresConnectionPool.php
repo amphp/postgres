@@ -3,7 +3,6 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
-use Amp\Postgres\Internal\PostgresHandleConnection;
 use Amp\Sql\Common\ConnectionPool;
 use Amp\Sql\Result;
 use Amp\Sql\SqlConnector;
@@ -12,11 +11,11 @@ use Amp\Sql\Transaction;
 use function Amp\async;
 
 /**
- * @extends ConnectionPool<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction, PostgresHandleConnection>
+ * @extends ConnectionPool<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction, PostgresConnection>
  */
 final class PostgresConnectionPool extends ConnectionPool implements PostgresConnection
 {
-    /** @var Future<PostgresHandleConnection>|null Connection used for notification listening. */
+    /** @var Future<PostgresConnection>|null Connection used for notification listening. */
     private Future|null $listeningConnection = null;
 
     /** @var int Number of listeners on listening connection. */
@@ -26,7 +25,7 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresCon
      * @param positive-int $maxConnections
      * @param positive-int $idleTimeout
      * @param bool $resetConnections True to automatically execute DISCARD ALL on a connection before use.
-     * @param SqlConnector<PostgresConfig, PostgresHandleConnection>|null $connector
+     * @param SqlConnector<PostgresConfig, PostgresConnection>|null $connector
      */
     public function __construct(
         PostgresConfig $config,
@@ -64,7 +63,7 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresCon
         return new Internal\PostgresPooledTransaction($transaction, $release);
     }
 
-    protected function pop(): PostgresHandleConnection
+    protected function pop(): PostgresConnection
     {
         $connection = parent::pop();
 

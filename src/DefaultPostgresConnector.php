@@ -3,13 +3,12 @@
 namespace Amp\Postgres;
 
 use Amp\Cancellation;
-use Amp\Postgres\Internal\PostgresHandleConnection;
 use Amp\Sql\SqlConfig;
 use Amp\Sql\SqlConnector;
 use Amp\Sql\SqlException;
 
 /**
- * @implements SqlConnector<PostgresConfig, PostgresHandleConnection>
+ * @implements SqlConnector<PostgresConfig, PostgresConnection>
  */
 final class DefaultPostgresConnector implements SqlConnector
 {
@@ -18,7 +17,7 @@ final class DefaultPostgresConnector implements SqlConnector
      *
      * @throws \Error If neither ext-pgsql nor pecl-pq is loaded.
      */
-    public function connect(SqlConfig $config, ?Cancellation $cancellation = null): PostgresHandleConnection
+    public function connect(SqlConfig $config, ?Cancellation $cancellation = null): PostgresConnection
     {
         if (!$config instanceof PostgresConfig) {
             throw new \TypeError(\sprintf("Must provide an instance of %s to Postgres connectors", PostgresConfig::class));

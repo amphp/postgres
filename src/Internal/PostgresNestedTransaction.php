@@ -5,8 +5,8 @@ namespace Amp\Postgres\Internal;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
+use Amp\Sql\Common\NestableTransactionExecutor;
 use Amp\Sql\Common\NestedTransaction;
-use Amp\Sql\Executor;
 use Amp\Sql\Transaction;
 
 /**
@@ -40,11 +40,11 @@ final class PostgresNestedTransaction extends NestedTransaction implements Postg
 
     protected function createNestedTransaction(
         Transaction $transaction,
-        Executor $executor,
+        NestableTransactionExecutor $executor,
         string $identifier,
         \Closure $release,
-    ): Transaction {
-        return new PostgresNestedTransaction($transaction, $executor, $identifier, $release);
+    ): PostgresTransaction {
+        return new self($transaction, $executor, $identifier, $release);
     }
 
     public function prepare(string $sql): PostgresStatement
