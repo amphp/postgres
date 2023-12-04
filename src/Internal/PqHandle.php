@@ -379,7 +379,7 @@ final class PqHandle extends AbstractHandle
 
         $modifiedSql = parseNamedParams($sql, $names);
 
-        $name = PostgresHandle::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
+        $name = self::STATEMENT_NAME_PREFIX . \sha1($modifiedSql);
 
         while (isset($this->statements[$name])) {
             $storage = $this->statements[$name];

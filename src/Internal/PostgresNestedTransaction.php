@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
@@ -30,10 +31,7 @@ final class PostgresNestedTransaction extends NestedTransaction implements Postg
         parent::__construct($transaction, $handle, $identifier, $release);
     }
 
-    /**
-     * Switches return type to this library's return type.
-     */
-    protected function getTransaction(): PostgresTransaction
+    protected function getExecutor(): PostgresExecutor
     {
         return $this->transaction;
     }

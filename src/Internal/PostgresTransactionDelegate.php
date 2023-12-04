@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
@@ -11,15 +12,18 @@ use Amp\Sql\Statement;
 /** @internal */
 trait PostgresTransactionDelegate
 {
-    abstract protected function getTransaction(): PostgresTransaction;
+    abstract protected function getExecutor(): PostgresExecutor;
 
     /**
      * @param \Closure():void $release
      */
-    protected function createStatement(Statement $statement, \Closure $release): PostgresStatement
-    {
+    protected function createStatement(
+        Statement $statement,
+        \Closure $release,
+        ?\Closure $awaitBusyResource = null,
+    ): PostgresStatement {
         \assert($statement instanceof PostgresStatement);
-        return new PostgresPooledStatement($statement, $release);
+        return new PostgresPooledStatement($statement, $release, $awaitBusyResource);
     }
 
     /**
@@ -68,21 +72,21 @@ trait PostgresTransactionDelegate
      */
     public function notify(string $channel, string $payload = ""): PostgresResult
     {
-        return $this->getTransaction()->notify($channel, $payload);
+        return $this->getExecutor()->notify($channel, $payload);
     }
 
     public function quoteString(string $data): string
     {
-        return $this->getTransaction()->quoteString($data);
+        return $this->getExecutor()->quoteString($data);
     }
 
     public function quoteName(string $name): string
     {
-        return $this->getTransaction()->quoteName($name);
+        return $this->getExecutor()->quoteName($name);
     }
 
     public function escapeByteA(string $data): string
     {
-        return $this->transaction->escapeByteA($data);
+        return $this->getExecutor()->escapeByteA($data);
     }
 }

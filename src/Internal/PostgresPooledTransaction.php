@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
@@ -24,7 +25,7 @@ final class PostgresPooledTransaction extends PooledTransaction implements Postg
         parent::__construct($transaction, $release);
     }
 
-    protected function getTransaction(): PostgresTransaction
+    protected function getExecutor(): PostgresExecutor
     {
         return $this->transaction;
     }

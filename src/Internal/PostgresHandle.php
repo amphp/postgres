@@ -3,8 +3,8 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\PostgresConfig;
+use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresListener;
-use Amp\Postgres\PostgresQuoter;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Sql\Common\NestableTransactionExecutor;
@@ -13,22 +13,11 @@ use Amp\Sql\Common\NestableTransactionExecutor;
  * @internal
  * @extends NestableTransactionExecutor<PostgresResult, PostgresStatement>
  */
-interface PostgresHandle extends PostgresQuoter, NestableTransactionExecutor
+interface PostgresHandle extends PostgresExecutor, NestableTransactionExecutor
 {
     public const STATEMENT_NAME_PREFIX = "amp_";
 
     public function getConfig(): PostgresConfig;
-
-    public function query(string $sql): PostgresResult;
-
-    public function execute(string $sql, array $params = []): PostgresResult;
-
-    public function prepare(string $sql): PostgresStatement;
-
-    /**
-     * @param non-empty-string $channel
-     */
-    public function notify(string $channel, string $payload = ""): PostgresResult;
 
     /**
      * @param non-empty-string $channel
