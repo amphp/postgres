@@ -27,6 +27,7 @@ REGEX;
 
 /**
  * @internal
+ * @psalm-suppress ReferenceConstraintViolation
  *
  * @param string $sql SQL statement with named and unnamed placeholders.
  * @param-out list<int|string> $names Array of parameter positions mapped to names and/or indexed locations.

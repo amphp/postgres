@@ -62,6 +62,8 @@ final class PgSqlHandle extends AbstractHandle
     ) {
         $this->handle = $handle;
 
+        $this->types = (self::$typeCache[$id] ??= self::fetchTypes($handle));
+
         $handle = &$this->handle;
         $lastUsedAt = &$this->lastUsedAt;
         $deferred = &$this->pendingOperation;
@@ -75,6 +77,11 @@ final class PgSqlHandle extends AbstractHandle
             &$handle,
             $onClose,
         ): void {
+            if (!$handle) {
+                EventLoop::disable($watcher);
+                return;
+            }
+
             $lastUsedAt = \time();
 
             \set_error_handler(self::getErrorHandler());
@@ -129,6 +136,11 @@ final class PgSqlHandle extends AbstractHandle
             &$handle,
             $onClose,
         ): void {
+            if (!$handle) {
+                EventLoop::disable($watcher);
+                return;
+            }
+
             \set_error_handler(self::getErrorHandler());
 
             try {
@@ -156,8 +168,6 @@ final class PgSqlHandle extends AbstractHandle
         EventLoop::disable($await);
 
         parent::__construct($config, $poll, $await, $onClose);
-
-        $this->types = (self::$typeCache[$id] ??= self::fetchTypes($handle));
     }
 
     /**

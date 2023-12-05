@@ -87,7 +87,7 @@ final class PqHandle extends AbstractHandle
             $onClose,
         ): void {
             try {
-                if (!$handle->flush()) {
+                if (!$handle?->flush()) {
                     return; // Not finished sending data, continue polling for writability.
                 }
             } catch (pq\Exception $exception) {

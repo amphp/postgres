@@ -24,7 +24,9 @@ final class PqConnection extends Internal\PostgresHandleConnection implements Po
         $connection->unbuffered = true;
 
         $deferred = new DeferredFuture();
-        $callback = function () use (&$poll, &$await, $connection, $config, $deferred): void {
+
+        /** @psalm-suppress UndefinedVariable $poll is defined below. */
+        $callback = static function () use (&$poll, &$await, $connection, $config, $deferred): void {
             switch ($result = $connection->poll()) {
                 case pq\Connection::POLLING_READING:
                 case pq\Connection::POLLING_WRITING:

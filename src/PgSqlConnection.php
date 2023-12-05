@@ -35,8 +35,19 @@ final class PgSqlConnection extends Internal\PostgresHandleConnection implements
         $hash = \sha1($config->getHost() . $config->getPort() . $config->getUser());
 
         $deferred = new DeferredFuture();
-        /** @psalm-suppress MissingClosureParamType $resource is a resource and cannot be inferred in this context */
-        $callback = static function (string $callbackId, $resource) use (&$poll, &$await, $connection, $config, $deferred, $hash): void {
+
+        /**
+         * @psalm-suppress MissingClosureParamType $resource is a resource and cannot be inferred in this context.
+         * @psalm-suppress UndefinedVariable $poll is defined below.
+         */
+        $callback = static function (string $callbackId, $resource) use (
+            &$poll,
+            &$await,
+            $connection,
+            $config,
+            $deferred,
+            $hash,
+        ): void {
             switch ($result = \pg_connect_poll($connection)) {
                 case \PGSQL_POLLING_READING:
                 case \PGSQL_POLLING_WRITING:
