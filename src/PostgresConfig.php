@@ -17,31 +17,32 @@ final class PostgresConfig extends SqlConfig
         'verify-full',
     ];
 
-    private ?string $sslMode = null;
+    public const KEY_MAP = [
+        ...parent::KEY_MAP,
+        'ssl_mode' => 'sslmode',
+        'sslMode' => 'sslmode',
+        'applicationName' => 'application_name',
+    ];
 
     private ?string $connectionString = null;
 
     public static function fromString(string $connectionString): self
     {
-        $parts = self::parseConnectionString($connectionString);
+        $parts = self::parseConnectionString($connectionString, self::KEY_MAP);
 
         if (!isset($parts["host"])) {
             throw new \Error("Host must be provided in connection string");
         }
 
-        $config = new self(
+        return new self(
             $parts["host"],
             (int) ($parts["port"] ?? self::DEFAULT_PORT),
             $parts["user"] ?? null,
             $parts["password"] ?? null,
-            $parts["db"] ?? null
+            $parts["db"] ?? null,
+            $parts["application_name"] ?? null,
+            $parts["sslmode"] ?? null,
         );
-
-        if (isset($parts["sslmode"])) {
-            $config = $config->withSslMode($parts["sslmode"]);
-        }
-
-        return $config;
     }
 
     public function __construct(
@@ -49,8 +50,12 @@ final class PostgresConfig extends SqlConfig
         int $port = self::DEFAULT_PORT,
         ?string $user = null,
         ?string $password = null,
-        ?string $database = null
+        ?string $database = null,
+        private ?string $applicationName = null,
+        private ?string $sslMode = null,
     ) {
+        self::assertValidSslMode($sslMode);
+
         parent::__construct($host, $port, $user, $password, $database);
     }
 
@@ -64,11 +69,20 @@ final class PostgresConfig extends SqlConfig
         return $this->sslMode;
     }
 
-    public function withSslMode(string $mode): self
+    private static function assertValidSslMode(?string $mode): void
     {
+        if ($mode === null) {
+            return;
+        }
+
         if (!\in_array($mode, self::SSL_MODES, true)) {
             throw new \Error('Invalid SSL mode, must be one of: ' . \implode(', ', self::SSL_MODES));
         }
+    }
+
+    public function withSslMode(string $mode): self
+    {
+        self::assertValidSslMode($mode);
 
         $new = clone $this;
         $new->sslMode = $mode;
@@ -79,6 +93,25 @@ final class PostgresConfig extends SqlConfig
     {
         $new = clone $this;
         $new->sslMode = null;
+        return $new;
+    }
+
+    public function getApplicationName(): ?string
+    {
+        return $this->applicationName;
+    }
+
+    public function withApplicationName(string $name): self
+    {
+        $new = clone $this;
+        $new->applicationName = $name;
+        return $new;
+    }
+
+    public function withoutApplicationName(): self
+    {
+        $new = clone $this;
+        $new->applicationName = null;
         return $new;
     }
 
@@ -113,6 +146,10 @@ final class PostgresConfig extends SqlConfig
 
         if ($this->sslMode !== null) {
             $chunks[] = "sslmode=" . $this->sslMode;
+        }
+
+        if ($this->applicationName !== null) {
+            $chunks[] = \sprintf("application_name='%s'", \addslashes($this->applicationName));
         }
 
         return $this->connectionString = \implode(" ", $chunks);
