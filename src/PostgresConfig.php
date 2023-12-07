@@ -17,6 +17,7 @@ final class PostgresConfig extends SqlConfig
         'verify-full',
     ];
 
+    /** @var array<non-empty-string, non-empty-string> Psalm has a bug with the spread operator. */
     public const KEY_MAP = [
         ...parent::KEY_MAP,
         'ssl_mode' => 'sslmode',
@@ -28,6 +29,7 @@ final class PostgresConfig extends SqlConfig
 
     public static function fromString(string $connectionString): self
     {
+        /** @psalm-suppress InvalidArgument Psalm does not recognize {@see self::KEY_MAP} is in fact a map. */
         $parts = self::parseConnectionString($connectionString, self::KEY_MAP);
 
         if (!isset($parts["host"])) {
