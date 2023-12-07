@@ -10,7 +10,7 @@ use Amp\Sql\SqlException;
 /**
  * @extends Connection<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction>
  */
-interface PostgresConnection extends Connection, PostgresLink
+interface PostgresConnection extends PostgresLink, Connection
 {
     /**
      * @return PostgresConfig Config object specific to this library.

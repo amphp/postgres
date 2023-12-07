@@ -9,6 +9,6 @@ use Amp\Sql\Transaction;
  *
  * @extends Transaction<PostgresResult, PostgresStatement, PostgresTransaction>
  */
-interface PostgresTransaction extends Transaction, PostgresLink
+interface PostgresTransaction extends PostgresLink, Transaction
 {
 }

@@ -9,8 +9,23 @@ use Amp\Sql\SqlException;
 /**
  * @extends Executor<PostgresResult, PostgresStatement>
  */
-interface PostgresExecutor extends Executor, PostgresQuoter
+interface PostgresExecutor extends PostgresQuoter, Executor
 {
+    /**
+     * @return PostgresResult Result object specific to this library.
+     */
+    public function query(string $sql): PostgresResult;
+
+    /**
+     * @return PostgresStatement Statement object specific to this library.
+     */
+    public function prepare(string $sql): PostgresStatement;
+
+    /**
+     * @return PostgresResult Result object specific to this library.
+     */
+    public function execute(string $sql, array $params = []): PostgresResult;
+
     /**
      * @param non-empty-string $channel Channel name.
      * @param string $payload Notification payload.
