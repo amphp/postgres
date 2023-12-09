@@ -11,6 +11,7 @@ use Amp\Sql\QueryError;
 use Amp\Sql\SqlException;
 use Revolt\EventLoop;
 use function Amp\async;
+use function Amp\delay;
 
 abstract class AbstractConnectionTest extends AbstractLinkTest
 {
@@ -109,5 +110,36 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
         $result = $this->executor->query("INSERT INTO test VALUES ('gitlab', 'com', '{1, 2, 3}', true, 4.2)");
 
         $this->assertSame(1, $result->getRowCount());
+    }
+
+    public function testTransactionsCallbacksOnCommit(): void
+    {
+        $transaction = $this->executor->beginTransaction();
+        $transaction->onCommit($this->createCallback(1));
+        $transaction->onRollback($this->createCallback(0));
+        $transaction->onClose($this->createCallback(1));
+
+        $transaction->commit();
+    }
+
+    public function testTransactionsCallbacksOnRollback(): void
+    {
+        $transaction = $this->executor->beginTransaction();
+        $transaction->onCommit($this->createCallback(0));
+        $transaction->onRollback($this->createCallback(1));
+        $transaction->onClose($this->createCallback(1));
+
+        $transaction->rollback();
+    }
+
+    public function testTransactionsCallbacksOnDestruct(): void
+    {
+        $transaction = $this->executor->beginTransaction();
+        $transaction->onCommit($this->createCallback(0));
+        $transaction->onRollback($this->createCallback(1));
+        $transaction->onClose($this->createCallback(1));
+
+        unset($transaction);
+        delay(0.1); // Destructor is async, so give control to the loop to invoke callbacks.
     }
 }
