@@ -22,8 +22,8 @@
         "php": ">=8.1",
         "amphp/amp": "^3",
         "amphp/pipeline": "^1",
-        "amphp/sql": "dev-refactor-transactions as 2.0",
-        "amphp/sql-common": "dev-refactor-transactions as 2.0"
+        "amphp/sql": "^2-beta.6",
+        "amphp/sql-common": "^2-beta.7"
     },
     "require-dev": {
         "ext-pgsql": "*",

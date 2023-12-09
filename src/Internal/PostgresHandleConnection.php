@@ -135,6 +135,11 @@ abstract class PostgresHandleConnection implements PostgresConnection
         );
     }
 
+    final public function getTransactionIsolation(): TransactionIsolation
+    {
+        return $this->transactionIsolation;
+    }
+
     final public function setTransactionIsolation(TransactionIsolation $isolation): void
     {
         $this->transactionIsolation = $isolation;
