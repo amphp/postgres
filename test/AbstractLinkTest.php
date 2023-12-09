@@ -618,6 +618,21 @@ abstract class AbstractLinkTest extends AsyncTestCase
         ];
     }
 
+    public function testEscapeByteA(): void
+    {
+        $this->assertSame('\x00', $this->executor->escapeByteA("\0"));
+    }
+
+    public function testQuoteString(): void
+    {
+        $this->assertSame("'\"''test''\"'", $this->executor->quoteLiteral("\"'test'\""));
+    }
+
+    public function testQuoteName(): void
+    {
+        $this->assertSame("\"\"\"'test'\"\"\"", $this->executor->quoteIdentifier("\"'test'\""));
+    }
+
     /**
      * @dataProvider provideInsertParameters
      */
