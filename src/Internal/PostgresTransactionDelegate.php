@@ -75,14 +75,14 @@ trait PostgresTransactionDelegate
         return $this->getExecutor()->notify($channel, $payload);
     }
 
-    public function quoteString(string $data): string
+    public function quoteLiteral(string $data): string
     {
-        return $this->getExecutor()->quoteString($data);
+        return $this->getExecutor()->quoteLiteral($data);
     }
 
-    public function quoteName(string $name): string
+    public function quoteIdentifier(string $name): string
     {
-        return $this->getExecutor()->quoteName($name);
+        return $this->getExecutor()->quoteIdentifier($name);
     }
 
     public function escapeByteA(string $data): string

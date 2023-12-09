@@ -456,10 +456,10 @@ final class PgSqlHandle extends AbstractHandle
     public function notify(string $channel, string $payload = ""): PostgresResult
     {
         if ($payload === "") {
-            return $this->query(\sprintf("NOTIFY %s", $this->quoteName($channel)));
+            return $this->query(\sprintf("NOTIFY %s", $this->quoteIdentifier($channel)));
         }
 
-        return $this->query(\sprintf("NOTIFY %s, %s", $this->quoteName($channel), $this->quoteString($payload)));
+        return $this->query(\sprintf("NOTIFY %s, %s", $this->quoteIdentifier($channel), $this->quoteLiteral($payload)));
     }
 
     public function listen(string $channel): PostgresListener
@@ -471,7 +471,7 @@ final class PgSqlHandle extends AbstractHandle
         $this->listeners[$channel] = $source = new Queue();
 
         try {
-            $this->query(\sprintf("LISTEN %s", $this->quoteName($channel)));
+            $this->query(\sprintf("LISTEN %s", $this->quoteIdentifier($channel)));
         } catch (\Throwable $exception) {
             unset($this->listeners[$channel]);
             throw $exception;
@@ -499,14 +499,14 @@ final class PgSqlHandle extends AbstractHandle
         }
 
         try {
-            $this->query(\sprintf("UNLISTEN %s", $this->quoteName($channel)));
+            $this->query(\sprintf("UNLISTEN %s", $this->quoteIdentifier($channel)));
             $source->complete();
         } catch (\Throwable $exception) {
             $source->error($exception);
         }
     }
 
-    public function quoteString(string $data): string
+    public function quoteLiteral(string $data): string
     {
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
@@ -515,7 +515,7 @@ final class PgSqlHandle extends AbstractHandle
         return \pg_escape_literal($this->handle, $data);
     }
 
-    public function quoteName(string $name): string
+    public function quoteIdentifier(string $name): string
     {
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");

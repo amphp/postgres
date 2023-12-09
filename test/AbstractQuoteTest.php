@@ -28,11 +28,11 @@ abstract class AbstractQuoteTest extends AbstractConnectTest
 
     public function testQuoteString(): void
     {
-        $this->assertSame("'\"''test''\"'", $this->connection->quoteString("\"'test'\""));
+        $this->assertSame("'\"''test''\"'", $this->connection->quoteLiteral("\"'test'\""));
     }
 
     public function testQuoteName(): void
     {
-        $this->assertSame("\"\"\"'test'\"\"\"", $this->connection->quoteName("\"'test'\""));
+        $this->assertSame("\"\"\"'test'\"\"\"", $this->connection->quoteIdentifier("\"'test'\""));
     }
 }

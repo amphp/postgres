@@ -106,16 +106,16 @@ abstract class AbstractHandle implements PostgresHandle
 
     public function createSavepoint(string $identifier): void
     {
-        $this->query("SAVEPOINT " . $this->quoteName($identifier));
+        $this->query("SAVEPOINT " . $this->quoteIdentifier($identifier));
     }
 
     public function rollbackTo(string $identifier): void
     {
-        $this->query("ROLLBACK TO " . $this->quoteName($identifier));
+        $this->query("ROLLBACK TO " . $this->quoteIdentifier($identifier));
     }
 
     public function releaseSavepoint(string $identifier): void
     {
-        $this->query("RELEASE SAVEPOINT " . $this->quoteName($identifier));
+        $this->query("RELEASE SAVEPOINT " . $this->quoteIdentifier($identifier));
     }
 }

@@ -151,23 +151,23 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresCon
         });
     }
 
-    public function quoteString(string $data): string
+    public function quoteLiteral(string $data): string
     {
         $connection = $this->pop();
 
         try {
-            return $connection->quoteString($data);
+            return $connection->quoteLiteral($data);
         } finally {
             $this->push($connection);
         }
     }
 
-    public function quoteName(string $name): string
+    public function quoteIdentifier(string $name): string
     {
         $connection = $this->pop();
 
         try {
-            return $connection->quoteName($name);
+            return $connection->quoteIdentifier($name);
         } finally {
             $this->push($connection);
         }

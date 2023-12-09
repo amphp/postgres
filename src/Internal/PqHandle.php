@@ -483,7 +483,7 @@ final class PqHandle extends AbstractHandle
         }
     }
 
-    public function quoteString(string $data): string
+    public function quoteLiteral(string $data): string
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");
@@ -492,7 +492,7 @@ final class PqHandle extends AbstractHandle
         return $this->handle->quote($data);
     }
 
-    public function quoteName(string $name): string
+    public function quoteIdentifier(string $name): string
     {
         if (!$this->handle) {
             throw new \Error("The connection to the database has been closed");

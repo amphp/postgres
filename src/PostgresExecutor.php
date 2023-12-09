@@ -36,19 +36,19 @@ interface PostgresExecutor extends Executor
     public function notify(string $channel, string $payload = ""): PostgresResult;
 
     /**
-     * Quotes (escapes) the given string for use as a string literal or identifier in a query. This method wraps the
+     * Quotes (escapes) the given string for use as a string literal in a query. This method wraps the
      * string in single quotes, so additional quotes should not be added in the query.
      *
      * @param string $data Unquoted data.
      *
-     * @return string Quoted string wrapped in single quotes.
+     * @return string Quoted string literal.
      *
      * @throws \Error If the connection to the database has been closed.
      */
-    public function quoteString(string $data): string;
+    public function quoteLiteral(string $data): string;
 
     /**
-     * Quotes (escapes) the given string for use as a name or identifier in a query.
+     * Quotes (escapes) the given string for use as an identifier in a query.
      *
      * @param string $name Unquoted identifier.
      *
@@ -56,7 +56,7 @@ interface PostgresExecutor extends Executor
      *
      * @throws \Error If the connection to the database has been closed.
      */
-    public function quoteName(string $name): string;
+    public function quoteIdentifier(string $name): string;
 
     /**
      * Escapes a binary string to be used as BYTEA data.

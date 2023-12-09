@@ -145,14 +145,14 @@ abstract class PostgresHandleConnection implements PostgresConnection
         $this->transactionIsolation = $isolation;
     }
 
-    final public function quoteString(string $data): string
+    final public function quoteLiteral(string $data): string
     {
-        return $this->handle->quoteString($data);
+        return $this->handle->quoteLiteral($data);
     }
 
-    final public function quoteName(string $name): string
+    final public function quoteIdentifier(string $name): string
     {
-        return $this->handle->quoteName($name);
+        return $this->handle->quoteIdentifier($name);
     }
 
     final public function escapeByteA(string $data): string
