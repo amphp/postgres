@@ -13,7 +13,7 @@ use Amp\Sql\Result;
  */
 final class PostgresPooledResult extends PooledResult implements PostgresResult
 {
-    protected function newInstanceFrom(Result $result, \Closure $release): self
+    protected static function newInstanceFrom(Result $result, \Closure $release): self
     {
         \assert($result instanceof PostgresResult);
         return new self($result, $release);
