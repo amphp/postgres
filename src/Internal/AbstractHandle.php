@@ -3,6 +3,8 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Pipeline\Queue;
 use Amp\Postgres\ByteA;
 use Amp\Postgres\PostgresConfig;
@@ -14,6 +16,9 @@ use Revolt\EventLoop;
  */
 abstract class AbstractHandle implements PostgresHandle
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     protected ?DeferredFuture $pendingOperation = null;
 
     /** @var array<non-empty-string, Queue> */

@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Postgres\ParseException;
 use Amp\Postgres\PostgresResult;
 use Amp\Sql\SqlException;
@@ -12,6 +14,9 @@ use Amp\Sql\SqlException;
  */
 final class PgSqlResultIterator
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     /**
      * @param array<int, PgSqlType> $types
      *

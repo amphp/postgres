@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Future;
 use Amp\Postgres\PostgresResult;
 
@@ -12,6 +14,9 @@ use Amp\Postgres\PostgresResult;
  */
 final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     private readonly \Iterator $iterator;
 
     private readonly int $rowCount;

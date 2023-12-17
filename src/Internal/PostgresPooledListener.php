@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
 use Revolt\EventLoop;
@@ -12,6 +14,9 @@ use Revolt\EventLoop;
  */
 final class PostgresPooledListener implements PostgresListener, \IteratorAggregate
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     private readonly PostgresListener $listener;
 
     /** @var null|\Closure():void  */

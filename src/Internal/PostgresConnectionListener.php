@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
 use function Amp\async;
@@ -12,6 +14,9 @@ use function Amp\async;
  */
 final class PostgresConnectionListener implements PostgresListener, \IteratorAggregate
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     /** @var null|\Closure(non-empty-string):void */
     private ?\Closure $unlisten;
 

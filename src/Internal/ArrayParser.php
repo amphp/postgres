@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Postgres\ParseException;
 
 /**
@@ -9,6 +11,9 @@ use Amp\Postgres\ParseException;
  */
 final class ArrayParser
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     /**
      * @param string $data String representation of PostgresSQL array.
      * @param \Closure(string):mixed $cast Callback to cast parsed values.

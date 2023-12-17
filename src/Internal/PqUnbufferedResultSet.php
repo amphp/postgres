@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Future;
 use Amp\Postgres\PostgresResult;
 use pq;
@@ -14,6 +16,9 @@ use Revolt\EventLoop;
  */
 final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     private readonly \Generator $generator;
 
     private readonly int $columnCount;

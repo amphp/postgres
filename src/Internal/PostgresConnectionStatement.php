@@ -3,6 +3,8 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\DeferredFuture;
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Postgres\PostgresStatement;
 use Amp\Sql\Result;
 use Amp\Sql\SqlException;
@@ -10,6 +12,9 @@ use Amp\Sql\SqlException;
 /** @internal  */
 final class PostgresConnectionStatement implements PostgresStatement
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     private int $lastUsedAt;
 
     private readonly DeferredFuture $onClose;

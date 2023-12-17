@@ -4,6 +4,8 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Postgres\Internal;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnection;
@@ -18,6 +20,9 @@ use Amp\Sql\TransactionIsolationLevel;
 /** @internal */
 abstract class PostgresHandleConnection implements PostgresConnection
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     /** @var DeferredFuture|null Used to only allow one transaction at a time. */
     private ?DeferredFuture $busy = null;
 

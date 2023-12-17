@@ -3,6 +3,8 @@
 namespace Amp\Postgres;
 
 use Amp\Cancellation;
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Sql\SqlConfig;
 use Amp\Sql\SqlConnector;
 use Amp\Sql\SqlException;
@@ -12,6 +14,9 @@ use Amp\Sql\SqlException;
  */
 final class DefaultPostgresConnector implements SqlConnector
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     /**
      * @throws SqlException If connecting fails.
      *

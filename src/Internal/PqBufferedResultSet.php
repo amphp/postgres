@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Future;
 use Amp\Postgres\PostgresResult;
 use pq;
@@ -13,6 +15,9 @@ use pq;
  */
 final class PqBufferedResultSet implements PostgresResult, \IteratorAggregate
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     private readonly \Generator $iterator;
 
     private readonly int $rowCount;

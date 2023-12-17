@@ -2,6 +2,8 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\ForbidCloning;
+use Amp\ForbidSerialization;
 use Amp\Future;
 
 /**
@@ -11,6 +13,9 @@ use Amp\Future;
  */
 final class StatementStorage
 {
+    use ForbidCloning;
+    use ForbidSerialization;
+
     public int $refCount = 1;
 
     /**
