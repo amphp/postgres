@@ -1,7 +1,7 @@
 #!/usr/bin/env php
-<?php
+<?php declare(strict_types=1);
 
-require \dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
@@ -15,7 +15,7 @@ $channel = "test";
 
 $listener = $pool->listen($channel);
 
-\printf("Listening on channel '%s'\n", $listener->getChannel());
+printf("Listening on channel '%s'\n", $listener->getChannel());
 
 async(function () use ($pool, $channel, $listener): void {
     delay(1);
@@ -32,7 +32,7 @@ async(function () use ($pool, $channel, $listener): void {
 });
 
 foreach ($listener as $notification) {
-    \printf(
+    printf(
         "Received notification from PID %d on channel '%s' with payload: %s\n",
         $notification->pid,
         $notification->channel,

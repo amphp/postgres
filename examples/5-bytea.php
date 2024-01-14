@@ -1,7 +1,7 @@
 #!/usr/bin/env php
-<?php
+<?php declare(strict_types=1);
 
-require \dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres\ByteA;
 use Amp\Postgres\PostgresConfig;
@@ -18,9 +18,9 @@ $transaction->query('CREATE TABLE test (value BYTEA)');
 
 $statement = $transaction->prepare('INSERT INTO test VALUES (?)');
 
-$statement->execute([new ByteA($a = \random_bytes(10))]);
-$statement->execute([new ByteA($b = \random_bytes(10))]);
-$statement->execute([new ByteA($c = \random_bytes(10))]);
+$statement->execute([new ByteA($a = random_bytes(10))]);
+$statement->execute([new ByteA($b = random_bytes(10))]);
+$statement->execute([new ByteA($c = random_bytes(10))]);
 
 $result = $transaction->execute('SELECT * FROM test WHERE value = :value', ['value' => new ByteA($a)]);
 

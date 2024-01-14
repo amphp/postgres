@@ -1,7 +1,7 @@
 #!/usr/bin/env php
-<?php
+<?php declare(strict_types=1);
 
-require \dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Future;
 use Amp\Postgres\PostgresConfig;
@@ -19,11 +19,11 @@ $channel2 = "test2";
 
 $listener1 = $pool->listen($channel1);
 
-\printf("Listening on channel '%s'\n", $listener1->getChannel());
+printf("Listening on channel '%s'\n", $listener1->getChannel());
 
 $listener2 = $pool->listen($channel2);
 
-\printf("Listening on channel '%s'\n", $listener2->getChannel());
+printf("Listening on channel '%s'\n", $listener2->getChannel());
 
 async(function () use ($pool, $listener1, $listener2, $channel1, $channel2): void {
     $pool->notify($channel1, "Data 1.1");
@@ -38,7 +38,7 @@ async(function () use ($pool, $listener1, $listener2, $channel1, $channel2): voi
 
     delay(0.5);
 
-    \printf("Unlistening from channel '%s'\n", $listener2->getChannel());
+    printf("Unlistening from channel '%s'\n", $listener2->getChannel());
     $listener2->unlisten();
 
     delay(0.5);
@@ -47,14 +47,14 @@ async(function () use ($pool, $listener1, $listener2, $channel1, $channel2): voi
 
     delay(0.5);
 
-    \printf("Unlistening from channel '%s'\n", $listener1->getChannel());
+    printf("Unlistening from channel '%s'\n", $listener1->getChannel());
     $listener1->unlisten();
 });
 
 $consumer = function (PostgresListener $listener): void {
     /** @var PostgresNotification $notification */
     foreach ($listener as $notification) {
-        \printf(
+        printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",
             $notification->pid,
             $notification->channel,

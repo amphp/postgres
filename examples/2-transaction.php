@@ -1,7 +1,7 @@
 #!/usr/bin/env php
-<?php
+<?php declare(strict_types=1);
 
-require \dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
@@ -24,9 +24,9 @@ $statement->execute(['github', 'com']);
 $result = $transaction->execute('SELECT * FROM test WHERE tld = :tld', ['tld' => 'com']);
 
 $format = "%-20s | %-10s\n";
-\printf($format, 'TLD', 'Domain');
+printf($format, 'TLD', 'Domain');
 foreach ($result as $row) {
-    \printf($format, $row['domain'], $row['tld']);
+    printf($format, $row['domain'], $row['tld']);
 }
 
 $transaction->rollback();
