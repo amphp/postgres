@@ -5,9 +5,9 @@ require \dirname(__DIR__) . '/vendor/autoload.php';
 
 use Amp\Future;
 use Amp\Postgres\PostgresConfig;
+use Amp\Postgres\PostgresConnectionPool;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
-use Amp\Postgres\PostgresConnectionPool;
 use function Amp\async;
 use function Amp\delay;
 
@@ -56,9 +56,9 @@ $consumer = function (PostgresListener $listener): void {
     foreach ($listener as $notification) {
         \printf(
             "Received notification from PID %d on channel '%s' with payload: %s\n",
-            $notification->getPid(),
-            $notification->getChannel(),
-            $notification->getPayload()
+            $notification->pid,
+            $notification->channel,
+            $notification->payload,
         );
     }
 };

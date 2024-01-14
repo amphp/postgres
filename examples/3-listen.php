@@ -34,9 +34,9 @@ async(function () use ($pool, $channel, $listener): void {
 foreach ($listener as $notification) {
     \printf(
         "Received notification from PID %d on channel '%s' with payload: %s\n",
-        $notification->getPid(),
-        $notification->getChannel(),
-        $notification->getPayload()
+        $notification->pid,
+        $notification->channel,
+        $notification->payload,
     );
 }
 

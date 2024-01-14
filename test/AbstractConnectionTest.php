@@ -57,7 +57,7 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
 
         /** @var PostgresNotification $notification */
         foreach ($listener as $notification) {
-            $this->assertSame($notification->getPayload(), (string) $count++);
+            $this->assertSame($notification->payload, (string) $count++);
         }
 
         $this->assertSame(2, $count);
@@ -81,7 +81,7 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
 
         /** @var PostgresNotification $notification */
         foreach ($listener as $notification) {
-            $this->assertSame($notification->getPayload(), (string) $count++);
+            $this->assertSame($notification->payload, (string) $count++);
         }
 
         $this->assertSame(2, $count);
