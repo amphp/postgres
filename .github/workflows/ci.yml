@@ -38,7 +38,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-version }}
-          extensions: raphf, pq
+          extensions: raphf, pq-m6w6/ext-pq@master
 
       - name: Get Composer cache directory
         id: composer-cache
