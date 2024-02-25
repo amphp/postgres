@@ -2,7 +2,7 @@
 
 namespace Amp\Postgres;
 
-final class ByteA
+final class PostgresByteA
 {
     public function __construct(
         private readonly string $data,

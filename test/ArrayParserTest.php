@@ -3,7 +3,7 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\Internal\ArrayParser;
-use Amp\Postgres\ParseException;
+use Amp\Postgres\PostgresParseException;
 use PHPUnit\Framework\TestCase;
 
 class ArrayParserTest extends TestCase
@@ -135,7 +135,7 @@ class ArrayParserTest extends TestCase
 
     public function testMalformedNestedArray(): void
     {
-        $this->expectException(ParseException::class);
+        $this->expectException(PostgresParseException::class);
         $this->expectExceptionMessage('Unexpected end of data');
 
         $string = '{{}';
@@ -144,7 +144,7 @@ class ArrayParserTest extends TestCase
 
     public function testEmptyString(): void
     {
-        $this->expectException(ParseException::class);
+        $this->expectException(PostgresParseException::class);
         $this->expectExceptionMessage('Unexpected end of data');
 
         $string = ' ';
@@ -153,7 +153,7 @@ class ArrayParserTest extends TestCase
 
     public function testNoOpeningBracket(): void
     {
-        $this->expectException(ParseException::class);
+        $this->expectException(PostgresParseException::class);
         $this->expectExceptionMessage('Missing opening bracket');
 
         $string = '"one", "two"}';
@@ -162,7 +162,7 @@ class ArrayParserTest extends TestCase
 
     public function testNoClosingBracket(): void
     {
-        $this->expectException(ParseException::class);
+        $this->expectException(PostgresParseException::class);
         $this->expectExceptionMessage('Unexpected end of data');
 
         $string = '{"one", "two"';
@@ -171,7 +171,7 @@ class ArrayParserTest extends TestCase
 
     public function testExtraClosingBracket(): void
     {
-        $this->expectException(ParseException::class);
+        $this->expectException(PostgresParseException::class);
         $this->expectExceptionMessage('Data left in buffer after parsing');
 
         $string = '{"one", "two"}}';
@@ -180,7 +180,7 @@ class ArrayParserTest extends TestCase
 
     public function testTrailingData(): void
     {
-        $this->expectException(ParseException::class);
+        $this->expectException(PostgresParseException::class);
         $this->expectExceptionMessage('Data left in buffer after parsing');
 
         $string = '{"one", "two"} data}';
@@ -189,7 +189,7 @@ class ArrayParserTest extends TestCase
 
     public function testMissingQuote(): void
     {
-        $this->expectException(ParseException::class);
+        $this->expectException(PostgresParseException::class);
         $this->expectExceptionMessage('Could not find matching quote in quoted value');
 
         $string = '{"one", "two}';
@@ -198,7 +198,7 @@ class ArrayParserTest extends TestCase
 
     public function testInvalidDelimiter(): void
     {
-        $this->expectException(ParseException::class);
+        $this->expectException(PostgresParseException::class);
         $this->expectExceptionMessage('Invalid delimiter');
 
         $string = '{"one"; "two"}';

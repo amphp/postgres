@@ -2,12 +2,12 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\ByteA;
+use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PqConnection;
-use Amp\Sql\Common\ConnectionPool;
+use Amp\Sql\Common\SqlCommonConnectionPool;
 use Amp\Sql\SqlConnector;
 use function Amp\Postgres\Internal\cast;
 
@@ -43,7 +43,7 @@ class PqPoolTest extends AbstractConnectionTest
                 return $this->newConnection(PqConnection::class, $handle, $config);
             });
 
-        $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
+        $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), SqlCommonConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
         $handle = \reset($this->handles);
 
@@ -68,7 +68,7 @@ class PqPoolTest extends AbstractConnectionTest
 
     private function cast(\pq\Connection $connection, mixed $param): mixed
     {
-        return $param instanceof ByteA ? $connection->escapeBytea($param->getData()) : cast($param);
+        return $param instanceof PostgresByteA ? $connection->escapeBytea($param->getData()) : cast($param);
     }
 
     public function tearDown(): void

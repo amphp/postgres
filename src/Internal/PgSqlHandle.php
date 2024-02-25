@@ -8,12 +8,12 @@ use Amp\Pipeline\Queue;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
+use Amp\Postgres\PostgresQueryError;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
-use Amp\Postgres\QueryExecutionError;
-use Amp\Sql\ConnectionException;
-use Amp\Sql\QueryError;
+use Amp\Sql\SqlConnectionException;
 use Amp\Sql\SqlException;
+use Amp\Sql\SqlQueryError;
 use Revolt\EventLoop;
 use function Amp\async;
 
@@ -88,11 +88,11 @@ final class PgSqlHandle extends AbstractHandle
 
             try {
                 if (\pg_connection_status($handle) !== \PGSQL_CONNECTION_OK) {
-                    throw new ConnectionException("The connection closed during the operation");
+                    throw new SqlConnectionException("The connection closed during the operation");
                 }
 
                 if (!\pg_consume_input($handle)) {
-                    throw new ConnectionException(\pg_last_error($handle));
+                    throw new SqlConnectionException(\pg_last_error($handle));
                 }
 
                 while ($result = \pg_get_notify($handle, \PGSQL_ASSOC)) {
@@ -120,7 +120,7 @@ final class PgSqlHandle extends AbstractHandle
                 if (empty($listeners)) {
                     EventLoop::unreference($watcher);
                 }
-            } catch (ConnectionException $exception) {
+            } catch (SqlConnectionException $exception) {
                 $handle = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
@@ -152,9 +152,9 @@ final class PgSqlHandle extends AbstractHandle
                 EventLoop::disable($watcher);
 
                 if ($flush === false) {
-                    throw new ConnectionException(\pg_last_error($handle));
+                    throw new SqlConnectionException(\pg_last_error($handle));
                 }
-            } catch (ConnectionException $exception) {
+            } catch (SqlConnectionException $exception) {
                 $handle = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
@@ -193,7 +193,7 @@ final class PgSqlHandle extends AbstractHandle
     private static function getErrorHandler(): \Closure
     {
         return self::$errorHandler ??= static function (int $code, string $message): never {
-            throw new ConnectionException($message, $code);
+            throw new SqlConnectionException($message, $code);
         };
     }
 
@@ -227,7 +227,7 @@ final class PgSqlHandle extends AbstractHandle
         }
 
         if ($this->handle === null) {
-            throw new ConnectionException("The connection to the database has been closed");
+            throw new SqlConnectionException("The connection to the database has been closed");
         }
 
         while ($result = \pg_get_result($this->handle)) {
@@ -255,7 +255,7 @@ final class PgSqlHandle extends AbstractHandle
      * @param string $sql Query SQL.
      *
      * @throws SqlException
-     * @throws QueryError
+     * @throws SqlQueryError
      */
     private function createResult(\PgSql\Result $result, string $sql): PostgresResult
     {
@@ -265,7 +265,7 @@ final class PgSqlHandle extends AbstractHandle
 
         switch (\pg_result_status($result)) {
             case \PGSQL_EMPTY_QUERY:
-                throw new QueryError("Empty query string");
+                throw new SqlQueryError("Empty query string");
 
             case \PGSQL_COMMAND_OK:
                 return new PostgresCommandResult(
@@ -290,7 +290,7 @@ final class PgSqlHandle extends AbstractHandle
                     }
                 } finally {
                     \restore_error_handler();
-                    throw new QueryExecutionError($message, $diagnostics, $sql);
+                    throw new PostgresQueryError($message, $diagnostics, $sql);
                 }
 
             case \PGSQL_BAD_RESPONSE:
@@ -428,7 +428,7 @@ final class PgSqlHandle extends AbstractHandle
                     foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
                         $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                     }
-                    throw new QueryExecutionError(\pg_result_error($result), $diagnostics, $sql);
+                    throw new PostgresQueryError(\pg_result_error($result), $diagnostics, $sql);
 
                 case \PGSQL_BAD_RESPONSE:
                     throw new SqlException(\pg_result_error($result));
@@ -465,7 +465,7 @@ final class PgSqlHandle extends AbstractHandle
     public function listen(string $channel): PostgresListener
     {
         if (isset($this->listeners[$channel])) {
-            throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
+            throw new SqlQueryError(\sprintf("Already listening on channel '%s'", $channel));
         }
 
         $this->listeners[$channel] = $source = new Queue();

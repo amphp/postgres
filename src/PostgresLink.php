@@ -2,12 +2,12 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\Link;
+use Amp\Sql\SqlLink;
 
 /**
- * @extends Link<PostgresResult, PostgresStatement, PostgresTransaction>
+ * @extends SqlLink<PostgresResult, PostgresStatement, PostgresTransaction>
  */
-interface PostgresLink extends PostgresExecutor, Link
+interface PostgresLink extends PostgresExecutor, SqlLink
 {
     /**
      * @return PostgresTransaction Transaction object specific to this library.

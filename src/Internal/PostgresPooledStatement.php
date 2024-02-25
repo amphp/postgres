@@ -4,16 +4,16 @@ namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
-use Amp\Sql\Common\PooledStatement;
-use Amp\Sql\Result;
+use Amp\Sql\Common\SqlPooledStatement;
+use Amp\Sql\SqlResult;
 
 /**
  * @internal
- * @extends PooledStatement<PostgresResult, PostgresStatement>
+ * @extends SqlPooledStatement<PostgresResult, PostgresStatement>
  */
-final class PostgresPooledStatement extends PooledStatement implements PostgresStatement
+final class PostgresPooledStatement extends SqlPooledStatement implements PostgresStatement
 {
-    protected function createResult(Result $result, \Closure $release): PostgresResult
+    protected function createResult(SqlResult $result, \Closure $release): PostgresResult
     {
         \assert($result instanceof PostgresResult);
         return new PostgresPooledResult($result, $release);

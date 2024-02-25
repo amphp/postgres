@@ -6,8 +6,8 @@ use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Sql\Common\StatementPool as SqlStatementPool;
-use Amp\Sql\Result as SqlResult;
+use Amp\Sql\Common\SqlStatementPool as SqlStatementPool;
+use Amp\Sql\SqlResult as SqlResult;
 
 /**
  * @internal

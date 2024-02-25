@@ -6,9 +6,9 @@ use Amp\DeferredFuture;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Pipeline\Queue;
-use Amp\Postgres\ByteA;
+use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
-use Amp\Sql\ConnectionException;
+use Amp\Sql\SqlConnectionException;
 use Revolt\EventLoop;
 
 /**
@@ -75,14 +75,14 @@ abstract class AbstractHandle implements PostgresHandle
         ?\Throwable $exception = null,
     ): void {
         if (!empty($listeners)) {
-            $exception ??= new ConnectionException("The connection was closed");
+            $exception ??= new SqlConnectionException("The connection was closed");
             foreach ($listeners as $listener) {
                 $listener->error($exception);
             }
             $listeners = [];
         }
 
-        $pendingOperation?->error($exception ?? new ConnectionException("The connection was closed"));
+        $pendingOperation?->error($exception ?? new SqlConnectionException("The connection was closed"));
         $pendingOperation = null;
 
         if (!$onClose->isComplete()) {
@@ -93,7 +93,7 @@ abstract class AbstractHandle implements PostgresHandle
     protected function escapeParams(array $params): array
     {
         return \array_map(fn (mixed $param) => match (true) {
-            $param instanceof ByteA => $this->escapeByteA($param->getData()),
+            $param instanceof PostgresByteA => $this->escapeByteA($param->getData()),
             \is_array($param) => $this->escapeParams($param),
             default => $param,
         }, $params);

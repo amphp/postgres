@@ -3,17 +3,17 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\PostgresResult;
-use Amp\Sql\Common\PooledResult;
-use Amp\Sql\Result;
+use Amp\Sql\Common\SqlPooledResult;
+use Amp\Sql\SqlResult;
 
 /**
  * @internal
  * @psalm-import-type TFieldType from PostgresResult
- * @extends PooledResult<TFieldType, PostgresResult>
+ * @extends SqlPooledResult<TFieldType, PostgresResult>
  */
-final class PostgresPooledResult extends PooledResult implements PostgresResult
+final class PostgresPooledResult extends SqlPooledResult implements PostgresResult
 {
-    protected static function newInstanceFrom(Result $result, \Closure $release): self
+    protected static function newInstanceFrom(SqlResult $result, \Closure $release): self
     {
         \assert($result instanceof PostgresResult);
         return new self($result, $release);

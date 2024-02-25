@@ -2,12 +2,12 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\ByteA;
 use Amp\Postgres\PgSqlConnection;
+use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
 use Amp\Postgres\PostgresLink;
-use Amp\Sql\Common\ConnectionPool;
+use Amp\Sql\Common\SqlCommonConnectionPool;
 use Amp\Sql\SqlConnector;
 use Revolt\EventLoop;
 use function Amp\Postgres\Internal\cast;
@@ -52,7 +52,7 @@ class PgSqlPoolTest extends AbstractConnectionTest
                 );
             });
 
-        $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), ConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
+        $pool = new PostgresConnectionPool(new PostgresConfig('localhost'), \count($this->handles), SqlCommonConnectionPool::DEFAULT_IDLE_TIMEOUT, true, $connector);
 
         $handle = \reset($this->handles);
 
@@ -77,7 +77,7 @@ class PgSqlPoolTest extends AbstractConnectionTest
 
     private function cast(\PgSql\Connection $handle, mixed $param): mixed
     {
-        return $param instanceof ByteA ? \pg_escape_bytea($handle, $param->getData()) : cast($param);
+        return $param instanceof PostgresByteA ? \pg_escape_bytea($handle, $param->getData()) : cast($param);
     }
 
     public function tearDown(): void

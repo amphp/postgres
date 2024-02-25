@@ -6,8 +6,8 @@ use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Sql\Result;
-use Amp\Sql\Statement;
+use Amp\Sql\SqlResult;
+use Amp\Sql\SqlStatement;
 
 /** @internal */
 trait PostgresTransactionDelegate
@@ -18,7 +18,7 @@ trait PostgresTransactionDelegate
      * @param \Closure():void $release
      */
     protected function createStatement(
-        Statement $statement,
+        SqlStatement $statement,
         \Closure $release,
         ?\Closure $awaitBusyResource = null,
     ): PostgresStatement {
@@ -29,7 +29,7 @@ trait PostgresTransactionDelegate
     /**
      * @param \Closure():void $release
      */
-    protected function createResult(Result $result, \Closure $release): PostgresResult
+    protected function createResult(SqlResult $result, \Closure $release): PostgresResult
     {
         \assert($result instanceof PostgresResult);
         return new PostgresPooledResult($result, $release);

@@ -3,17 +3,17 @@
 namespace Amp\Postgres;
 
 use Amp\Future;
-use Amp\Sql\Common\ConnectionPool;
-use Amp\Sql\Result;
+use Amp\Sql\Common\SqlCommonConnectionPool;
 use Amp\Sql\SqlConnector;
-use Amp\Sql\Statement;
-use Amp\Sql\Transaction;
+use Amp\Sql\SqlResult;
+use Amp\Sql\SqlStatement;
+use Amp\Sql\SqlTransaction;
 use function Amp\async;
 
 /**
- * @extends ConnectionPool<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction, PostgresConnection>
+ * @extends SqlCommonConnectionPool<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction, PostgresConnection>
  */
-final class PostgresConnectionPool extends ConnectionPool implements PostgresConnection
+final class PostgresConnectionPool extends SqlCommonConnectionPool implements PostgresConnection
 {
     /** @var Future<PostgresConnection>|null Connection used for notification listening. */
     private Future|null $listeningConnection = null;
@@ -40,13 +40,13 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresCon
     /**
      * @param \Closure():void $release
      */
-    protected function createStatement(Statement $statement, \Closure $release): PostgresStatement
+    protected function createStatement(SqlStatement $statement, \Closure $release): PostgresStatement
     {
         \assert($statement instanceof PostgresStatement);
         return new Internal\PostgresPooledStatement($statement, $release);
     }
 
-    protected function createResult(Result $result, \Closure $release): PostgresResult
+    protected function createResult(SqlResult $result, \Closure $release): PostgresResult
     {
         \assert($result instanceof PostgresResult);
         return new Internal\PostgresPooledResult($result, $release);
@@ -57,7 +57,7 @@ final class PostgresConnectionPool extends ConnectionPool implements PostgresCon
         return new Internal\PostgresStatementPool($this, $sql, $prepare);
     }
 
-    protected function createTransaction(Transaction $transaction, \Closure $release): PostgresTransaction
+    protected function createTransaction(SqlTransaction $transaction, \Closure $release): PostgresTransaction
     {
         \assert($transaction instanceof PostgresTransaction);
         return new Internal\PostgresPooledTransaction($transaction, $release);

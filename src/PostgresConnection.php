@@ -2,15 +2,15 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\Connection;
-use Amp\Sql\ConnectionException;
-use Amp\Sql\QueryError;
+use Amp\Sql\SqlConnection;
+use Amp\Sql\SqlConnectionException;
 use Amp\Sql\SqlException;
+use Amp\Sql\SqlQueryError;
 
 /**
- * @extends Connection<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction>
+ * @extends SqlConnection<PostgresConfig, PostgresResult, PostgresStatement, PostgresTransaction>
  */
-interface PostgresConnection extends PostgresLink, Connection
+interface PostgresConnection extends PostgresLink, SqlConnection
 {
     /**
      * @return PostgresConfig Config object specific to this library.
@@ -21,8 +21,8 @@ interface PostgresConnection extends PostgresLink, Connection
      * @param non-empty-string $channel Channel name.
      *
      * @throws SqlException If the operation fails due to unexpected condition.
-     * @throws ConnectionException If the connection to the database is lost.
-     * @throws QueryError If the operation fails due to an error in the query (such as a syntax error).
+     * @throws SqlConnectionException If the connection to the database is lost.
+     * @throws SqlQueryError If the operation fails due to an error in the query (such as a syntax error).
      */
     public function listen(string $channel): PostgresListener;
 }

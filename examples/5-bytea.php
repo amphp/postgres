@@ -3,7 +3,7 @@
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use Amp\Postgres\ByteA;
+use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
 
@@ -18,11 +18,11 @@ $transaction->query('CREATE TABLE test (value BYTEA)');
 
 $statement = $transaction->prepare('INSERT INTO test VALUES (?)');
 
-$statement->execute([new ByteA($a = random_bytes(10))]);
-$statement->execute([new ByteA($b = random_bytes(10))]);
-$statement->execute([new ByteA($c = random_bytes(10))]);
+$statement->execute([new PostgresByteA($a = random_bytes(10))]);
+$statement->execute([new PostgresByteA($b = random_bytes(10))]);
+$statement->execute([new PostgresByteA($c = random_bytes(10))]);
 
-$result = $transaction->execute('SELECT * FROM test WHERE value = :value', ['value' => new ByteA($a)]);
+$result = $transaction->execute('SELECT * FROM test WHERE value = :value', ['value' => new PostgresByteA($a)]);
 
 foreach ($result as $row) {
     assert($row['value'] === $a);

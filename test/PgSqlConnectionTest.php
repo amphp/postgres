@@ -2,8 +2,8 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\ByteA;
 use Amp\Postgres\PgSqlConnection;
+use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresLink;
 use Revolt\EventLoop;
@@ -51,7 +51,7 @@ class PgSqlConnectionTest extends AbstractConnectionTest
 
     private function cast(mixed $param): mixed
     {
-        return $param instanceof ByteA ? \pg_escape_bytea($this->handle, $param->getData()) : cast($param);
+        return $param instanceof PostgresByteA ? \pg_escape_bytea($this->handle, $param->getData()) : cast($param);
     }
 
     public function tearDown(): void

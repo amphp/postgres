@@ -13,9 +13,9 @@ use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Sql\ConnectionException;
-use Amp\Sql\TransactionIsolation;
-use Amp\Sql\TransactionIsolationLevel;
+use Amp\Sql\SqlConnectionException;
+use Amp\Sql\SqlTransactionIsolation;
+use Amp\Sql\SqlTransactionIsolationLevel;
 
 /** @internal */
 abstract class PostgresHandleConnection implements PostgresConnection
@@ -26,10 +26,10 @@ abstract class PostgresHandleConnection implements PostgresConnection
     /** @var DeferredFuture|null Used to only allow one transaction at a time. */
     private ?DeferredFuture $busy = null;
 
-    private TransactionIsolation $transactionIsolation = TransactionIsolationLevel::Committed;
+    private SqlTransactionIsolation $transactionIsolation = SqlTransactionIsolationLevel::Committed;
 
     /**
-     * @throws ConnectionException
+     * @throws SqlConnectionException
      */
     abstract public static function connect(
         PostgresConfig $config,
@@ -140,12 +140,12 @@ abstract class PostgresHandleConnection implements PostgresConnection
         );
     }
 
-    final public function getTransactionIsolation(): TransactionIsolation
+    final public function getTransactionIsolation(): SqlTransactionIsolation
     {
         return $this->transactionIsolation;
     }
 
-    final public function setTransactionIsolation(TransactionIsolation $isolation): void
+    final public function setTransactionIsolation(SqlTransactionIsolation $isolation): void
     {
         $this->transactionIsolation = $isolation;
     }

@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
-use Amp\Sql\ConnectionException;
+use Amp\Sql\SqlConnectionException;
 use pq;
 use Revolt\EventLoop;
 
@@ -17,7 +17,7 @@ final class PqConnection extends Internal\PostgresHandleConnection implements Po
         try {
             $connection = new pq\Connection($config->getConnectionString(), pq\Connection::ASYNC);
         } catch (pq\Exception $exception) {
-            throw new ConnectionException("Could not connect to PostgreSQL server", 0, $exception);
+            throw new SqlConnectionException("Could not connect to PostgreSQL server", 0, $exception);
         }
 
         $connection->nonblocking = true;
@@ -33,7 +33,7 @@ final class PqConnection extends Internal\PostgresHandleConnection implements Po
                     return; // Connection still reading or writing, so return and leave callback enabled.
 
                 case pq\Connection::POLLING_FAILED:
-                    $deferred->error(new ConnectionException($connection->errorMessage));
+                    $deferred->error(new SqlConnectionException($connection->errorMessage));
                     break;
 
                 case pq\Connection::POLLING_OK:
@@ -41,7 +41,7 @@ final class PqConnection extends Internal\PostgresHandleConnection implements Po
                     break;
 
                 default:
-                    $deferred->error(new ConnectionException('Unexpected connection status value: ' . $result));
+                    $deferred->error(new SqlConnectionException('Unexpected connection status value: ' . $result));
                     break;
             }
 

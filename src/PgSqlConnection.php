@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Cancellation;
 use Amp\DeferredFuture;
-use Amp\Sql\ConnectionException;
+use Amp\Sql\SqlConnectionException;
 use Revolt\EventLoop;
 
 final class PgSqlConnection extends Internal\PostgresHandleConnection implements PostgresConnection
@@ -21,15 +21,15 @@ final class PgSqlConnection extends Internal\PostgresHandleConnection implements
         } // @codeCoverageIgnoreEnd
 
         if (!$connection = \pg_connect($config->getConnectionString(), \PGSQL_CONNECT_ASYNC | \PGSQL_CONNECT_FORCE_NEW)) {
-            throw new ConnectionException("Failed to create connection resource");
+            throw new SqlConnectionException("Failed to create connection resource");
         }
 
         if (\pg_connection_status($connection) === \PGSQL_CONNECTION_BAD) {
-            throw new ConnectionException(\pg_last_error($connection));
+            throw new SqlConnectionException(\pg_last_error($connection));
         }
 
         if (!$socket = \pg_socket($connection)) {
-            throw new ConnectionException("Failed to access connection socket");
+            throw new SqlConnectionException("Failed to access connection socket");
         }
 
         $hash = \sha1($config->getHost() . $config->getPort() . $config->getUser());
@@ -54,7 +54,7 @@ final class PgSqlConnection extends Internal\PostgresHandleConnection implements
                     return; // Connection still reading or writing, so return and leave callback enabled.
 
                 case \PGSQL_POLLING_FAILED:
-                    $deferred->error(new ConnectionException(\pg_last_error($connection)));
+                    $deferred->error(new SqlConnectionException(\pg_last_error($connection)));
                     break;
 
                 case \PGSQL_POLLING_OK:
@@ -62,7 +62,7 @@ final class PgSqlConnection extends Internal\PostgresHandleConnection implements
                     break;
 
                 default:
-                    $deferred->error(new ConnectionException('Unexpected connection status value: ' . $result));
+                    $deferred->error(new SqlConnectionException('Unexpected connection status value: ' . $result));
                     break;
             }
 

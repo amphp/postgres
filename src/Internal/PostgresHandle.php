@@ -7,13 +7,13 @@ use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
-use Amp\Sql\Common\NestableTransactionExecutor;
+use Amp\Sql\Common\SqlNestableTransactionExecutor;
 
 /**
  * @internal
- * @extends NestableTransactionExecutor<PostgresResult, PostgresStatement>
+ * @extends SqlNestableTransactionExecutor<PostgresResult, PostgresStatement>
  */
-interface PostgresHandle extends PostgresExecutor, NestableTransactionExecutor
+interface PostgresHandle extends PostgresExecutor, SqlNestableTransactionExecutor
 {
     public const STATEMENT_NAME_PREFIX = "amp_";
 

@@ -2,9 +2,9 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\QueryError;
+use Amp\Sql\SqlQueryError;
 
-class QueryExecutionError extends QueryError
+class PostgresQueryError extends SqlQueryError
 {
     /**
      * @param array<non-empty-string, scalar|null> $diagnostics

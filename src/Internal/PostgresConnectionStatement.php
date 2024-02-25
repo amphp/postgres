@@ -5,8 +5,8 @@ namespace Amp\Postgres\Internal;
 use Amp\DeferredFuture;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
+use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
-use Amp\Sql\Result;
 use Amp\Sql\SqlException;
 
 /** @internal  */
@@ -67,7 +67,7 @@ final class PostgresConnectionStatement implements PostgresStatement
         return $this->lastUsedAt;
     }
 
-    public function execute(array $params = []): Result
+    public function execute(array $params = []): PostgresResult
     {
         if ($this->isClosed()) {
             throw new SqlException('The statement has been closed or the connection went away');

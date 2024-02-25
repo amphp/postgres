@@ -8,12 +8,12 @@ use Amp\Pipeline\Queue;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
+use Amp\Postgres\PostgresQueryError;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
-use Amp\Postgres\QueryExecutionError;
-use Amp\Sql\ConnectionException;
-use Amp\Sql\QueryError;
+use Amp\Sql\SqlConnectionException;
 use Amp\Sql\SqlException;
+use Amp\Sql\SqlQueryError;
 use pq;
 use Revolt\EventLoop;
 use function Amp\async;
@@ -49,13 +49,13 @@ final class PqHandle extends AbstractHandle
 
             try {
                 if ($handle->status !== pq\Connection::OK) {
-                    throw new ConnectionException("The connection closed during the operation");
+                    throw new SqlConnectionException("The connection closed during the operation");
                 }
 
                 if ($handle->poll() === pq\Connection::POLLING_FAILED) {
-                    throw new ConnectionException($handle->errorMessage);
+                    throw new SqlConnectionException($handle->errorMessage);
                 }
-            } catch (ConnectionException $exception) {
+            } catch (SqlConnectionException $exception) {
                 $handle = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
@@ -91,7 +91,7 @@ final class PqHandle extends AbstractHandle
                     return; // Not finished sending data, continue polling for writability.
                 }
             } catch (pq\Exception $exception) {
-                $exception = new ConnectionException("Flushing the connection failed", 0, $exception);
+                $exception = new SqlConnectionException("Flushing the connection failed", 0, $exception);
                 $handle = null; // Marks connection as dead.
 
                 self::shutdown($listeners, $deferred, $onClose, $exception);
@@ -135,7 +135,7 @@ final class PqHandle extends AbstractHandle
         }
 
         if (!$this->handle) {
-            throw new ConnectionException("The connection to the database has been closed");
+            throw new SqlConnectionException("The connection to the database has been closed");
         }
 
         try {
@@ -180,12 +180,12 @@ final class PqHandle extends AbstractHandle
     private function makeResult(pq\Result $result, ?string $sql): PostgresResult
     {
         if (!$this->handle) {
-            throw new ConnectionException("Connection closed");
+            throw new SqlConnectionException("Connection closed");
         }
 
         switch ($result->status) {
             case pq\Result::EMPTY_QUERY:
-                throw new QueryError("Empty query string");
+                throw new SqlQueryError("Empty query string");
 
             case pq\Result::COMMAND_OK:
                 return new PostgresCommandResult(
@@ -209,7 +209,7 @@ final class PqHandle extends AbstractHandle
                 while ($this->handle->busy && $this->handle->getResult()) {
                     // Clear all outstanding result rows from the connection
                 }
-                throw new QueryExecutionError($result->errorMessage, $result->diag, $sql ?? '');
+                throw new PostgresQueryError($result->errorMessage, $result->diag, $sql ?? '');
 
             case pq\Result::BAD_RESPONSE:
                 $this->close();
@@ -227,7 +227,7 @@ final class PqHandle extends AbstractHandle
     private function fetchNextResult(?string $sql): ?PostgresResult
     {
         if (!$this->handle) {
-            throw new ConnectionException("Connection closed");
+            throw new SqlConnectionException("Connection closed");
         }
 
         if (!$this->handle->busy && ($next = $this->handle->getResult()) instanceof pq\Result) {
@@ -240,7 +240,7 @@ final class PqHandle extends AbstractHandle
     private function fetch(?string $sql): ?pq\Result
     {
         if (!$this->handle) {
-            throw new ConnectionException("Connection closed");
+            throw new SqlConnectionException("Connection closed");
         }
 
         if (!$this->handle->busy) { // Results buffered.
@@ -257,7 +257,7 @@ final class PqHandle extends AbstractHandle
         }
 
         if (!$result) {
-            throw new ConnectionException("Connection closed");
+            throw new SqlConnectionException("Connection closed");
         }
 
         switch ($result->status) {
@@ -430,7 +430,7 @@ final class PqHandle extends AbstractHandle
         }
 
         if (isset($this->listeners[$channel])) {
-            throw new QueryError(\sprintf("Already listening on channel '%s'", $channel));
+            throw new SqlQueryError(\sprintf("Already listening on channel '%s'", $channel));
         }
 
         $this->listeners[$channel] = $source = new Queue();

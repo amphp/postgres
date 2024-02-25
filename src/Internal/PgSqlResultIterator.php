@@ -4,7 +4,7 @@ namespace Amp\Postgres\Internal;
 
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
-use Amp\Postgres\ParseException;
+use Amp\Postgres\PostgresParseException;
 use Amp\Postgres\PostgresResult;
 use Amp\Sql\SqlException;
 
@@ -71,7 +71,7 @@ final class PgSqlResultIterator
      *
      * @return list<mixed>|bool|int|float|string|null
      *
-     * @throws ParseException
+     * @throws PostgresParseException
      */
     private function cast(int $oid, ?string $value): array|bool|int|float|string|null
     {

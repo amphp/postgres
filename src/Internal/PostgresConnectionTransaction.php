@@ -6,30 +6,30 @@ use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Sql\Common\ConnectionTransaction;
-use Amp\Sql\Common\NestableTransactionExecutor;
-use Amp\Sql\Transaction;
-use Amp\Sql\TransactionIsolation;
+use Amp\Sql\Common\SqlConnectionTransaction;
+use Amp\Sql\Common\SqlNestableTransactionExecutor;
+use Amp\Sql\SqlTransaction;
+use Amp\Sql\SqlTransactionIsolation;
 
 /**
  * @internal
- * @extends ConnectionTransaction<PostgresResult, PostgresStatement, PostgresTransaction, PostgresHandle>
+ * @extends SqlConnectionTransaction<PostgresResult, PostgresStatement, PostgresTransaction, PostgresHandle>
  */
-final class PostgresConnectionTransaction extends ConnectionTransaction implements PostgresTransaction
+final class PostgresConnectionTransaction extends SqlConnectionTransaction implements PostgresTransaction
 {
     use PostgresTransactionDelegate;
 
     public function __construct(
         private readonly PostgresHandle $handle,
         \Closure $release,
-        TransactionIsolation $isolation
+        SqlTransactionIsolation $isolation
     ) {
         parent::__construct($handle, $release, $isolation);
     }
 
     protected function createNestedTransaction(
-        Transaction $transaction,
-        NestableTransactionExecutor $executor,
+        SqlTransaction $transaction,
+        SqlNestableTransactionExecutor $executor,
         string $identifier,
         \Closure $release,
     ): PostgresTransaction {

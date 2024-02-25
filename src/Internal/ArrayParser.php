@@ -4,7 +4,7 @@ namespace Amp\Postgres\Internal;
 
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
-use Amp\Postgres\ParseException;
+use Amp\Postgres\PostgresParseException;
 
 /**
  * @internal
@@ -21,7 +21,7 @@ final class ArrayParser
      *
      * @return list<mixed> Parsed column data.
      *
-     * @throws ParseException
+     * @throws PostgresParseException
      */
     public static function parse(string $data, \Closure $cast, string $delimiter = ','): array
     {
@@ -31,7 +31,7 @@ final class ArrayParser
         $data = \iterator_to_array($parser, false);
 
         if ($parser->getReturn() !== '') {
-            throw new ParseException("Data left in buffer after parsing");
+            throw new PostgresParseException("Data left in buffer after parsing");
         }
 
         return $data;
@@ -52,23 +52,23 @@ final class ArrayParser
     /**
      * Recursive generator parser yielding array values.
      *
-     * @throws ParseException
+     * @throws PostgresParseException
      */
     private function parser(): \Generator
     {
         if ($this->data === '') {
-            throw new ParseException("Unexpected end of data");
+            throw new PostgresParseException("Unexpected end of data");
         }
 
         if ($this->data[0] !== '{') {
-            throw new ParseException("Missing opening bracket");
+            throw new PostgresParseException("Missing opening bracket");
         }
 
         $this->data = \ltrim(\substr($this->data, 1));
 
         do {
             if ($this->data === '') {
-                throw new ParseException("Unexpected end of data");
+                throw new PostgresParseException("Unexpected end of data");
             }
 
             if ($this->data[0] === '}') { // Empty array
@@ -96,7 +96,7 @@ final class ArrayParser
                 }
 
                 if (!isset($this->data[$position])) {
-                    throw new ParseException("Could not find matching quote in quoted value");
+                    throw new PostgresParseException("Could not find matching quote in quoted value");
                 }
 
                 $yield = \stripslashes(\substr($this->data, 1, $position - 1));
@@ -129,20 +129,20 @@ final class ArrayParser
      *
      * @return string First non-whitespace character after given position.
      *
-     * @throws ParseException
+     * @throws PostgresParseException
      */
     private function trim(int $position): string
     {
         $this->data = \ltrim(\substr($this->data, $position));
 
         if ($this->data === '') {
-            throw new ParseException("Unexpected end of data");
+            throw new PostgresParseException("Unexpected end of data");
         }
 
         $end = $this->data[0];
 
         if ($end !== $this->delimiter && $end !== '}') {
-            throw new ParseException("Invalid delimiter");
+            throw new PostgresParseException("Invalid delimiter");
         }
 
         $this->data = \ltrim(\substr($this->data, 1));

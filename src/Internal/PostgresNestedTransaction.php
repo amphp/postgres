@@ -6,15 +6,15 @@ use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Sql\Common\NestableTransactionExecutor;
-use Amp\Sql\Common\NestedTransaction;
-use Amp\Sql\Transaction;
+use Amp\Sql\Common\SqlNestableTransactionExecutor;
+use Amp\Sql\Common\SqlNestedTransaction;
+use Amp\Sql\SqlTransaction;
 
 /**
  * @internal
- * @extends NestedTransaction<PostgresResult, PostgresStatement, PostgresTransaction, PostgresHandle>
+ * @extends SqlNestedTransaction<PostgresResult, PostgresStatement, PostgresTransaction, PostgresHandle>
  */
-final class PostgresNestedTransaction extends NestedTransaction implements PostgresTransaction
+final class PostgresNestedTransaction extends SqlNestedTransaction implements PostgresTransaction
 {
     use PostgresTransactionDelegate;
 
@@ -37,8 +37,8 @@ final class PostgresNestedTransaction extends NestedTransaction implements Postg
     }
 
     protected function createNestedTransaction(
-        Transaction $transaction,
-        NestableTransactionExecutor $executor,
+        SqlTransaction $transaction,
+        SqlNestableTransactionExecutor $executor,
         string $identifier,
         \Closure $release,
     ): PostgresTransaction {

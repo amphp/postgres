@@ -5,10 +5,10 @@ namespace Amp\Postgres\Test;
 use Amp\Future;
 use Amp\Postgres\PostgresListener;
 use Amp\Postgres\PostgresNotification;
-use Amp\Postgres\QueryExecutionError;
-use Amp\Sql\ConnectionException;
-use Amp\Sql\QueryError;
+use Amp\Postgres\PostgresQueryError;
+use Amp\Sql\SqlConnectionException;
 use Amp\Sql\SqlException;
+use Amp\Sql\SqlQueryError;
 use Revolt\EventLoop;
 use function Amp\async;
 use function Amp\delay;
@@ -31,7 +31,7 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
 
         try {
             $query->await();
-            self::fail(\sprintf('Expected %s to be thrown', ConnectionException::class));
+            self::fail(\sprintf('Expected %s to be thrown', SqlConnectionException::class));
         } catch (SqlException) {
             // Expected
         }
@@ -92,7 +92,7 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
      */
     public function testListenOnSameChannel()
     {
-        $this->expectException(QueryError::class);
+        $this->expectException(SqlQueryError::class);
         $this->expectExceptionMessage('Already listening on channel');
 
         $channel = "test";
@@ -103,7 +103,7 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
     {
         try {
             $result = $this->executor->query("INSERT INTO test VALUES ('github', 'com', '{1, 2, 3}', true, 4.2)");
-        } catch (QueryExecutionError $exception) {
+        } catch (PostgresQueryError $exception) {
             // Expected exception due to duplicate key.
         }
 

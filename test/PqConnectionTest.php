@@ -2,9 +2,9 @@
 
 namespace Amp\Postgres\Test;
 
-use Amp\Postgres\ByteA;
 use Amp\Postgres\Internal\PqBufferedResultSet;
 use Amp\Postgres\Internal\PqUnbufferedResultSet;
+use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PqConnection;
@@ -45,7 +45,7 @@ class PqConnectionTest extends AbstractConnectionTest
 
     private function cast(mixed $param): mixed
     {
-        return $param instanceof ByteA ? $this->handle->escapeBytea($param->getData()) : cast($param);
+        return $param instanceof PostgresByteA ? $this->handle->escapeBytea($param->getData()) : cast($param);
     }
 
     public function tearDown(): void

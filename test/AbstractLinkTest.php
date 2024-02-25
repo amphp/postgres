@@ -4,16 +4,16 @@ namespace Amp\Postgres\Test;
 
 use Amp\Future;
 use Amp\PHPUnit\AsyncTestCase;
-use Amp\Postgres\ByteA;
 use Amp\Postgres\Internal\PostgresHandleConnection;
+use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresLink;
+use Amp\Postgres\PostgresQueryError;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Postgres\QueryExecutionError;
-use Amp\Sql\QueryError;
-use Amp\Sql\Result;
-use Amp\Sql\Statement;
-use Amp\Sql\TransactionError;
+use Amp\Sql\SqlQueryError;
+use Amp\Sql\SqlResult;
+use Amp\Sql\SqlStatement;
+use Amp\Sql\SqlTransactionError;
 use function Amp\async;
 
 abstract class AbstractLinkTest extends AsyncTestCase
@@ -38,9 +38,9 @@ abstract class AbstractLinkTest extends AsyncTestCase
     protected function getParams(): array
     {
         return $this->data ??= [
-            ['amphp', 'org', [1], true, 3.14159, null, new ByteA(\random_bytes(10)), \json_encode('string')],
-            ['github', 'com', [1, 2, 3, 4, 5], false, 2.71828, null, new ByteA(\str_repeat("\0", 10)), \json_encode([1, 2, 3])],
-            ['google', 'com', [1, 2, 3, 4], true, 1.61803, null, new ByteA(\random_bytes(42)), \json_encode(null)],
+            ['amphp', 'org', [1], true, 3.14159, null, new PostgresByteA(\random_bytes(10)), \json_encode('string')],
+            ['github', 'com', [1, 2, 3, 4, 5], false, 2.71828, null, new PostgresByteA(\str_repeat("\0", 10)), \json_encode([1, 2, 3])],
+            ['google', 'com', [1, 2, 3, 4], true, 1.61803, null, new PostgresByteA(\random_bytes(42)), \json_encode(null)],
             ['php', 'net', [1, 2], false, 0.0, null, null, \json_encode((object) ['value' => 1])],
         ];
     }
@@ -51,12 +51,12 @@ abstract class AbstractLinkTest extends AsyncTestCase
     protected function getData(): array
     {
         return \array_map(fn (array $params) => \array_map(
-            fn (mixed $param) => $param instanceof ByteA ? $param->getData() : $param,
+            fn (mixed $param) => $param instanceof PostgresByteA ? $param->getData() : $param,
             $params,
         ), $this->getParams());
     }
 
-    protected function verifyResult(Result $result, array $data): void
+    protected function verifyResult(SqlResult $result, array $data): void
     {
         $this->assertSame(self::FIELD_COUNT, $result->getColumnCount());
 
@@ -141,7 +141,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $result = $result->getNextResult();
 
-        $this->assertInstanceOf(Result::class, $result);
+        $this->assertInstanceOf(SqlResult::class, $result);
 
         $this->verifyResult($result, $data);
 
@@ -156,7 +156,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $result = $result->getNextResult();
 
-        $this->assertInstanceOf(Result::class, $result);
+        $this->assertInstanceOf(SqlResult::class, $result);
 
         $data = $this->getData();
         $data[] = ['canon', 'jp', [1], true, 4.2, null, null, \json_encode(3.1415926)]; // Add inserted row to expected data.
@@ -185,13 +185,13 @@ abstract class AbstractLinkTest extends AsyncTestCase
     {
         $result = $this->executor->query("SELECT * FROM test");
 
-        $this->assertInstanceOf(Result::class, $result);
+        $this->assertInstanceOf(SqlResult::class, $result);
 
         unset($result); // Force destruction of result object.
 
         $result = $this->executor->query("SELECT * FROM test");
 
-        $this->assertInstanceOf(Result::class, $result);
+        $this->assertInstanceOf(SqlResult::class, $result);
 
         $data = $this->getData();
 
@@ -207,17 +207,17 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
     public function testQueryWithEmptyQuery(): void
     {
-        $this->expectException(QueryError::class);
+        $this->expectException(SqlQueryError::class);
         $this->executor->query('');
     }
 
     public function testQueryWithSyntaxError()
     {
-        /** @var Result $result */
+        /** @var SqlResult $result */
         try {
             $result = $this->executor->query("SELECT & FROM test");
-            $this->fail(\sprintf("An instance of %s was expected to be thrown", QueryExecutionError::class));
-        } catch (QueryExecutionError $exception) {
+            $this->fail(\sprintf("An instance of %s was expected to be thrown", PostgresQueryError::class));
+        } catch (PostgresQueryError $exception) {
             $diagnostics = $exception->getDiagnostics();
             $this->assertArrayHasKey("sqlstate", $diagnostics);
         }
@@ -323,7 +323,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
      */
     public function testPrepareInvalidQuery()
     {
-        $this->expectException(QueryExecutionError::class);
+        $this->expectException(PostgresQueryError::class);
         $this->expectExceptionMessage('column "invalid" does not exist');
 
         $query = "SELECT * FROM test WHERE invalid=\$1";
@@ -344,8 +344,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         $statement2 = $this->executor->prepare($sql);
 
-        $this->assertInstanceOf(Statement::class, $statement1);
-        $this->assertInstanceOf(Statement::class, $statement2);
+        $this->assertInstanceOf(SqlStatement::class, $statement1);
+        $this->assertInstanceOf(SqlStatement::class, $statement2);
 
         unset($statement1);
 
@@ -389,8 +389,8 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
         [$statement1, $statement2] = Future\await([$statement1, $statement2]);
 
-        $this->assertInstanceOf(Statement::class, $statement1);
-        $this->assertInstanceOf(Statement::class, $statement2);
+        $this->assertInstanceOf(SqlStatement::class, $statement1);
+        $this->assertInstanceOf(SqlStatement::class, $statement2);
 
         $this->assertNotSame($statement1, $statement2);
 
@@ -402,7 +402,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $results[] = \iterator_to_array($statement2->execute(['domain' => $data[0]]));
 
         foreach ($results as $result) {
-            /** @var Result $result */
+            /** @var SqlResult $result */
             foreach ($result as $row) {
                 $this->assertSame($data[0], $row['domain']);
                 $this->assertSame($data[1], $row['tld']);
@@ -492,7 +492,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
      */
     public function testSimultaneousQueryWithOneFailing()
     {
-        $callback = fn (string $query) => async(function () use ($query): Result {
+        $callback = fn (string $query) => async(function () use ($query): SqlResult {
             $result = $this->executor->query($query);
 
             $data = $this->getData();
@@ -515,12 +515,12 @@ abstract class AbstractLinkTest extends AsyncTestCase
 
             $result = $successful->await();
             $failing->await();
-        } catch (QueryError $exception) {
-            $this->assertInstanceOf(Result::class, $result);
+        } catch (SqlQueryError $exception) {
+            $this->assertInstanceOf(SqlResult::class, $result);
             return;
         }
 
-        $this->fail(\sprintf("Test did not throw an instance of %s", QueryError::class));
+        $this->fail(\sprintf("Test did not throw an instance of %s", SqlQueryError::class));
     }
 
     public function testSimultaneousQueryAndPrepare()
@@ -592,7 +592,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         try {
             $result = $transaction->execute("SELECT * FROM test");
             $this->fail('Query should fail after transaction commit');
-        } catch (TransactionError $exception) {
+        } catch (SqlTransactionError $exception) {
             // Exception expected.
         }
     }
@@ -612,7 +612,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
                 'keys' => [1, 2, 3],
                 'enabled' => false,
                 'number' => 2.718,
-                'bytea' => new ByteA($data),
+                'bytea' => new PostgresByteA($data),
             ],
             ['bytea' => $data],
         ];

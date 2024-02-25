@@ -4,7 +4,7 @@ namespace Amp\Postgres;
 
 use Amp\Sql\SqlException;
 
-final class ParseException extends SqlException
+final class PostgresParseException extends SqlException
 {
     public function __construct(string $message = '')
     {

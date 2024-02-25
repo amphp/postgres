@@ -2,13 +2,13 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\Transaction;
+use Amp\Sql\SqlTransaction;
 
 /**
  * Note that notifications sent during a transaction are not delivered until the transaction has been committed.
  *
- * @extends Transaction<PostgresResult, PostgresStatement, PostgresTransaction>
+ * @extends SqlTransaction<PostgresResult, PostgresStatement, PostgresTransaction>
  */
-interface PostgresTransaction extends PostgresLink, Transaction
+interface PostgresTransaction extends PostgresLink, SqlTransaction
 {
 }

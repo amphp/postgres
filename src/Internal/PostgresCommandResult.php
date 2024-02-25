@@ -3,14 +3,14 @@
 namespace Amp\Postgres\Internal;
 
 use Amp\Postgres\PostgresResult;
-use Amp\Sql\Common\CommandResult;
+use Amp\Sql\Common\SqlCommandResult;
 
 /**
  * @internal
  * @psalm-import-type TFieldType from PostgresResult
- * @extends CommandResult<TFieldType, PostgresResult>
+ * @extends SqlCommandResult<TFieldType, PostgresResult>
  */
-final class PostgresCommandResult extends CommandResult implements PostgresResult
+final class PostgresCommandResult extends SqlCommandResult implements PostgresResult
 {
     /**
      * Changes return type to this library's Result type.

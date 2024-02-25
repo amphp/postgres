@@ -2,11 +2,11 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\Statement;
+use Amp\Sql\SqlStatement;
 
 /**
- * @extends Statement<PostgresResult>
+ * @extends SqlStatement<PostgresResult>
  */
-interface PostgresStatement extends Statement
+interface PostgresStatement extends SqlStatement
 {
 }

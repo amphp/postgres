@@ -2,14 +2,14 @@
 
 namespace Amp\Postgres;
 
-use Amp\Sql\ConnectionException;
-use Amp\Sql\Executor;
+use Amp\Sql\SqlConnectionException;
 use Amp\Sql\SqlException;
+use Amp\Sql\SqlExecutor;
 
 /**
- * @extends Executor<PostgresResult, PostgresStatement>
+ * @extends SqlExecutor<PostgresResult, PostgresStatement>
  */
-interface PostgresExecutor extends Executor
+interface PostgresExecutor extends SqlExecutor
 {
     /**
      * @return PostgresResult Result object specific to this library.
@@ -31,7 +31,7 @@ interface PostgresExecutor extends Executor
      * @param string $payload Notification payload.
      *
      * @throws SqlException If the operation fails due to unexpected condition.
-     * @throws ConnectionException If the connection to the database is lost.
+     * @throws SqlConnectionException If the connection to the database is lost.
      */
     public function notify(string $channel, string $payload = ""): PostgresResult;
 

@@ -6,14 +6,14 @@ use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresStatement;
 use Amp\Postgres\PostgresTransaction;
-use Amp\Sql\Common\PooledTransaction;
-use Amp\Sql\Transaction;
+use Amp\Sql\Common\SqlPooledTransaction;
+use Amp\Sql\SqlTransaction;
 
 /**
  * @internal
- * @extends PooledTransaction<PostgresResult, PostgresStatement, PostgresTransaction>
+ * @extends SqlPooledTransaction<PostgresResult, PostgresStatement, PostgresTransaction>
  */
-final class PostgresPooledTransaction extends PooledTransaction implements PostgresTransaction
+final class PostgresPooledTransaction extends SqlPooledTransaction implements PostgresTransaction
 {
     use PostgresTransactionDelegate;
 
@@ -30,7 +30,7 @@ final class PostgresPooledTransaction extends PooledTransaction implements Postg
         return $this->transaction;
     }
 
-    protected function createTransaction(Transaction $transaction, \Closure $release): PostgresTransaction
+    protected function createTransaction(SqlTransaction $transaction, \Closure $release): PostgresTransaction
     {
         \assert($transaction instanceof PostgresTransaction);
         return new PostgresPooledTransaction($transaction, $release);
