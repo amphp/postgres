@@ -179,6 +179,10 @@ final class PgSqlHandle extends AbstractHandle
              FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON t.typnamespace=n.oid
              WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public') ORDER BY t.oid");
 
+        if ($result === false) {
+            throw new SqlException(\pg_last_error($handle));
+        }
+
         $types = [];
         while ($row = \pg_fetch_array($result, mode: \PGSQL_NUM)) {
             [$oid, $type, $delimiter, $element] = $row;
