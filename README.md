@@ -1,15 +1,17 @@
-<p align="center">
-<a href="https://amphp.org/postgres"><img src="https://raw.githubusercontent.com/amphp/logo/master/repos/postgres.png?v=12-07-2017" alt="postgres"/></a>
-</p>
+# amphp/postgres
 
-<p align="center">
-<a href="https://travis-ci.org/amphp/postgres"><img src="https://img.shields.io/travis/amphp/postgres/master.svg?style=flat-square" alt="Build Status"/></a>
-<a href="https://coveralls.io/github/amphp/postgres?branch=master"><img src="https://img.shields.io/coveralls/amphp/postgres/master.svg?style=flat-square" alt="Code Coverage"/></a>
-<a href="https://github.com/amphp/postgres/releases"><img src="https://img.shields.io/github/release/amphp/postgres.svg?style=flat-square" alt="Release"/></a>
-<a href="https://github.com/amphp/postgres/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License"/></a>
-</p>
+AMPHP is a collection of event-driven libraries for PHP designed with fibers and concurrency in mind.
+`amphp/postgres` is an asynchronous Postgres client.
+The library implements concurrent querying by transparently distributing queries across a scalable pool of available connections. Either [ext-pgsql](https://secure.php.net/pgsql) (bundled with PHP) or [pecl-pq](https://pecl.php.net/package/pq) are required.
 
-<p align="center"><strong>Async PostgreSQL client for PHP built with <a href="https://amphp.org/">Amp</a>.</strong></p>
+## Features
+
+- Exposes a non-blocking API for issuing multiple Postgres queries concurrently
+- Transparent connection pooling to overcome Postgres' fundamentally synchronous connection protocol
+- Support for parameterized prepared statements
+- Nested transactions with commit and rollback event hooks
+- Unbuffered results to reduce memory usage for large result sets
+- Support for sending and receiving notifications
 
 ## Installation
 
@@ -21,7 +23,7 @@ composer require amphp/postgres
 
 ## Requirements
 
-- PHP 7.1+
+- PHP 8.1+
 - [ext-pgsql](https://secure.php.net/pgsql) or [pecl-pq](https://pecl.php.net/package/pq)
 
 Note: [pecl-ev](https://pecl.php.net/package/ev) is not compatible with ext-pgsql. If you wish to use pecl-ev for the event loop backend, you must use pecl-pq.
@@ -30,30 +32,24 @@ Note: [pecl-ev](https://pecl.php.net/package/ev) is not compatible with ext-pgsq
 
 Prepared statements and parameterized queries support named placeholders, as well as `?` and standard numeric (i.e. `$1`) placeholders.
 
+Row values are cast to their corresponding PHP types. For example, integer columns will be an `int` in the result row array.
+
 More examples can be found in the [`examples`](examples) directory.
 
 ```php
-use Amp\Postgres;
 use Amp\Postgres\PostgresConfig;
-use Amp\Sql\Result;
-use Amp\Sql\Statement;
+use Amp\Postgres\PostgresConnectionPool;
 
-Amp\Loop::run(function () {
-    $config = PostgresConfig::fromString("host=localhost user=postgres db=test");
+$config = PostgresConfig::fromString("host=localhost user=postgres db=test");
 
-    /** @var Postgres\Pool $pool */
-    $pool = Postgres\pool($config);
+$pool = new PostgresConnectionPool($config);
 
-    /** @var Statement $statement */
-    $statement = yield $pool->prepare("SELECT * FROM test WHERE id = :id");
+$statement = $pool->prepare("SELECT * FROM test WHERE id = :id");
 
-    /** @var Result $result */
-    $result = yield $statement->execute(['id' => 1337]);
-    while (yield $result->advance()) {
-        $row = $result->getCurrent();
-        // $row is an array (map) of column values. e.g.: $row['column_name']
-    }
-});
+$result = $statement->execute(['id' => 1337]);
+foreach ($result as $row) {
+    // $row is an associative-array of column values, e.g.: $row['column_name']
+}
 ```
 
 ## Versioning
@@ -62,7 +58,7 @@ Amp\Loop::run(function () {
 
 ## Security
 
-If you discover any security related issues, please email [`contact@amphp.org`](mailto:contact@amphp.org) instead of using the issue tracker.
+If you discover any security related issues, please use the private security issue reporter instead of using the public issue tracker.
 
 ## License
 
