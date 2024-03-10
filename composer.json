@@ -22,8 +22,8 @@
         "php": ">=8.1",
         "amphp/amp": "^3",
         "amphp/pipeline": "^1",
-        "amphp/sql": "2.x-dev",
-        "amphp/sql-common": "2.x-dev"
+        "amphp/sql": "^2",
+        "amphp/sql-common": "^2"
     },
     "require-dev": {
         "ext-pgsql": "*",
@@ -31,10 +31,8 @@
         "amphp/phpunit-util": "^3",
         "phpunit/phpunit": "^9",
         "amphp/php-cs-fixer-config": "^2",
-        "psalm/phar": "^5.18"
+        "psalm/phar": "5.23"
     },
-    "minimum-stability": "beta",
-    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "Amp\\Postgres\\": "src"
