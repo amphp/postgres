@@ -22,7 +22,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
                                                        tld VARCHAR(63) NOT NULL,
                                                        keys INTEGER[] NOT NULL,
                                                        enabled BOOLEAN NOT NULL, 
-                                                       number DOUBLE PRECISION NOT NULL,
+                                                       number NUMERIC NOT NULL,
                                                        nullable CHAR(1) DEFAULT NULL,
                                                        bytea BYTEA DEFAULT NULL,
                                                        json JSON DEFAULT NULL,
@@ -38,10 +38,10 @@ abstract class AbstractLinkTest extends AsyncTestCase
     protected function getParams(): array
     {
         return $this->data ??= [
-            ['amphp', 'org', [1], true, 3.14159, null, new PostgresByteA(\random_bytes(10)), \json_encode('string')],
-            ['github', 'com', [1, 2, 3, 4, 5], false, 2.71828, null, new PostgresByteA(\str_repeat("\0", 10)), \json_encode([1, 2, 3])],
-            ['google', 'com', [1, 2, 3, 4], true, 1.61803, null, new PostgresByteA(\random_bytes(42)), \json_encode(null)],
-            ['php', 'net', [1, 2], false, 0.0, null, null, \json_encode((object) ['value' => 1])],
+            ['amphp', 'org', [1], true, '3.14159', null, new PostgresByteA(\random_bytes(10)), \json_encode('string')],
+            ['github', 'com', [1, 2, 3, 4, 5], false, '2.71828', null, new PostgresByteA(\str_repeat("\0", 10)), \json_encode([1, 2, 3])],
+            ['google', 'com', [1, 2, 3, 4], true, '1.61803', null, new PostgresByteA(\random_bytes(42)), \json_encode(null)],
+            ['php', 'net', [1, 2], false, '0', null, null, \json_encode((object) ['value' => 1])],
         ];
     }
 
@@ -66,7 +66,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $this->assertSame($data[$i][1], $row['tld']);
             $this->assertSame($data[$i][2], $row['keys']);
             $this->assertSame($data[$i][3], $row['enabled']);
-            $this->assertEqualsWithDelta($data[$i][4], $row['number'], 0.001);
+            $this->assertSame($data[$i][4], $row['number']);
             $this->assertNull($row['nullable']);
             $this->assertEquals(\json_decode($data[$i][7]), \json_decode($row['json']));
             ++$i;
@@ -159,7 +159,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $this->assertInstanceOf(SqlResult::class, $result);
 
         $data = $this->getData();
-        $data[] = ['canon', 'jp', [1], true, 4.2, null, null, \json_encode(3.1415926)]; // Add inserted row to expected data.
+        $data[] = ['canon', 'jp', [1], true, '4.2', null, null, \json_encode(3.1415926)]; // Add inserted row to expected data.
 
         $this->verifyResult($result, $data);
 
@@ -249,7 +249,7 @@ abstract class AbstractLinkTest extends AsyncTestCase
             'tld' => 'jp',
             'keys' => [1],
             'enabled' => true,
-            'number' => 1,
+            'number' => '1',
             'nullable' => null,
             'bytea' => null,
             'json' => '[1,2,3]',

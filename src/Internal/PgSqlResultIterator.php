@@ -89,8 +89,9 @@ final class PgSqlResultIterator
             ),
             'B' => $value === 't', // Boolean
             'N' => match ($oid) { // Numeric
-                700, 701, 1700 => (float) $value, // float4, float8, and numeric to float
-                790 => $value, // money includes currency symbol as string
+                700, 701 => (float) $value, // "float4" and "float8" to float
+                1700 => $value, // Return "numeric" as string to retain precision
+                790 => $value, // "money" includes currency symbol as string
                 default => (int) $value, // All other numeric types cast to an integer
             },
             default => match ($oid) { // String
