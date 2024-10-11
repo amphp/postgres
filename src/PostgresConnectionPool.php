@@ -8,6 +8,8 @@ use Amp\Sql\SqlConnector;
 use Amp\Sql\SqlResult;
 use Amp\Sql\SqlStatement;
 use Amp\Sql\SqlTransaction;
+use Amp\Sql\SqlTransactionIsolation;
+use Amp\Sql\SqlTransactionIsolationLevel;
 use function Amp\async;
 
 /**
@@ -33,8 +35,15 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
         int $idleTimeout = self::DEFAULT_IDLE_TIMEOUT,
         private readonly bool $resetConnections = true,
         ?SqlConnector $connector = null,
+        SqlTransactionIsolation $transactionIsolation = SqlTransactionIsolationLevel::Committed,
     ) {
-        parent::__construct($config, $connector ?? postgresConnector(), $maxConnections, $idleTimeout);
+        parent::__construct(
+            config: $config,
+            connector: $connector ?? postgresConnector(),
+            maxConnections: $maxConnections,
+            idleTimeout: $idleTimeout,
+            transactionIsolation: $transactionIsolation,
+        );
     }
 
     /**
