@@ -13,7 +13,7 @@ class PostgresQueryError extends SqlQueryError
         string $message,
         private readonly array $diagnostics,
         string $query,
-        \Throwable $previous = null,
+        ?\Throwable $previous = null,
     ) {
         parent::__construct($message, $query, $previous);
     }
