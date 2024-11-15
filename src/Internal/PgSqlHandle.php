@@ -175,7 +175,7 @@ final class PgSqlHandle extends AbstractHandle
      */
     private static function fetchTypes(\PgSql\Connection $handle): array
     {
-        $result = \pg_query($handle, "SELECT t.oid, t.typcategory, t.typdelim, t.typelem
+        $result = \pg_query($handle, "SELECT t.oid, t.typcategory, t.typname, t.typdelim, t.typelem
              FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON t.typnamespace=n.oid
              WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public') ORDER BY t.oid");
 
@@ -185,10 +185,18 @@ final class PgSqlHandle extends AbstractHandle
 
         $types = [];
         while ($row = \pg_fetch_array($result, mode: \PGSQL_NUM)) {
-            [$oid, $type, $delimiter, $element] = $row;
-            \assert(\is_numeric($oid) && \is_numeric($element), "OID and element type expected to be integers");
-            \assert(\is_string($type) && \is_string($delimiter), "Unexpected types in type catalog query results");
-            $types[(int) $oid] = new PgSqlType($type, $delimiter, (int) $element);
+            [$oid, $typeCategory, $typeName, $delimiter, $element] = $row;
+
+            \assert(
+                \is_numeric($oid) && \is_numeric($element),
+                "OID and element type expected to be integers",
+            );
+            \assert(
+                \is_string($typeCategory) && \is_string($typeName) && \is_string($delimiter),
+                "Unexpected types in type catalog query results",
+            );
+
+            $types[(int) $oid] = new PgSqlType($typeCategory, $typeName, $delimiter, (int) $element);
         }
 
         return $types;

@@ -81,23 +81,31 @@ final class PgSqlResultIterator
 
         $type = $this->types[$oid] ?? PgSqlType::getDefaultType();
 
-        return match ($type->type) {
-            'A' => ArrayParser::parse( // Array
-                $value,
-                fn (string $data) => $this->cast($type->element, $data),
-                $type->delimiter,
-            ),
-            'B' => $value === 't', // Boolean
-            'N' => match ($oid) { // Numeric
-                700, 701 => (float) $value, // "float4" and "float8" to float
-                1700 => $value, // Return "numeric" as string to retain precision
-                790 => $value, // "money" includes currency symbol as string
-                default => (int) $value, // All other numeric types cast to an integer
+        return match ($type->category) {
+            'A' => match ($type->name) { // Array
+                'int2vector', 'oidvector' => $value, // Deprecated array types
+                default => ArrayParser::parse(
+                    $value,
+                    fn (string $data) => $this->cast($type->element, $data),
+                    $type->delimiter,
+                ),
             },
-            default => match ($oid) { // String
-                17 => \pg_unescape_bytea($value),
-                default => $value, // Return a string for all other types
+            'B' => match ($value) {
+                't' => true,
+                'f' => false,
+                default => throw new PostgresParseException('Unexpected value for boolean field: ' . $value),
+            }, // Boolean
+            'N' => match ($type->name) { // Numeric
+                'float4', 'float8' => (float) $value,
+                'int2', 'int4', 'oid' => (int) $value,
+                'int8' => \PHP_INT_SIZE >= 8 ? (int) $value : $value, // String on 32-bit systems
+                default => $value, // Return a string for all other numeric types
             },
+            'U' => match ($type->name) {
+                'bytea' => \pg_unescape_bytea($value),
+                default => $value,
+            },
+            default => $value, // Return a string for all other types
         };
     }
 }

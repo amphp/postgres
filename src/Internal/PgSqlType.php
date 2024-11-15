@@ -8,7 +8,8 @@ final class PgSqlType
     private static ?self $default = null;
 
     public function __construct(
-        public readonly string $type,
+        public readonly string $category,
+        public readonly string $name,
         public readonly string $delimiter,
         public readonly int $element,
     ) {
@@ -16,6 +17,6 @@ final class PgSqlType
 
     public static function getDefaultType(): self
     {
-        return self::$default ??= new self('S', ',', 0);
+        return self::$default ??= new self('S', 'text', ',', 0);
     }
 }
