@@ -17,9 +17,19 @@ use Amp\Sql\SqlQueryError;
 use Revolt\EventLoop;
 use function Amp\async;
 
-/** @internal  */
+/**
+ * @internal
+ *
+ * @psalm-type PgSqlTypeMap = array<int, PgSqlType> Map of OID to corresponding PgSqlType.
+ */
 final class PgSqlHandle extends AbstractHandle
 {
+    private const TYPE_QUERY = <<<SQL
+        SELECT t.oid, t.typcategory, t.typname, t.typdelim, t.typelem
+        FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON t.typnamespace=n.oid
+        WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public') ORDER BY t.oid
+        SQL;
+
     private const DIAGNOSTIC_CODES = [
         \PGSQL_DIAG_SEVERITY => "severity",
         \PGSQL_DIAG_SQLSTATE => "sqlstate",
@@ -35,7 +45,7 @@ final class PgSqlHandle extends AbstractHandle
         \PGSQL_DIAG_SOURCE_FUNCTION => "source_function",
     ];
 
-    /** @var array<string, array<int, PgSqlType>> */
+    /** @var array<string, Future<PgSqlTypeMap>> */
     private static array $typeCache;
 
     private static ?\Closure $errorHandler = null;
@@ -43,8 +53,8 @@ final class PgSqlHandle extends AbstractHandle
     /** @var \PgSql\Connection PostgreSQL connection handle. */
     private ?\PgSql\Connection $handle;
 
-    /** @var array<int, PgSqlType> */
-    private readonly array $types;
+    /** @var PgSqlTypeMap|null */
+    private ?array $types = null;
 
     /** @var array<non-empty-string, StatementStorage<string>> */
     private array $statements = [];
@@ -57,12 +67,10 @@ final class PgSqlHandle extends AbstractHandle
     public function __construct(
         \PgSql\Connection $handle,
         $socket,
-        string $id,
+        private readonly string $id,
         PostgresConfig $config,
     ) {
         $this->handle = $handle;
-
-        $this->types = (self::$typeCache[$id] ??= self::fetchTypes($handle));
 
         $handle = &$this->handle;
         $lastUsedAt = &$this->lastUsedAt;
@@ -171,35 +179,66 @@ final class PgSqlHandle extends AbstractHandle
     }
 
     /**
-     * @return array<int, PgSqlType>
+     * @return Future<PgSqlTypeMap>
      */
-    private static function fetchTypes(\PgSql\Connection $handle): array
+    private function fetchTypes(): Future
     {
-        $result = \pg_query($handle, "SELECT t.oid, t.typcategory, t.typname, t.typdelim, t.typelem
-             FROM pg_catalog.pg_type t JOIN pg_catalog.pg_namespace n ON t.typnamespace=n.oid
-             WHERE t.typisdefined AND n.nspname IN ('pg_catalog', 'public') ORDER BY t.oid");
+        if (isset(self::$typeCache[$this->id])) {
+            return self::$typeCache[$this->id];
+        }
 
+        \assert($this->pendingOperation === null, 'Operation pending when fetching types!');
+
+        if ($this->handle === null) {
+            throw new \Error("The connection to the database has been closed");
+        }
+
+        $result = \pg_send_query($this->handle, self::TYPE_QUERY);
         if ($result === false) {
-            throw new SqlException(\pg_last_error($handle));
+            $this->close();
+            throw new SqlException(\pg_last_error($this->handle));
         }
 
-        $types = [];
-        while ($row = \pg_fetch_array($result, mode: \PGSQL_NUM)) {
-            [$oid, $typeCategory, $typeName, $delimiter, $element] = $row;
+        $this->pendingOperation = $queryDeferred = new DeferredFuture();
+        $typesDeferred = new DeferredFuture();
 
-            \assert(
-                \is_numeric($oid) && \is_numeric($element),
-                "OID and element type expected to be integers",
-            );
-            \assert(
-                \is_string($typeCategory) && \is_string($typeName) && \is_string($delimiter),
-                "Unexpected types in type catalog query results",
-            );
-
-            $types[(int) $oid] = new PgSqlType($typeCategory, $typeName, $delimiter, (int) $element);
+        EventLoop::reference($this->poll);
+        if ($result === 0) {
+            EventLoop::enable($this->await);
         }
 
-        return $types;
+        EventLoop::queue(function () use ($queryDeferred, $typesDeferred): void {
+            try {
+                $result = $queryDeferred->getFuture()->await();
+                if (\pg_result_status($result) !== \PGSQL_TUPLES_OK) {
+                    throw new SqlException(\pg_result_error($result));
+                }
+
+                $types = [];
+                while ($row = \pg_fetch_array($result, mode: \PGSQL_NUM)) {
+                    [$oid, $category, $name, $delimiter, $element] = $row;
+
+                    \assert(
+                        \is_numeric($oid) && \is_numeric($element),
+                        "OID and element type expected to be integers",
+                    );
+                    \assert( // For Psalm
+                        \is_string($category) && \is_string($name) && \is_string($delimiter),
+                        "Unexpected nulls in type catalog query results",
+                    );
+
+                    $types[(int) $oid] = new PgSqlType($category, $name, $delimiter, (int) $element);
+                }
+
+                $typesDeferred->complete($types);
+            } catch (\Throwable $exception) {
+                $this->close();
+                $typesDeferred->error($exception);
+                unset(self::$typeCache[$this->id]);
+            }
+        });
+
+        return self::$typeCache[$this->id] = $typesDeferred->getFuture();
     }
 
     private static function getErrorHandler(): \Closure
@@ -224,12 +263,12 @@ final class PgSqlHandle extends AbstractHandle
      * @param \Closure $function Function to execute.
      * @param mixed ...$args Arguments to pass to function.
      *
-     * @return \PgSql\Result
-     *
      * @throws SqlException
      */
     private function send(\Closure $function, mixed ...$args): mixed
     {
+        $this->types ??= $this->fetchTypes()->await();
+
         while ($this->pendingOperation) {
             try {
                 $this->pendingOperation->getFuture()->await();
@@ -274,6 +313,8 @@ final class PgSqlHandle extends AbstractHandle
         if ($this->handle === null) {
             throw new \Error("The connection to the database has been closed");
         }
+
+        \assert($this->types !== null, 'Expected type array to be populated before creating a result');
 
         switch (\pg_result_status($result)) {
             case \PGSQL_EMPTY_QUERY:
