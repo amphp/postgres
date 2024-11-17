@@ -27,14 +27,14 @@ final class ArrayParser
     {
         $data = \trim($data);
 
-        $parser = (new self($data, $cast, $delimiter))->parser();
-        $data = \iterator_to_array($parser, false);
+        $parser = new self($data, $cast, $delimiter);
+        $result = $parser->parseToArray();
 
-        if ($parser->getReturn() !== '') {
+        if ($parser->data !== '') {
             throw new PostgresParseException("Data left in buffer after parsing");
         }
 
-        return $data;
+        return $result;
     }
 
     /**
@@ -50,12 +50,14 @@ final class ArrayParser
     }
 
     /**
-     * Recursive generator parser yielding array values.
+     * @return list<mixed> Parsed column data.
      *
      * @throws PostgresParseException
      */
-    private function parser(): \Generator
+    private function parseToArray(): array
     {
+        $result = [];
+
         if ($this->data === '') {
             throw new PostgresParseException("Unexpected end of data");
         }
@@ -72,13 +74,14 @@ final class ArrayParser
             }
 
             if ($this->data[0] === '}') { // Empty array
-                return \ltrim(\substr($this->data, 1));
+                $this->data = \ltrim(\substr($this->data, 1));
+                break;
             }
 
             if ($this->data[0] === '{') { // Array
-                $parser = (new self($this->data, $this->cast, $this->delimiter))->parser();
-                yield \iterator_to_array($parser, false);
-                $this->data = $parser->getReturn();
+                $parser = new self($this->data, $this->cast, $this->delimiter);
+                $result[] = $parser->parseToArray();
+                $this->data = $parser->data;
                 $end = $this->trim(0);
                 continue;
             }
@@ -113,15 +116,15 @@ final class ArrayParser
                 $end = $this->trim($position);
 
                 if (\strcasecmp($yield, "NULL") === 0) { // Literal NULL is always unquoted.
-                    yield null;
+                    $result[] = null;
                     continue;
                 }
             }
 
-            yield ($this->cast)($yield);
+            $result[] = ($this->cast)($yield);
         } while ($end !== '}');
 
-        return $this->data;
+        return $result;
     }
 
     /**
