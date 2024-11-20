@@ -14,6 +14,8 @@ final class ArrayParser
     use ForbidCloning;
     use ForbidSerialization;
 
+    private const WHITESPACE_CHARS = " \n\r\t\v\0";
+
     /**
      * @param string $data String representation of PostgresSQL array.
      * @param \Closure(string):mixed $cast Callback to cast parsed values.
@@ -25,12 +27,10 @@ final class ArrayParser
      */
     public static function parse(string $data, \Closure $cast, string $delimiter = ','): array
     {
-        $data = \trim($data);
-
         $parser = new self($data, $cast, $delimiter);
         $result = $parser->parseToArray();
 
-        if ($parser->data !== '') {
+        if (isset($parser->data[$parser->position])) {
             throw new PostgresParseException("Data left in buffer after parsing");
         }
 
@@ -43,9 +43,10 @@ final class ArrayParser
      * @param string $delimiter Delimiter used to separate values.
      */
     private function __construct(
-        private string $data,
+        private readonly string $data,
         private readonly \Closure $cast,
-        private readonly string $delimiter = ',',
+        private readonly string $delimiter,
+        private int $position = 0,
     ) {
     }
 
@@ -58,36 +59,39 @@ final class ArrayParser
     {
         $result = [];
 
-        if ($this->data === '') {
+        $this->position = $this->skipWhitespace($this->position);
+
+        if (!isset($this->data[$this->position])) {
             throw new PostgresParseException("Unexpected end of data");
         }
 
-        if ($this->data[0] !== '{') {
+        if ($this->data[$this->position] !== '{') {
             throw new PostgresParseException("Missing opening bracket");
         }
 
-        $this->data = \ltrim(\substr($this->data, 1));
+        $this->position = $this->skipWhitespace($this->position + 1);
 
         do {
-            if ($this->data === '') {
+            if (!isset($this->data[$this->position])) {
                 throw new PostgresParseException("Unexpected end of data");
             }
 
-            if ($this->data[0] === '}') { // Empty array
-                $this->data = \ltrim(\substr($this->data, 1));
+            if ($this->data[$this->position] === '}') { // Empty array
+                $this->position = $this->skipWhitespace($this->position + 1);
                 break;
             }
 
-            if ($this->data[0] === '{') { // Array
-                $parser = new self($this->data, $this->cast, $this->delimiter);
+            if ($this->data[$this->position] === '{') { // Array
+                $parser = new self($this->data, $this->cast, $this->delimiter, $this->position);
                 $result[] = $parser->parseToArray();
-                $this->data = $parser->data;
-                $end = $this->trim(0);
+                $this->position = $parser->position;
+                $delimiter = $this->moveToNextDelimiter($this->position);
                 continue;
             }
 
-            if ($this->data[0] === '"') { // Quoted value
-                for ($position = 1; isset($this->data[$position]); ++$position) {
+            if ($this->data[$this->position] === '"') { // Quoted value
+                ++$this->position;
+                for ($position = $this->position; isset($this->data[$position]); ++$position) {
                     if ($this->data[$position] === '\\') {
                         ++$position; // Skip next character
                         continue;
@@ -102,27 +106,30 @@ final class ArrayParser
                     throw new PostgresParseException("Could not find matching quote in quoted value");
                 }
 
-                $yield = \stripslashes(\substr($this->data, 1, $position - 1));
+                $entry = \stripslashes(\substr($this->data, $this->position, $position - $this->position));
 
-                $end = $this->trim($position + 1);
+                $delimiter = $this->moveToNextDelimiter($position + 1);
             } else { // Unquoted value
-                $position = 0;
-                while (isset($this->data[$position]) && $this->data[$position] !== $this->delimiter && $this->data[$position] !== '}') {
+                $position = $this->position;
+                while (isset($this->data[$position])
+                    && $this->data[$position] !== $this->delimiter
+                    && $this->data[$position] !== '}'
+                ) {
                     ++$position;
                 }
 
-                $yield = \trim(\substr($this->data, 0, $position));
+                $entry = \trim(\substr($this->data, $this->position, $position - $this->position));
 
-                $end = $this->trim($position);
+                $delimiter = $this->moveToNextDelimiter($position);
 
-                if (\strcasecmp($yield, "NULL") === 0) { // Literal NULL is always unquoted.
+                if (\strcasecmp($entry, "NULL") === 0) { // Literal NULL is always unquoted.
                     $result[] = null;
                     continue;
                 }
             }
 
-            $result[] = ($this->cast)($yield);
-        } while ($end !== '}');
+            $result[] = ($this->cast)($entry);
+        } while ($delimiter !== '}');
 
         return $result;
     }
@@ -134,22 +141,31 @@ final class ArrayParser
      *
      * @throws PostgresParseException
      */
-    private function trim(int $position): string
+    private function moveToNextDelimiter(int $position): string
     {
-        $this->data = \ltrim(\substr($this->data, $position));
+        $position = $this->skipWhitespace($position);
 
-        if ($this->data === '') {
+        if (!isset($this->data[$position])) {
             throw new PostgresParseException("Unexpected end of data");
         }
 
-        $end = $this->data[0];
+        $delimiter = $this->data[$position];
 
-        if ($end !== $this->delimiter && $end !== '}') {
+        if ($delimiter !== $this->delimiter && $delimiter !== '}') {
             throw new PostgresParseException("Invalid delimiter");
         }
 
-        $this->data = \ltrim(\substr($this->data, 1));
+        $this->position = $this->skipWhitespace($position + 1);
 
-        return $end;
+        return $delimiter;
+    }
+
+    private function skipWhitespace(int $position): int
+    {
+        while (isset($this->data[$position]) && \str_contains(self::WHITESPACE_CHARS, $this->data[$position])) {
+            ++$position;
+        }
+
+        return $position;
     }
 }
