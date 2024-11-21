@@ -316,7 +316,7 @@ final class PgSqlHandle extends AbstractHandle
 
         \assert($this->types !== null, 'Expected type array to be populated before creating a result');
 
-        switch (\pg_result_status($result)) {
+        switch ($status = \pg_result_status($result)) {
             case \PGSQL_EMPTY_QUERY:
                 throw new SqlQueryError("Empty query string");
 
@@ -353,7 +353,11 @@ final class PgSqlHandle extends AbstractHandle
             default:
                 // @codeCoverageIgnoreStart
                 $this->close();
-                throw new SqlException("Unknown result status");
+                throw new SqlException(\sprintf(
+                    "Unknown result status: %d; error: %s",
+                    $status,
+                    \pg_result_error($result) ?: 'none',
+                ));
                 // @codeCoverageIgnoreEnd
         }
     }
@@ -471,7 +475,7 @@ final class PgSqlHandle extends AbstractHandle
         $future = async(function () use ($name, $modifiedSql, $sql): string {
             $result = $this->send(\pg_send_prepare(...), $name, $modifiedSql);
 
-            switch (\pg_result_status($result, \PGSQL_STATUS_LONG)) {
+            switch ($status = \pg_result_status($result)) {
                 case \PGSQL_COMMAND_OK:
                     return $name; // Statement created successfully.
 
@@ -488,7 +492,11 @@ final class PgSqlHandle extends AbstractHandle
 
                 default:
                     // @codeCoverageIgnoreStart
-                    throw new SqlException("Unknown result status");
+                    throw new SqlException(\sprintf(
+                        "Unknown result status: %d; error: %s",
+                        $status,
+                        \pg_result_error($result) ?: 'none',
+                    ));
                     // @codeCoverageIgnoreEnd
             }
         });
