@@ -3,14 +3,12 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\PgSqlConnection;
-use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
 use Amp\Postgres\PostgresLink;
 use Amp\Sql\Common\SqlCommonConnectionPool;
 use Amp\Sql\SqlConnector;
 use Revolt\EventLoop;
-use function Amp\Postgres\Internal\cast;
 
 /**
  * @requires extension pgsql
@@ -56,6 +54,14 @@ class PgSqlPoolTest extends AbstractConnectionTest
 
         $handle = \reset($this->handles);
 
+        $connection = $this->newConnection(
+            PgSqlConnection::class,
+            $handle,
+            \pg_socket($handle),
+            'mock-connection',
+            PostgresConfig::fromString($connectionString),
+        );
+
         \pg_query($handle, self::DROP_QUERY);
 
         $result = \pg_query($handle, self::CREATE_QUERY);
@@ -65,7 +71,11 @@ class PgSqlPoolTest extends AbstractConnectionTest
         }
 
         foreach ($this->getParams() as $row) {
-            $result = \pg_query_params($handle, self::INSERT_QUERY, \array_map(fn ($data) => $this->cast($handle, $data), $row));
+            $result = \pg_query_params(
+                $handle,
+                self::INSERT_QUERY,
+                \array_map(fn ($data) => $this->encodeParam($connection, $data), $row),
+            );
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
@@ -73,11 +83,6 @@ class PgSqlPoolTest extends AbstractConnectionTest
         }
 
         return $pool;
-    }
-
-    private function cast(\PgSql\Connection $handle, mixed $param): mixed
-    {
-        return $param instanceof PostgresByteA ? \pg_escape_bytea($handle, $param->getData()) : cast($param);
     }
 
     public function tearDown(): void

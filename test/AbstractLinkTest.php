@@ -15,6 +15,7 @@ use Amp\Sql\SqlResult;
 use Amp\Sql\SqlStatement;
 use Amp\Sql\SqlTransactionError;
 use function Amp\async;
+use function Amp\Postgres\Internal\encodeParam;
 
 abstract class AbstractLinkTest extends AsyncTestCase
 {
@@ -71,6 +72,13 @@ abstract class AbstractLinkTest extends AsyncTestCase
             $this->assertEquals(\json_decode($data[$i][7]), \json_decode($row['json']));
             ++$i;
         }
+    }
+
+    protected function encodeParam(PostgresExecutor $executor, mixed $value): string|int|null|float
+    {
+        return $value instanceof PostgresByteA
+            ? $executor->escapeByteA($value->getData())
+            : encodeParam($executor, $value);
     }
 
     /**

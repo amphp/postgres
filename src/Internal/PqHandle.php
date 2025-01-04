@@ -303,7 +303,7 @@ final class PqHandle extends AbstractHandle
         return $this->send(
             $storage->sql,
             $statement->execAsync(...),
-            \array_map(cast(...), $this->escapeParams($params)),
+            \array_map($this->encodeParam(...), $params),
         );
     }
 
@@ -367,7 +367,7 @@ final class PqHandle extends AbstractHandle
             $sql,
             $this->handle->execParamsAsync(...),
             $sql,
-            \array_map(cast(...), $this->escapeParams($params)),
+            \array_map($this->encodeParam(...), $params),
         );
     }
 

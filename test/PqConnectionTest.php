@@ -4,11 +4,9 @@ namespace Amp\Postgres\Test;
 
 use Amp\Postgres\Internal\PqBufferedResultSet;
 use Amp\Postgres\Internal\PqUnbufferedResultSet;
-use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PqConnection;
-use function Amp\Postgres\Internal\cast;
 
 /**
  * @requires extension pq
@@ -32,20 +30,24 @@ class PqConnectionTest extends AbstractConnectionTest
             $this->fail('Could not create test table.');
         }
 
+        $connection = $this->newConnection(
+            PqConnection::class,
+            $this->handle,
+            PostgresConfig::fromString($connectionString),
+        );
+
         foreach ($this->getParams() as $row) {
-            $result = $this->handle->execParams(self::INSERT_QUERY, \array_map($this->cast(...), $row));
+            $result = $this->handle->execParams(
+                self::INSERT_QUERY,
+                \array_map(fn ($data) => $this->encodeParam($connection, $data), $row),
+            );
 
             if (!$result) {
                 $this->fail('Could not insert test data.');
             }
         }
 
-        return $this->newConnection(PqConnection::class, $this->handle, PostgresConfig::fromString($connectionString));
-    }
-
-    private function cast(mixed $param): mixed
-    {
-        return $param instanceof PostgresByteA ? $this->handle->escapeBytea($param->getData()) : cast($param);
+        return $connection;
     }
 
     public function tearDown(): void

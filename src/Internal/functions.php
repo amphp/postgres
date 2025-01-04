@@ -2,6 +2,9 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\PostgresByteA;
+use Amp\Postgres\PostgresExecutor;
+
 /** @internal */
 const STATEMENT_PARAM_REGEX = <<<'REGEX'
 [
@@ -96,21 +99,20 @@ function replaceNamedParams(array $params, array $names): array
  * @internal
  *
  * Casts a PHP value to a representation that is understood by Postgres, including encoding arrays.
- *
- * @throws \Error If $value is an object which is not a BackedEnum or Stringable, a resource, or an unknown type.
  */
-function cast(mixed $value): string|int|float|null
+function encodeParam(PostgresExecutor $executor, mixed $value): string|int|float|null
 {
     return match (\gettype($value)) {
         "NULL", "integer", "double", "string" => $value,
         "boolean" => $value ? 't' : 'f',
-        "array" => '{' . \implode(',', \array_map(encodeArrayItem(...), $value)) . '}',
+        "array" => '{' . \implode(',', \array_map(fn ($i) => encodeArrayItem($executor, $i), $value)) . '}',
         "object" => match (true) {
+            $value instanceof PostgresByteA => $executor->escapeByteA($value->getData()),
             $value instanceof \BackedEnum => $value->value,
             $value instanceof \Stringable => (string) $value,
             default => throw new \TypeError(
-                "An object in parameter values must be a BackedEnum or implement Stringable; got instance of "
-                . \get_debug_type($value)
+                "An object in parameter values must be a PostgresByteA, a BackedEnum, or implement Stringable; "
+                . "got instance of " . \get_debug_type($value)
             ),
         },
         default => throw new \TypeError(\sprintf(
@@ -125,19 +127,16 @@ function cast(mixed $value): string|int|float|null
  *
  * Wraps string in double-quotes for inclusion in an array.
  */
-function encodeArrayItem(mixed $value): mixed
+function encodeArrayItem(PostgresExecutor $executor, mixed $value): mixed
 {
     return match (\gettype($value)) {
         "NULL" => "NULL",
         "string" => '"' . \str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"',
-        "object" => match (true) {
-            $value instanceof \BackedEnum => encodeArrayItem($value->value),
-            $value instanceof \Stringable => encodeArrayItem((string) $value),
-            default => throw new \TypeError(
-                "An object in parameter arrays must be a BackedEnum or implement Stringable; "
-                . "got instance of " . \get_debug_type($value)
-            ),
-        },
-        default => cast($value),
+        "array", "boolean", "integer", "double" => encodeParam($executor, $value),
+        "object" => encodeArrayItem($executor, encodeParam($executor, $value)),
+        default => throw new \TypeError(\sprintf(
+            "Invalid value type '%s' in array",
+            \get_debug_type($value),
+        )),
     };
 }

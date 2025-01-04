@@ -3,11 +3,9 @@
 namespace Amp\Postgres\Test;
 
 use Amp\Postgres\PgSqlConnection;
-use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresLink;
 use Revolt\EventLoop;
-use function Amp\Postgres\Internal\cast;
 
 /**
  * @requires extension pgsql
@@ -33,25 +31,27 @@ class PgSqlConnectionTest extends AbstractConnectionTest
             $this->fail('Could not create test table.');
         }
 
-        foreach ($this->getParams() as $row) {
-            $result = \pg_query_params($this->handle, self::INSERT_QUERY, \array_map($this->cast(...), $row));
-            if (!$result) {
-                $this->fail('Could not insert test data.');
-            }
-        }
-
-        return $this->newConnection(
+        $connection = $this->newConnection(
             PgSqlConnection::class,
             $this->handle,
             $socket,
             'mock-connection',
             PostgresConfig::fromString($connectionString),
         );
-    }
 
-    private function cast(mixed $param): mixed
-    {
-        return $param instanceof PostgresByteA ? \pg_escape_bytea($this->handle, $param->getData()) : cast($param);
+        foreach ($this->getParams() as $row) {
+            $result = \pg_query_params(
+                $this->handle,
+                self::INSERT_QUERY,
+                \array_map(fn ($data) => $this->encodeParam($connection, $data), $row),
+            );
+
+            if (!$result) {
+                $this->fail('Could not insert test data.');
+            }
+        }
+
+        return $connection;
     }
 
     public function tearDown(): void

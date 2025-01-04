@@ -2,8 +2,9 @@
 
 namespace Amp\Postgres\Test;
 
+use Amp\Postgres\PostgresExecutor;
 use PHPUnit\Framework\TestCase;
-use function Amp\Postgres\Internal\cast;
+use function Amp\Postgres\Internal\encodeParam;
 
 enum IntegerEnum: int
 {
@@ -24,14 +25,19 @@ enum UnitEnum
     case Case;
 }
 
-class CastTest extends TestCase
+class EncodeParamTest extends TestCase
 {
+    private function encodeParam(mixed $param): string|int|float|null
+    {
+        return encodeParam($this->createMock(PostgresExecutor::class), $param);
+    }
+
     public function testSingleDimensionalStringArray(): void
     {
         $array = ["one", "two", "three"];
         $string = '{"one","two","three"}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testMultiDimensionalStringArray(): void
@@ -39,7 +45,7 @@ class CastTest extends TestCase
         $array = ["one", "two", ["three", "four"], "five"];
         $string = '{"one","two",{"three","four"},"five"}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testQuotedStrings(): void
@@ -47,7 +53,7 @@ class CastTest extends TestCase
         $array = ["one", "two", ["three", "four"], "five"];
         $string = '{"one","two",{"three","four"},"five"}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testEscapedQuoteDelimiter(): void
@@ -55,7 +61,7 @@ class CastTest extends TestCase
         $array = ['va"lue1', 'value"2'];
         $string = '{"va\\"lue1","value\\"2"}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testNullValue(): void
@@ -63,7 +69,7 @@ class CastTest extends TestCase
         $array = ["one", null, "three"];
         $string = '{"one",NULL,"three"}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testSingleDimensionalIntegerArray(): void
@@ -71,7 +77,7 @@ class CastTest extends TestCase
         $array = [1, 2, 3];
         $string = '{' . \implode(',', $array) . '}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testIntegerArrayWithNull(): void
@@ -79,7 +85,7 @@ class CastTest extends TestCase
         $array = [1, 2, null, 3];
         $string = '{1,2,NULL,3}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testMultidimensionalIntegerArray(): void
@@ -87,7 +93,7 @@ class CastTest extends TestCase
         $array = [1, 2, [3, 4], [5], 6, 7, [[8, 9], 10]];
         $string = '{1,2,{3,4},{5},6,7,{{8,9},10}}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testEscapedBackslashesInQuotedValue(): void
@@ -95,13 +101,13 @@ class CastTest extends TestCase
         $array = ["test\\ing", "esca\\ped\\"];
         $string = '{"test\\\\ing","esca\\\\ped\\\\"}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testBackedEnum(): void
     {
-        $this->assertSame(3, cast(IntegerEnum::Three));
-        $this->assertSame('three', cast(StringEnum::Three));
+        $this->assertSame(3, $this->encodeParam(IntegerEnum::Three));
+        $this->assertSame('three', $this->encodeParam(StringEnum::Three));
     }
 
     public function testBackedEnumInArray(): void
@@ -112,7 +118,7 @@ class CastTest extends TestCase
         ];
         $string = '{{1,2,3},{"one","two","three"}}';
 
-        $this->assertSame($string, cast($array));
+        $this->assertSame($string, $this->encodeParam($array));
     }
 
     public function testUnitEnum(): void
@@ -120,15 +126,15 @@ class CastTest extends TestCase
         $this->expectException(\TypeError::class);
         $this->expectExceptionMessage('An object in parameter values must be');
 
-        cast(UnitEnum::Case);
+        $this->encodeParam(UnitEnum::Case);
     }
 
     public function testUnitEnumInArray(): void
     {
         $this->expectException(\TypeError::class);
-        $this->expectExceptionMessage('An object in parameter arrays must be');
+        $this->expectExceptionMessage('An object in parameter values must be');
 
-        cast([UnitEnum::Case]);
+        $this->encodeParam([UnitEnum::Case]);
     }
 
     public function testObjectWithoutToStringMethod(): void
@@ -136,14 +142,14 @@ class CastTest extends TestCase
         $this->expectException(\TypeError::class);
         $this->expectExceptionMessage('An object in parameter values must be');
 
-        cast(new \stdClass);
+        $this->encodeParam(new \stdClass);
     }
 
     public function testObjectWithoutToStringMethodInArray(): void
     {
         $this->expectException(\TypeError::class);
-        $this->expectExceptionMessage('An object in parameter arrays must be');
+        $this->expectExceptionMessage('An object in parameter values must be');
 
-        cast([new \stdClass]);
+        $this->encodeParam([new \stdClass]);
     }
 }

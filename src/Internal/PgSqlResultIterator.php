@@ -90,11 +90,11 @@ final class PgSqlResultIterator
                     $type->delimiter,
                 ),
             },
-            'B' => match ($value) {
+            'B' => match ($value) { // Boolean
                 't' => true,
                 'f' => false,
                 default => throw new PostgresParseException('Unexpected value for boolean field: ' . $value),
-            }, // Boolean
+            },
             'N' => match ($type->name) { // Numeric
                 'float4', 'float8' => (float) $value,
                 'int2', 'int4', 'oid' => (int) $value,

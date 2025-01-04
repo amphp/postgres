@@ -381,7 +381,7 @@ final class PgSqlHandle extends AbstractHandle
     public function statementExecute(string $name, array $params): PostgresResult
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
-        $result = $this->send(\pg_send_execute(...), $name, \array_map(cast(...), $this->escapeParams($params)));
+        $result = $this->send(\pg_send_execute(...), $name, \array_map($this->encodeParam(...), $params));
         return $this->createResult($result, $this->statements[$name]->sql);
     }
 
@@ -444,7 +444,7 @@ final class PgSqlHandle extends AbstractHandle
         $result = $this->send(
             \pg_send_query_params(...),
             $sql,
-            \array_map(cast(...), $this->escapeParams($params))
+            \array_map($this->encodeParam(...), $params)
         );
 
         return $this->createResult($result, $sql);

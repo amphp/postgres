@@ -6,7 +6,6 @@ use Amp\DeferredFuture;
 use Amp\ForbidCloning;
 use Amp\ForbidSerialization;
 use Amp\Pipeline\Queue;
-use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresConfig;
 use Amp\Sql\SqlConnectionException;
 use Revolt\EventLoop;
@@ -90,13 +89,9 @@ abstract class AbstractHandle implements PostgresHandle
         }
     }
 
-    protected function escapeParams(array $params): array
+    protected function encodeParam(mixed $value): string|int|float|null
     {
-        return \array_map(fn (mixed $param) => match (true) {
-            $param instanceof PostgresByteA => $this->escapeByteA($param->getData()),
-            \is_array($param) => $this->escapeParams($param),
-            default => $param,
-        }, $params);
+        return encodeParam($this, $value);
     }
 
     public function commit(): void
