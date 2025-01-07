@@ -2,6 +2,7 @@
 
 namespace Amp\Postgres\Internal;
 
+use Amp\Postgres\PostgresArray;
 use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresExecutor;
 
@@ -105,8 +106,9 @@ function encodeParam(PostgresExecutor $executor, mixed $value): string|int|float
     return match (\gettype($value)) {
         "NULL", "integer", "double", "string" => $value,
         "boolean" => $value ? 't' : 'f',
-        "array" => '{' . \implode(',', \array_map(fn ($i) => encodeArrayItem($executor, $i), $value)) . '}',
+        "array" => encodeArray($executor, $value, ','),
         "object" => match (true) {
+            $value instanceof PostgresArray => $value->encode($executor),
             $value instanceof PostgresByteA => $executor->escapeByteA($value->getData()),
             $value instanceof \BackedEnum => $value->value,
             $value instanceof \Stringable => (string) $value,
@@ -124,6 +126,14 @@ function encodeParam(PostgresExecutor $executor, mixed $value): string|int|float
 
 /**
  * @internal
+ */
+function encodeArray(PostgresExecutor $executor, array $array, string $delimiter): string
+{
+    return '{' . \implode($delimiter, \array_map(fn ($i) => encodeArrayItem($executor, $i), $array)) . '}';
+}
+
+/**
+ * @internal
  *
  * Wraps string in double-quotes for inclusion in an array.
  */
@@ -133,7 +143,10 @@ function encodeArrayItem(PostgresExecutor $executor, mixed $value): mixed
         "NULL" => "NULL",
         "string" => '"' . \str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"',
         "array", "boolean", "integer", "double" => encodeParam($executor, $value),
-        "object" => encodeArrayItem($executor, encodeParam($executor, $value)),
+        "object" => match (true) {
+            $value instanceof PostgresArray => encodeParam($executor, $value),
+            default => encodeArrayItem($executor, encodeParam($executor, $value)),
+        },
         default => throw new \TypeError(\sprintf(
             "Invalid value type '%s' in array",
             \get_debug_type($value),
