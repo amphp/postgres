@@ -22,6 +22,7 @@ final class PostgresConfig extends SqlConfig
         'ssl_mode' => 'sslmode',
         'sslMode' => 'sslmode',
         'applicationName' => 'application_name',
+        'options' => 'options',
     ];
 
     private ?string $connectionString = null;
@@ -42,6 +43,7 @@ final class PostgresConfig extends SqlConfig
             $parts["db"] ?? null,
             $parts["application_name"] ?? null,
             $parts["sslmode"] ?? null,
+            $parts["options"] ?? null,
         );
     }
 
@@ -53,6 +55,7 @@ final class PostgresConfig extends SqlConfig
         ?string $database = null,
         private ?string $applicationName = null,
         private ?string $sslMode = null,
+        private ?string $options = null,
     ) {
         self::assertValidSslMode($sslMode);
 
@@ -115,6 +118,25 @@ final class PostgresConfig extends SqlConfig
         return $new;
     }
 
+    public function getOptions(): ?string
+    {
+        return $this->options;
+    }
+
+    public function withOptions(string $options): self
+    {
+        $new = clone $this;
+        $new->options = $options;
+        return $new;
+    }
+
+    public function withoutOptions(): self
+    {
+        $new = clone $this;
+        $new->options = null;
+        return $new;
+    }
+
     /**
      * @return string Connection string used with ext-pgsql and pecl-pq.
      */
@@ -150,6 +172,10 @@ final class PostgresConfig extends SqlConfig
 
         if ($this->applicationName !== null) {
             $chunks[] = \sprintf("application_name='%s'", \addslashes($this->applicationName));
+        }
+
+        if ($this->options !== null) {
+            $chunks[] = \sprintf("options='%s'", \addslashes($this->options));
         }
 
         return $this->connectionString = \implode(" ", $chunks);
