@@ -27,6 +27,12 @@
             </errorLevel>
         </MissingClosureReturnType>
 
+        <PossiblyUnusedMethod>
+            <errorLevel type="suppress">
+                <directory name="src"/>
+            </errorLevel>
+        </PossiblyUnusedMethod>
+
         <RiskyTruthyFalsyComparison>
             <errorLevel type="suppress">
                 <directory name="src"/>
