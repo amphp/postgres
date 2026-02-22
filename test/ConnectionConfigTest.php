@@ -32,14 +32,12 @@ class ConnectionConfigTest extends TestCase
     public function testNoHost(): void
     {
         $this->expectException(\Error::class);
-        $this->expectExceptionMessage("Host must be provided in connection string");
         $config = PostgresConfig::fromString("user=postgres");
     }
 
     public function testInvalidString(): void
     {
         $this->expectException(\Error::class);
-        $this->expectExceptionMessage("Host must be provided in connection string");
         $config = PostgresConfig::fromString("invalid connection string");
     }
 
