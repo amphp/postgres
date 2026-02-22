@@ -31,7 +31,7 @@ REGEX;
 
 /**
  * @internal
- * @psalm-suppress ReferenceConstraintViolation
+ * @psalm-suppress InvalidNullableReturnType, NullableReturnStatement, ReferenceConstraintViolation
  *
  * @param string $sql SQL statement with named and unnamed placeholders.
  * @param-out list<int|string> $names Array of parameter positions mapped to names and/or indexed locations.
@@ -79,7 +79,7 @@ function parseNamedParams(string $sql, ?array &$names): string
 function replaceNamedParams(array $params, array $names): array
 {
     $values = [];
-    foreach ($names as $index => $name) {
+    foreach ($names as $name) {
         if (!\array_key_exists($name, $params)) {
             if (\is_int($name)) {
                 $message = \sprintf("Value for unnamed parameter at position %s missing", $name);

@@ -54,13 +54,14 @@ final class PgSqlResultIterator
                 $result = \pg_fetch_array($this->handle, mode: \PGSQL_NUM);
 
                 if ($result === false) {
-                    throw new SqlException(\pg_result_error($this->handle));
+                    throw new SqlException(\pg_result_error($this->handle) ?: 'Unknown result error');
                 }
 
                 /** @var list<int> $fieldTypes */
                 yield \array_combine($fieldNames, \array_map($this->cast(...), $fieldTypes, $result));
             }
         } finally {
+            /** @psalm-suppress UnusedFunctionCall */
             \pg_free_result($this->handle);
         }
     }

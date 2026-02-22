@@ -28,11 +28,14 @@ final class PqHandle extends AbstractHandle
     /** @var array<non-empty-string, StatementStorage<pq\Statement>> */
     private array $statements = [];
 
+    /**
+     * @psalm-suppress UnusedVariable
+     */
     public function __construct(pq\Connection $handle, PostgresConfig $config)
     {
         $this->handle = $handle;
 
-        $handle = &$this->handle;
+        $connection = &$this->handle;
         $lastUsedAt = &$this->lastUsedAt;
         $deferred = &$this->pendingOperation;
         $listeners = &$this->listeners;
@@ -42,21 +45,21 @@ final class PqHandle extends AbstractHandle
             &$deferred,
             &$lastUsedAt,
             &$listeners,
-            &$handle,
+            &$connection,
             $onClose,
         ): void {
             $lastUsedAt = \time();
 
             try {
-                if ($handle->status !== pq\Connection::OK) {
+                if ($connection->status !== pq\Connection::OK) {
                     throw new SqlConnectionException("The connection closed during the operation");
                 }
 
-                if ($handle->poll() === pq\Connection::POLLING_FAILED) {
-                    throw new SqlConnectionException($handle->errorMessage);
+                if ($connection->poll() === pq\Connection::POLLING_FAILED) {
+                    throw new SqlConnectionException($connection->errorMessage);
                 }
             } catch (SqlConnectionException $exception) {
-                $handle = null; // Marks connection as dead.
+                $connection = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
                 self::shutdown($listeners, $deferred, $onClose, $exception);
@@ -68,11 +71,11 @@ final class PqHandle extends AbstractHandle
                 return; // No active query, only notification listeners.
             }
 
-            if ($handle->busy) {
+            if ($connection->busy) {
                 return; // Not finished receiving data, poll again.
             }
 
-            $deferred->complete($handle->getResult());
+            $deferred->complete($connection->getResult());
             $deferred = null;
 
             if (empty($listeners)) {
@@ -83,16 +86,16 @@ final class PqHandle extends AbstractHandle
         $await = EventLoop::onWritable($this->handle->socket, static function (string $watcher) use (
             &$deferred,
             &$listeners,
-            &$handle,
+            &$connection,
             $onClose,
         ): void {
             try {
-                if (!$handle?->flush()) {
+                if (!$connection?->flush()) {
                     return; // Not finished sending data, continue polling for writability.
                 }
             } catch (pq\Exception $exception) {
                 $exception = new SqlConnectionException("Flushing the connection failed", 0, $exception);
-                $handle = null; // Marks connection as dead.
+                $connection = null; // Marks connection as dead.
 
                 self::shutdown($listeners, $deferred, $onClose, $exception);
             }
@@ -329,7 +332,7 @@ final class PqHandle extends AbstractHandle
         }
 
         $future = $storage->future;
-        $storage->future = async(function () use ($future, $storage, $name): void {
+        $storage->future = async(function () use ($future, $name): void {
             $statement = $future->await();
             if (!$statement instanceof pq\Statement) {
                 return; // Statement already deallocated.

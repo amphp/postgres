@@ -60,19 +60,19 @@ final class PgSqlHandle extends AbstractHandle
     private array $statements = [];
 
     /**
-     * @param \PgSql\Connection $handle PostgreSQL connection handle.
+     * @param \PgSql\Connection $connection PostgreSQL connection handle.
      * @param resource $socket PostgreSQL connection stream socket.
      * @param string $id Connection identifier for determining which cached type table to use.
      */
     public function __construct(
-        \PgSql\Connection $handle,
+        \PgSql\Connection $connection,
         $socket,
         private readonly string $id,
         PostgresConfig $config,
     ) {
-        $this->handle = $handle;
+        $this->handle = $connection;
 
-        $handle = &$this->handle;
+        $connection = &$this->handle;
         $lastUsedAt = &$this->lastUsedAt;
         $deferred = &$this->pendingOperation;
         $listeners = &$this->listeners;
@@ -82,10 +82,10 @@ final class PgSqlHandle extends AbstractHandle
             &$deferred,
             &$lastUsedAt,
             &$listeners,
-            &$handle,
+            &$connection,
             $onClose,
         ): void {
-            if (!$handle) {
+            if (!$connection) {
                 EventLoop::disable($watcher);
                 return;
             }
@@ -95,15 +95,15 @@ final class PgSqlHandle extends AbstractHandle
             \set_error_handler(self::getErrorHandler());
 
             try {
-                if (\pg_connection_status($handle) !== \PGSQL_CONNECTION_OK) {
+                if (\pg_connection_status($connection) !== \PGSQL_CONNECTION_OK) {
                     throw new SqlConnectionException("The connection closed during the operation");
                 }
 
-                if (!\pg_consume_input($handle)) {
-                    throw new SqlConnectionException(\pg_last_error($handle));
+                if (!\pg_consume_input($connection)) {
+                    throw new SqlConnectionException(\pg_last_error($connection));
                 }
 
-                while ($result = \pg_get_notify($handle, \PGSQL_ASSOC)) {
+                while ($result = \pg_get_notify($connection, \PGSQL_ASSOC)) {
                     $channel = $result["message"];
 
                     if (!isset($listeners[$channel])) {
@@ -118,18 +118,18 @@ final class PgSqlHandle extends AbstractHandle
                     return; // No active query, only notification listeners.
                 }
 
-                if (\pg_connection_busy($handle)) {
+                if (\pg_connection_busy($connection)) {
                     return;
                 }
 
-                $deferred->complete(\pg_get_result($handle));
+                $deferred->complete(\pg_get_result($connection));
                 $deferred = null;
 
                 if (empty($listeners)) {
                     EventLoop::unreference($watcher);
                 }
             } catch (SqlConnectionException $exception) {
-                $handle = null; // Marks connection as dead.
+                $connection = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
                 self::shutdown($listeners, $deferred, $onClose, $exception);
@@ -141,10 +141,10 @@ final class PgSqlHandle extends AbstractHandle
         $await = EventLoop::onWritable($socket, static function (string $watcher) use (
             &$deferred,
             &$listeners,
-            &$handle,
+            &$connection,
             $onClose,
         ): void {
-            if (!$handle) {
+            if (!$connection) {
                 EventLoop::disable($watcher);
                 return;
             }
@@ -152,7 +152,7 @@ final class PgSqlHandle extends AbstractHandle
             \set_error_handler(self::getErrorHandler());
 
             try {
-                $flush = \pg_flush($handle);
+                $flush = \pg_flush($connection);
                 if ($flush === 0) {
                     return; // Not finished sending data, listen again.
                 }
@@ -160,10 +160,10 @@ final class PgSqlHandle extends AbstractHandle
                 EventLoop::disable($watcher);
 
                 if ($flush === false) {
-                    throw new SqlConnectionException(\pg_last_error($handle));
+                    throw new SqlConnectionException(\pg_last_error($connection));
                 }
             } catch (SqlConnectionException $exception) {
-                $handle = null; // Marks connection as dead.
+                $connection = null; // Marks connection as dead.
                 EventLoop::disable($watcher);
 
                 self::shutdown($listeners, $deferred, $onClose, $exception);
@@ -211,7 +211,7 @@ final class PgSqlHandle extends AbstractHandle
             try {
                 $result = $queryDeferred->getFuture()->await();
                 if (\pg_result_status($result) !== \PGSQL_TUPLES_OK) {
-                    throw new SqlException(\pg_result_error($result));
+                    throw new SqlException(\pg_result_error($result) ?: 'Unknown result error');
                 }
 
                 $types = [];
@@ -284,6 +284,7 @@ final class PgSqlHandle extends AbstractHandle
         }
 
         while ($result = \pg_get_result($this->handle)) {
+            /** @psalm-suppress UnusedFunctionCall */
             \pg_free_result($result);
         }
 
@@ -337,7 +338,7 @@ final class PgSqlHandle extends AbstractHandle
                 foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
                     $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                 }
-                $message = \pg_result_error($result);
+                $message = \pg_result_error($result) ?: 'Unknown result error';
                 \set_error_handler(self::getErrorHandler());
                 try {
                     while (\pg_connection_busy($this->handle) && \pg_get_result($this->handle)) {
@@ -350,7 +351,7 @@ final class PgSqlHandle extends AbstractHandle
 
             case \PGSQL_BAD_RESPONSE:
                 $this->close();
-                throw new SqlException(\pg_result_error($result));
+                throw new SqlException(\pg_result_error($result) ?: 'Unknown result error');
 
             default:
                 // @codeCoverageIgnoreStart
@@ -407,7 +408,7 @@ final class PgSqlHandle extends AbstractHandle
         }
 
         $future = $storage->future;
-        $storage->future = async(function () use ($future, $storage, $name): void {
+        $storage->future = async(function () use ($future, $name): void {
             if (!$future->await()) {
                 return; // Statement already deallocated.
             }
@@ -493,17 +494,21 @@ final class PgSqlHandle extends AbstractHandle
                     foreach (self::DIAGNOSTIC_CODES as $fieldCode => $description) {
                         $diagnostics[$description] = \pg_result_error_field($result, $fieldCode);
                     }
-                    throw new PostgresQueryError(\pg_result_error($result), $diagnostics, $sql);
+                    throw new PostgresQueryError(
+                        \pg_result_error($result) ?: 'Unknown result error',
+                        $diagnostics,
+                        $sql,
+                    );
 
                 case \PGSQL_BAD_RESPONSE:
-                    throw new SqlException(\pg_result_error($result));
+                    throw new SqlException(\pg_result_error($result) ?: 'Unknown result error');
 
                 default:
                     // @codeCoverageIgnoreStart
                     throw new SqlException(\sprintf(
                         "Unknown result status: %d; error: %s",
                         $status,
-                        \pg_result_error($result) ?: 'none',
+                        \pg_result_error($result) ?: 'Unknown result error',
                     ));
                     // @codeCoverageIgnoreEnd
             }
