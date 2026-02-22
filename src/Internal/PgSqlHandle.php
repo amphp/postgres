@@ -248,12 +248,14 @@ final class PgSqlHandle extends AbstractHandle
         };
     }
 
+    #[\Override]
     public function close(): void
     {
         $this->handle = null;
         parent::close();
     }
 
+    #[\Override]
     public function isClosed(): bool
     {
         return !$this->handle instanceof \PgSql\Connection;
@@ -378,6 +380,7 @@ final class PgSqlHandle extends AbstractHandle
         return null;
     }
 
+    #[\Override]
     public function statementExecute(string $name, array $params): PostgresResult
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
@@ -388,6 +391,7 @@ final class PgSqlHandle extends AbstractHandle
     /**
      * @throws \Error
      */
+    #[\Override]
     public function statementDeallocate(string $name): void
     {
         if ($this->isClosed()) {
@@ -414,6 +418,7 @@ final class PgSqlHandle extends AbstractHandle
         $storage->future->ignore();
     }
 
+    #[\Override]
     public function escapeByteA(string $data): string
     {
         if ($this->handle === null) {
@@ -423,6 +428,7 @@ final class PgSqlHandle extends AbstractHandle
         return \pg_escape_bytea($this->handle, $data);
     }
 
+    #[\Override]
     public function query(string $sql): PostgresResult
     {
         if ($this->handle === null) {
@@ -432,6 +438,7 @@ final class PgSqlHandle extends AbstractHandle
         return $this->createResult($this->send(\pg_send_query(...), $sql), $sql);
     }
 
+    #[\Override]
     public function execute(string $sql, array $params = []): PostgresResult
     {
         if ($this->handle === null) {
@@ -450,6 +457,7 @@ final class PgSqlHandle extends AbstractHandle
         return $this->createResult($result, $sql);
     }
 
+    #[\Override]
     public function prepare(string $sql): PostgresStatement
     {
         if ($this->handle === null) {
@@ -514,6 +522,7 @@ final class PgSqlHandle extends AbstractHandle
         return new PostgresConnectionStatement($this, $name, $sql, $names);
     }
 
+    #[\Override]
     public function notify(string $channel, string $payload = ""): PostgresResult
     {
         if ($payload === "") {
@@ -523,6 +532,7 @@ final class PgSqlHandle extends AbstractHandle
         return $this->query(\sprintf("NOTIFY %s, %s", $this->quoteIdentifier($channel), $this->quoteLiteral($payload)));
     }
 
+    #[\Override]
     public function listen(string $channel): PostgresListener
     {
         if (isset($this->listeners[$channel])) {
@@ -567,6 +577,7 @@ final class PgSqlHandle extends AbstractHandle
         }
     }
 
+    #[\Override]
     public function quoteLiteral(string $data): string
     {
         if ($this->handle === null) {
@@ -576,6 +587,7 @@ final class PgSqlHandle extends AbstractHandle
         return \pg_escape_literal($this->handle, $data);
     }
 
+    #[\Override]
     public function quoteIdentifier(string $name): string
     {
         if ($this->handle === null) {

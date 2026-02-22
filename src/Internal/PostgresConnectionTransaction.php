@@ -27,6 +27,7 @@ final class PostgresConnectionTransaction extends SqlConnectionTransaction imple
         parent::__construct($handle, $release, $isolation);
     }
 
+    #[\Override]
     protected function createNestedTransaction(
         SqlTransaction $transaction,
         SqlNestableTransactionExecutor $executor,
@@ -37,6 +38,7 @@ final class PostgresConnectionTransaction extends SqlConnectionTransaction imple
         return new PostgresNestedTransaction($this, $executor, $identifier, $release);
     }
 
+    #[\Override]
     protected function getExecutor(): PostgresExecutor
     {
         return $this->handle;

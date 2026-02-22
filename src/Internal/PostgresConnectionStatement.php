@@ -40,11 +40,13 @@ final class PostgresConnectionStatement implements PostgresStatement
         $this->close();
     }
 
+    #[\Override]
     public function isClosed(): bool
     {
         return $this->onClose->isComplete();
     }
 
+    #[\Override]
     public function close(): void
     {
         if (!$this->onClose->isComplete()) {
@@ -52,21 +54,25 @@ final class PostgresConnectionStatement implements PostgresStatement
         }
     }
 
+    #[\Override]
     public function onClose(\Closure $onClose): void
     {
         $this->onClose->getFuture()->finally($onClose);
     }
 
+    #[\Override]
     public function getQuery(): string
     {
         return $this->sql;
     }
 
+    #[\Override]
     public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }
 
+    #[\Override]
     public function execute(array $params = []): PostgresResult
     {
         if ($this->isClosed()) {

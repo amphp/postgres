@@ -31,11 +31,13 @@ final class PostgresNestedTransaction extends SqlNestedTransaction implements Po
         parent::__construct($transaction, $handle, $identifier, $release);
     }
 
+    #[\Override]
     protected function getExecutor(): PostgresExecutor
     {
         return $this->transaction;
     }
 
+    #[\Override]
     protected function createNestedTransaction(
         SqlTransaction $transaction,
         SqlNestableTransactionExecutor $executor,
@@ -45,6 +47,7 @@ final class PostgresNestedTransaction extends SqlNestedTransaction implements Po
         return new self($transaction, $executor, $identifier, $release);
     }
 
+    #[\Override]
     public function prepare(string $sql): PostgresStatement
     {
         $statement = parent::prepare($sql);

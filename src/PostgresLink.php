@@ -12,5 +12,6 @@ interface PostgresLink extends PostgresExecutor, SqlLink
     /**
      * @return PostgresTransaction Transaction object specific to this library.
      */
+    #[\Override]
     public function beginTransaction(): PostgresTransaction;
 }

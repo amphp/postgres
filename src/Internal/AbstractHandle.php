@@ -41,21 +41,25 @@ abstract class AbstractHandle implements PostgresHandle
         }
     }
 
+    #[\Override]
     public function getConfig(): PostgresConfig
     {
         return $this->config;
     }
 
+    #[\Override]
     public function getLastUsedAt(): int
     {
         return $this->lastUsedAt;
     }
 
+    #[\Override]
     public function onClose(\Closure $onClose): void
     {
         $this->onClose->getFuture()->finally($onClose);
     }
 
+    #[\Override]
     public function close(): void
     {
         self::shutdown($this->listeners, $this->pendingOperation, $this->onClose);
@@ -94,26 +98,31 @@ abstract class AbstractHandle implements PostgresHandle
         return encodeParam($this, $value);
     }
 
+    #[\Override]
     public function commit(): void
     {
         $this->query("COMMIT");
     }
 
+    #[\Override]
     public function rollback(): void
     {
         $this->query("ROLLBACK");
     }
 
+    #[\Override]
     public function createSavepoint(string $identifier): void
     {
         $this->query("SAVEPOINT " . $this->quoteIdentifier($identifier));
     }
 
+    #[\Override]
     public function rollbackTo(string $identifier): void
     {
         $this->query("ROLLBACK TO " . $this->quoteIdentifier($identifier));
     }
 
+    #[\Override]
     public function releaseSavepoint(string $identifier): void
     {
         $this->query("RELEASE SAVEPOINT " . $this->quoteIdentifier($identifier));

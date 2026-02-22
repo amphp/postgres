@@ -49,29 +49,34 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
     /**
      * @param \Closure():void $release
      */
+    #[\Override]
     protected function createStatement(SqlStatement $statement, \Closure $release): PostgresStatement
     {
         \assert($statement instanceof PostgresStatement);
         return new Internal\PostgresPooledStatement($statement, $release);
     }
 
+    #[\Override]
     protected function createResult(SqlResult $result, \Closure $release): PostgresResult
     {
         \assert($result instanceof PostgresResult);
         return new Internal\PostgresPooledResult($result, $release);
     }
 
+    #[\Override]
     protected function createStatementPool(string $sql, \Closure $prepare): PostgresStatement
     {
         return new Internal\PostgresStatementPool($this, $sql, $prepare);
     }
 
+    #[\Override]
     protected function createTransaction(SqlTransaction $transaction, \Closure $release): PostgresTransaction
     {
         \assert($transaction instanceof PostgresTransaction);
         return new Internal\PostgresPooledTransaction($transaction, $release);
     }
 
+    #[\Override]
     protected function pop(): PostgresConnection
     {
         $connection = parent::pop();
@@ -86,6 +91,7 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
     /**
      * Changes return type to this library's Result type.
      */
+    #[\Override]
     public function query(string $sql): PostgresResult
     {
         return parent::query($sql);
@@ -94,6 +100,7 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
     /**
      * Changes return type to this library's Statement type.
      */
+    #[\Override]
     public function prepare(string $sql): PostgresStatement
     {
         return parent::prepare($sql);
@@ -102,6 +109,7 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
     /**
      * Changes return type to this library's Result type.
      */
+    #[\Override]
     public function execute(string $sql, array $params = []): PostgresResult
     {
         return parent::execute($sql, $params);
@@ -110,6 +118,7 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
     /**
      * Changes return type to this library's Transaction type.
      */
+    #[\Override]
     public function beginTransaction(): PostgresTransaction
     {
         return parent::beginTransaction();
@@ -118,11 +127,13 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
     /**
      * Changes return type to this library's configuration type.
      */
+    #[\Override]
     public function getConfig(): PostgresConfig
     {
         return parent::getConfig();
     }
 
+    #[\Override]
     public function notify(string $channel, string $payload = ""): PostgresResult
     {
         $connection = $this->pop();
@@ -136,6 +147,7 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
         return $result;
     }
 
+    #[\Override]
     public function listen(string $channel): PostgresListener
     {
         $this->listeningConnection ??= async($this->pop(...));
@@ -160,6 +172,7 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
         });
     }
 
+    #[\Override]
     public function quoteLiteral(string $data): string
     {
         $connection = $this->pop();
@@ -171,6 +184,7 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
         }
     }
 
+    #[\Override]
     public function quoteIdentifier(string $name): string
     {
         $connection = $this->pop();
@@ -182,6 +196,7 @@ final class PostgresConnectionPool extends SqlCommonConnectionPool implements Po
         }
     }
 
+    #[\Override]
     public function escapeByteA(string $data): string
     {
         $connection = $this->pop();

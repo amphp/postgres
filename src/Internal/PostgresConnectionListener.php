@@ -41,17 +41,20 @@ final class PostgresConnectionListener implements PostgresListener, \IteratorAgg
         }
     }
 
+    #[\Override]
     public function getIterator(): \Traversable
     {
         // Using a Generator to keep a reference to $this.
         yield from $this->source;
     }
 
+    #[\Override]
     public function getChannel(): string
     {
         return $this->channel;
     }
 
+    #[\Override]
     public function isListening(): bool
     {
         return $this->unlisten !== null;
@@ -62,6 +65,7 @@ final class PostgresConnectionListener implements PostgresListener, \IteratorAgg
      *
      * @throws \Error If this method was previously invoked.
      */
+    #[\Override]
     public function unlisten(): void
     {
         if (!$this->unlisten) {

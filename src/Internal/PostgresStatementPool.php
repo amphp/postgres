@@ -15,12 +15,14 @@ use Amp\Sql\SqlResult as SqlResult;
  */
 final class PostgresStatementPool extends SqlStatementPool implements PostgresStatement
 {
+    #[\Override]
     protected function createResult(SqlResult $result, \Closure $release): PostgresResult
     {
         \assert($result instanceof PostgresResult);
         return new PostgresPooledResult($result, $release);
     }
 
+    #[\Override]
     public function execute(array $params = []): PostgresResult
     {
         return parent::execute($params);

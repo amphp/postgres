@@ -13,6 +13,7 @@ use Amp\Sql\SqlResult;
  */
 final class PostgresPooledStatement extends SqlPooledStatement implements PostgresStatement
 {
+    #[\Override]
     protected function createResult(SqlResult $result, \Closure $release): PostgresResult
     {
         \assert($result instanceof PostgresResult);
@@ -22,6 +23,7 @@ final class PostgresPooledStatement extends SqlPooledStatement implements Postgr
     /**
      * Changes return type to this library's Result type.
      */
+    #[\Override]
     public function execute(array $params = []): PostgresResult
     {
         return parent::execute($params);

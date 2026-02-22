@@ -47,6 +47,7 @@ final class PqBufferedResultSet implements PostgresResult, \IteratorAggregate
         }
     }
 
+    #[\Override]
     public function fetchRow(): ?array
     {
         if (!$this->iterator->valid()) {
@@ -58,21 +59,25 @@ final class PqBufferedResultSet implements PostgresResult, \IteratorAggregate
         return $current;
     }
 
+    #[\Override]
     public function getIterator(): \Traversable
     {
         return $this->iterator;
     }
 
+    #[\Override]
     public function getNextResult(): ?PostgresResult
     {
         return $this->nextResult->await();
     }
 
+    #[\Override]
     public function getRowCount(): int
     {
         return $this->rowCount;
     }
 
+    #[\Override]
     public function getColumnCount(): int
     {
         return $this->columnCount;

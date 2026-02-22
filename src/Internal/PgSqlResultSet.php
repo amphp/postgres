@@ -38,6 +38,7 @@ final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
         $this->iterator = PgSqlResultIterator::iterate($handle, $types);
     }
 
+    #[\Override]
     public function fetchRow(): ?array
     {
         if (!$this->iterator->valid()) {
@@ -49,11 +50,13 @@ final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
         return $current;
     }
 
+    #[\Override]
     public function getIterator(): \Traversable
     {
         return $this->iterator;
     }
 
+    #[\Override]
     public function getNextResult(): ?PostgresResult
     {
         return $this->nextResult->await();
@@ -62,6 +65,7 @@ final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
     /**
      * @return int Number of rows returned.
      */
+    #[\Override]
     public function getRowCount(): int
     {
         return $this->rowCount;
@@ -70,6 +74,7 @@ final class PgSqlResultSet implements PostgresResult, \IteratorAggregate
     /**
      * @return int Number of columns returned.
      */
+    #[\Override]
     public function getColumnCount(): int
     {
         return $this->columnCount;

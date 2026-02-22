@@ -25,11 +25,13 @@ final class PostgresPooledTransaction extends SqlPooledTransaction implements Po
         parent::__construct($transaction, $release);
     }
 
+    #[\Override]
     protected function getExecutor(): PostgresExecutor
     {
         return $this->transaction;
     }
 
+    #[\Override]
     protected function createTransaction(SqlTransaction $transaction, \Closure $release): PostgresTransaction
     {
         \assert($transaction instanceof PostgresTransaction);

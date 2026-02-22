@@ -22,6 +22,7 @@ final class DefaultPostgresConnector implements SqlConnector
      *
      * @throws \Error If neither ext-pgsql nor pecl-pq is loaded.
      */
+    #[\Override]
     public function connect(SqlConfig $config, ?Cancellation $cancellation = null): PostgresConnection
     {
         if (!$config instanceof PostgresConfig) {

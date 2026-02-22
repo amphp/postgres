@@ -56,22 +56,26 @@ final class PostgresPooledListener implements PostgresListener, \IteratorAggrega
         }
     }
 
+    #[\Override]
     public function getIterator(): \Traversable
     {
         // Using a Generator to keep a reference to $this.
         yield from $this->listener;
     }
 
+    #[\Override]
     public function getChannel(): string
     {
         return $this->listener->getChannel();
     }
 
+    #[\Override]
     public function isListening(): bool
     {
         return $this->listener->isListening();
     }
 
+    #[\Override]
     public function unlisten(): void
     {
         if (!$this->release) {

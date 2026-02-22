@@ -14,16 +14,19 @@ interface PostgresExecutor extends SqlExecutor
     /**
      * @return PostgresResult Result object specific to this library.
      */
+    #[\Override]
     public function query(string $sql): PostgresResult;
 
     /**
      * @return PostgresStatement Statement object specific to this library.
      */
+    #[\Override]
     public function prepare(string $sql): PostgresStatement;
 
     /**
      * @return PostgresResult Result object specific to this library.
      */
+    #[\Override]
     public function execute(string $sql, array $params = []): PostgresResult;
 
     /**

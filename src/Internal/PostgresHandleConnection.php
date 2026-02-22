@@ -40,26 +40,31 @@ abstract class PostgresHandleConnection implements PostgresConnection
     {
     }
 
+    #[\Override]
     final public function getConfig(): PostgresConfig
     {
         return $this->handle->getConfig();
     }
 
+    #[\Override]
     final public function getLastUsedAt(): int
     {
         return $this->handle->getLastUsedAt();
     }
 
+    #[\Override]
     final public function close(): void
     {
         $this->handle->close();
     }
 
+    #[\Override]
     final public function isClosed(): bool
     {
         return $this->handle->isClosed();
     }
 
+    #[\Override]
     final public function onClose(\Closure $onClose): void
     {
         $this->handle->onClose($onClose);
@@ -92,36 +97,42 @@ abstract class PostgresHandleConnection implements PostgresConnection
         $this->busy = null;
     }
 
+    #[\Override]
     final public function query(string $sql): PostgresResult
     {
         $this->awaitPending();
         return $this->handle->query($sql);
     }
 
+    #[\Override]
     final public function execute(string $sql, array $params = []): PostgresResult
     {
         $this->awaitPending();
         return $this->handle->execute($sql, $params);
     }
 
+    #[\Override]
     final public function prepare(string $sql): PostgresStatement
     {
         $this->awaitPending();
         return $this->handle->prepare($sql);
     }
 
+    #[\Override]
     final public function notify(string $channel, string $payload = ""): PostgresResult
     {
         $this->awaitPending();
         return $this->handle->notify($channel, $payload);
     }
 
+    #[\Override]
     final public function listen(string $channel): PostgresListener
     {
         $this->awaitPending();
         return $this->handle->listen($channel);
     }
 
+    #[\Override]
     final public function beginTransaction(): PostgresTransaction
     {
         $this->reserve();
@@ -140,26 +151,31 @@ abstract class PostgresHandleConnection implements PostgresConnection
         );
     }
 
+    #[\Override]
     final public function getTransactionIsolation(): SqlTransactionIsolation
     {
         return $this->transactionIsolation;
     }
 
+    #[\Override]
     final public function setTransactionIsolation(SqlTransactionIsolation $isolation): void
     {
         $this->transactionIsolation = $isolation;
     }
 
+    #[\Override]
     final public function quoteLiteral(string $data): string
     {
         return $this->handle->quoteLiteral($data);
     }
 
+    #[\Override]
     final public function quoteIdentifier(string $name): string
     {
         return $this->handle->quoteIdentifier($name);
     }
 
+    #[\Override]
     final public function escapeByteA(string $data): string
     {
         return $this->handle->escapeByteA($data);

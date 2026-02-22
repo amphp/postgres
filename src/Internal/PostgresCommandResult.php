@@ -15,6 +15,7 @@ final class PostgresCommandResult extends SqlCommandResult implements PostgresRe
     /**
      * Changes return type to this library's Result type.
      */
+    #[\Override]
     public function getNextResult(): ?PostgresResult
     {
         return parent::getNextResult();

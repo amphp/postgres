@@ -64,6 +64,7 @@ final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
         }
     }
 
+    #[\Override]
     public function fetchRow(): ?array
     {
         if (!$this->generator->valid()) {
@@ -75,12 +76,14 @@ final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
         return $current;
     }
 
+    #[\Override]
     public function getIterator(): \Traversable
     {
         // Using a Generator to keep a reference to $this.
         yield from $this->generator;
     }
 
+    #[\Override]
     public function getNextResult(): ?PostgresResult
     {
         self::dispose($this->generator);
@@ -88,11 +91,13 @@ final class PqUnbufferedResultSet implements PostgresResult, \IteratorAggregate
         return $this->nextResult->await();
     }
 
+    #[\Override]
     public function getRowCount(): ?int
     {
         return null; // Unbuffered result sets do not have a total row count.
     }
 
+    #[\Override]
     public function getColumnCount(): int
     {
         return $this->columnCount;

@@ -106,11 +106,13 @@ final class PqHandle extends AbstractHandle
         parent::__construct($config, $poll, $await, $onClose);
     }
 
+    #[\Override]
     public function isClosed(): bool
     {
         return $this->handle === null;
     }
 
+    #[\Override]
     public function close(): void
     {
         $this->handle = null;
@@ -289,6 +291,7 @@ final class PqHandle extends AbstractHandle
      *
      * @throws SqlException
      */
+    #[\Override]
     public function statementExecute(string $name, array $params): PostgresResult
     {
         \assert(isset($this->statements[$name]), "Named statement not found when executing");
@@ -310,6 +313,7 @@ final class PqHandle extends AbstractHandle
     /**
      * @throws SqlException
      */
+    #[\Override]
     public function statementDeallocate(string $name): void
     {
         if (!$this->handle) {
@@ -336,6 +340,7 @@ final class PqHandle extends AbstractHandle
         });
     }
 
+    #[\Override]
     public function escapeByteA(string $data): string
     {
         if (!$this->handle) {
@@ -345,6 +350,7 @@ final class PqHandle extends AbstractHandle
         return $this->handle->escapeBytea($data);
     }
 
+    #[\Override]
     public function query(string $sql): PostgresResult
     {
         if (!$this->handle) {
@@ -354,6 +360,7 @@ final class PqHandle extends AbstractHandle
         return $this->send($sql, $this->handle->execAsync(...), $sql);
     }
 
+    #[\Override]
     public function execute(string $sql, array $params = []): PostgresResult
     {
         if (!$this->handle) {
@@ -371,6 +378,7 @@ final class PqHandle extends AbstractHandle
         );
     }
 
+    #[\Override]
     public function prepare(string $sql): PostgresStatement
     {
         if (!$this->handle) {
@@ -414,6 +422,7 @@ final class PqHandle extends AbstractHandle
         return new PostgresConnectionStatement($this, $name, $sql, $names);
     }
 
+    #[\Override]
     public function notify(string $channel, string $payload = ""): PostgresResult
     {
         if (!$this->handle) {
@@ -423,6 +432,7 @@ final class PqHandle extends AbstractHandle
         return $this->send(null, $this->handle->notifyAsync(...), $channel, $payload);
     }
 
+    #[\Override]
     public function listen(string $channel): PostgresListener
     {
         if (!$this->handle) {
@@ -483,6 +493,7 @@ final class PqHandle extends AbstractHandle
         }
     }
 
+    #[\Override]
     public function quoteLiteral(string $data): string
     {
         if (!$this->handle) {
@@ -492,6 +503,7 @@ final class PqHandle extends AbstractHandle
         return $this->handle->quote($data);
     }
 
+    #[\Override]
     public function quoteIdentifier(string $name): string
     {
         if (!$this->handle) {

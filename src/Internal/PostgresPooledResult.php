@@ -13,12 +13,14 @@ use Amp\Sql\SqlResult;
  */
 final class PostgresPooledResult extends SqlPooledResult implements PostgresResult
 {
+    #[\Override]
     protected static function newInstanceFrom(SqlResult $result, \Closure $release): self
     {
         \assert($result instanceof PostgresResult);
         return new self($result, $release);
     }
 
+    #[\Override]
     public function getNextResult(): ?PostgresResult
     {
         return parent::getNextResult();

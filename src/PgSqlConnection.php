@@ -12,6 +12,7 @@ final class PgSqlConnection extends Internal\PostgresHandleConnection implements
     /**
      * @throws \Error If pecl-ev is used as a loop extension.
      */
+    #[\Override]
     public static function connect(PostgresConfig $config, ?Cancellation $cancellation = null): self
     {
         // @codeCoverageIgnoreStart

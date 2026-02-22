@@ -15,6 +15,7 @@ interface PostgresConnection extends PostgresLink, SqlConnection
     /**
      * @return PostgresConfig Config object specific to this library.
      */
+    #[\Override]
     public function getConfig(): PostgresConfig;
 
     /**

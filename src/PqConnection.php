@@ -12,6 +12,7 @@ final class PqConnection extends Internal\PostgresHandleConnection implements Po
 {
     private readonly Internal\PqHandle $handle;
 
+    #[\Override]
     public static function connect(PostgresConfig $config, ?Cancellation $cancellation = null): self
     {
         try {
