@@ -153,17 +153,17 @@ final class PostgresConfig extends SqlConfig
 
         $user = $this->getUser();
         if ($user !== null) {
-            $chunks[] = "user=" . $user;
+            $chunks[] = \sprintf("user='%s'", \addslashes($user));
         }
 
         $password = $this->getPassword();
         if ($password !== null) {
-            $chunks[] = "password=" . $password;
+            $chunks[] = \sprintf("password='%s'", \addslashes($password));
         }
 
         $database = $this->getDatabase();
         if ($database !== null) {
-            $chunks[] = "dbname=" . $database;
+            $chunks[] = \sprintf("dbname='%s'", \addslashes($database));
         }
 
         if ($this->sslMode !== null) {
