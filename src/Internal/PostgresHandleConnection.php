@@ -135,6 +135,7 @@ abstract class PostgresHandleConnection implements PostgresConnection
     #[\Override]
     final public function beginTransaction(): PostgresTransaction
     {
+        $this->awaitPending();
         $this->reserve();
 
         try {
