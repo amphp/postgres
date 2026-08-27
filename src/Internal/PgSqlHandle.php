@@ -413,7 +413,17 @@ final class PgSqlHandle extends AbstractHandle
                 return; // Statement already deallocated.
             }
 
-            $this->query(\sprintf("DEALLOCATE %s", $name));
+            try {
+                // Send the DEALLOCATE without building a result object: an error result
+                // must not be processed through createResult(), whose fatal-error drain
+                // would consume results belonging to an operation dispatched after this
+                // one and leave that operation awaiting a response forever.
+                $this->send(\pg_send_query(...), \sprintf("DEALLOCATE %s", $name));
+            } catch (\Throwable) {
+                // Ignore failures: the server may have already dropped the statement,
+                // e.g. via the DISCARD ALL issued when the pool resets connections.
+            }
+
             unset($this->statements[$name]);
         });
         $storage->future->ignore();
