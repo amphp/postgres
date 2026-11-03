@@ -3,26 +3,48 @@
 namespace Amp\Postgres\Test;
 
 use Amp\PHPUnit\AsyncTestCase;
+use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
+use Amp\Postgres\PqConnection;
+use Amp\Sql\SqlConfig;
+use Amp\Sql\SqlConnector;
 use Revolt\EventLoop;
 
-/**
- * @requires extension pgsql
- */
 class StatementDeallocateTest extends AsyncTestCase
 {
-    public function testDeallocateRacingConnectionResetDoesNotBreakSubsequentOperations(): void
+    public function provideConnectors(): \Generator
     {
-        if (EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
-            $this->markTestSkipped("ext-pgsql is not compatible with pecl-ev");
+        if (\extension_loaded('pgsql') && !EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
+            $connector = $this->createMock(SqlConnector::class);
+            $connector
+                ->method('connect')
+                ->willReturnCallback(fn (SqlConfig $config) => PgSqlConnection::connect($config));
+
+            yield 'ext-pgsql' => [$connector];
         }
 
+        if (\extension_loaded('pq')) {
+            $connector = $this->createMock(SqlConnector::class);
+            $connector
+                ->method('connect')
+                ->willReturnCallback(fn (SqlConfig $config) => PqConnection::connect($config));
+
+            yield 'ext-pq' => [$connector];
+        }
+    }
+
+    /**
+     * @dataProvider provideConnectors
+     */
+    public function testDeallocateRacingConnectionResetDoesNotBreakSubsequentOperations(SqlConnector $connector): void
+    {
         $this->setTimeout(5);
 
         $pool = new PostgresConnectionPool(
             PostgresConfig::fromString('host=localhost user=postgres password=postgres'),
-            1,
+            maxConnections: 1,
+            connector: $connector,
         );
 
         try {
