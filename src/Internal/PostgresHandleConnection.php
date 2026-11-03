@@ -82,8 +82,10 @@ abstract class PostgresHandleConnection implements PostgresConnection
      */
     private function reserve(): void
     {
+        $this->awaitPending();
         \assert($this->busy === null);
-        $this->busy = new DeferredFuture;
+
+        $this->busy = new DeferredFuture();
     }
 
     /**
@@ -135,7 +137,6 @@ abstract class PostgresHandleConnection implements PostgresConnection
     #[\Override]
     final public function beginTransaction(): PostgresTransaction
     {
-        $this->awaitPending();
         $this->reserve();
 
         try {
