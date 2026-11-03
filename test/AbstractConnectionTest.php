@@ -143,6 +143,10 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
         delay(0.1); // Destructor is async, so give control to the loop to invoke callbacks.
     }
 
+    /**
+     * Ensure prior transaction has fully completed before attempting to begin another transaction.
+     * @see https://github.com/amphp/postgres/pull/73
+     */
     public function testSequentialTransactionsWaitForPreviousRelease(): void
     {
         $connection = $this->executor;
