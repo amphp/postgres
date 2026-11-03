@@ -7,7 +7,6 @@ use Amp\Postgres\PgSqlConnection;
 use Amp\Postgres\PostgresConfig;
 use Amp\Postgres\PostgresConnectionPool;
 use Amp\Postgres\PqConnection;
-use Amp\Sql\SqlConfig;
 use Amp\Sql\SqlConnector;
 use Revolt\EventLoop;
 
@@ -15,23 +14,35 @@ class StatementDeallocateTest extends AsyncTestCase
 {
     public function provideConnectors(): \Generator
     {
-        if (\extension_loaded('pgsql') && !EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
-            $connector = $this->createMock(SqlConnector::class);
-            $connector
-                ->method('connect')
-                ->willReturnCallback(fn (SqlConfig $config) => PgSqlConnection::connect($config));
+        $connector = $this->createMock(SqlConnector::class);
+        $connector
+            ->method('connect')
+            ->willReturnCallback(function (PostgresConfig $config): PgSqlConnection {
+                if (!\extension_loaded('pgsql')) {
+                    self::markTestSkipped('requires pgsql extension');
+                }
 
-            yield 'ext-pgsql' => [$connector];
-        }
+                if (EventLoop::getDriver()->getHandle() instanceof \EvLoop) {
+                    self::markTestSkipped('ext-pgsql is not compatible with pecl-ev');
+                }
 
-        if (\extension_loaded('pq')) {
-            $connector = $this->createMock(SqlConnector::class);
-            $connector
-                ->method('connect')
-                ->willReturnCallback(fn (SqlConfig $config) => PqConnection::connect($config));
+                return PgSqlConnection::connect($config);
+            });
 
-            yield 'ext-pq' => [$connector];
-        }
+        yield 'ext-pgsql' => [$connector];
+
+        $connector = $this->createMock(SqlConnector::class);
+        $connector
+            ->method('connect')
+            ->willReturnCallback(function (PostgresConfig $config): PqConnection {
+                if (!\extension_loaded('pq')) {
+                    self::markTestSkipped('requires pq extension');
+                }
+
+                return PqConnection::connect($config);
+            });
+
+        yield 'ext-pq' => [$connector];
     }
 
     /**
