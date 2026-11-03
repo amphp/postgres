@@ -142,4 +142,17 @@ abstract class AbstractConnectionTest extends AbstractLinkTest
         unset($transaction);
         delay(0.1); // Destructor is async, so give control to the loop to invoke callbacks.
     }
+
+    public function testSequentialTransactionsWaitForPreviousRelease(): void
+    {
+        $connection = $this->executor;
+
+        $transaction = $connection->beginTransaction();
+        $transaction->onClose($this->createCallback(1));
+        $transaction->commit();
+
+        $transaction = $connection->beginTransaction();
+        $transaction->onClose($this->createCallback(1));
+        $transaction->commit();
+    }
 }
