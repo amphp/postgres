@@ -77,11 +77,9 @@ final class PgSqlHandle extends AbstractHandle
         $deferred = &$this->pendingOperation;
         $listeners = &$this->listeners;
         $onClose = new DeferredFuture();
-        $results = [];
 
         $poll = EventLoop::onReadable($socket, static function (string $watcher) use (
             &$deferred,
-            &$results,
             &$lastUsedAt,
             &$listeners,
             &$connection,
@@ -123,6 +121,7 @@ final class PgSqlHandle extends AbstractHandle
                 // Collect all results of the operation before completing the pending Deferred.
                 // If all results are not immediately collected, another operation could be started on the connection
                 // before all results have been consumed.
+                $results = [];
                 while (!\pg_connection_busy($connection)) {
                     $result = \pg_get_result($connection);
                     if (!$result) {
