@@ -9,12 +9,14 @@ use Amp\Postgres\PostgresByteA;
 use Amp\Postgres\PostgresExecutor;
 use Amp\Postgres\PostgresLink;
 use Amp\Postgres\PostgresQueryError;
+use Amp\Postgres\PostgresResult;
 use Amp\Postgres\PostgresTransaction;
 use Amp\Sql\SqlQueryError;
 use Amp\Sql\SqlResult;
 use Amp\Sql\SqlStatement;
 use Amp\Sql\SqlTransactionError;
 use function Amp\async;
+use function Amp\delay;
 use function Amp\Postgres\Internal\encodeParam;
 
 abstract class AbstractLinkTest extends AsyncTestCase
@@ -204,6 +206,36 @@ abstract class AbstractLinkTest extends AsyncTestCase
         $data = $this->getData();
 
         $this->verifyResult($result, $data);
+    }
+
+    public function testMultipleQueryWithQueryInBetweenConsumingResult()
+    {
+        $future1 = async(function (): void {
+            $result1 = $this->executor->query("SELECT 1 AS value; SELECT 2 AS value; SELECT 3 AS value");
+
+            self::assertSame(1, $result1->fetchRow()['value']);
+            self::assertNull($result1->fetchRow());
+
+            delay(0.1); // Allow second coroutine to execute query.
+
+            $result2 = $result1->getNextResult();
+            self::assertInstanceOf(PostgresResult::class, $result2);
+            self::assertSame(2, $result2->fetchRow()['value']);
+            self::assertNull($result2->fetchRow());
+
+            $result3 = $result2->getNextResult();
+            self::assertInstanceOf(PostgresResult::class, $result3);
+            self::assertSame(3, $result3->fetchRow()['value']);
+            self::assertNull($result3->fetchRow());
+        });
+
+        $future2 = async(function (): void {
+            $result4 = $this->executor->query("SELECT 4 AS value");
+            self::assertSame(4, $result4->fetchRow()['value']);
+            self::assertNull($result4->fetchRow());
+        });
+
+        Future\await([$future1, $future2]);
     }
 
     public function testQueryWithCommandResult(): void
