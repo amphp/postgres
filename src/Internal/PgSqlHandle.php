@@ -120,32 +120,27 @@ final class PgSqlHandle extends AbstractHandle
                     return; // No active query, only notification listeners.
                 }
 
-                // Collect every result of the operation before completing it: the operation only ends once
-                // the connection is idle again. Otherwise, another operation could be sent in between, and
-                // fetching the remaining results of this one would block on and consume its results instead.
-                $operation = $deferred;
+                // Collect all results of the operation before completing the pending Deferred.
+                // If all results are not immediately collected, another operation could be started on the connection
+                // before all results have been consumed.
                 while (!\pg_connection_busy($connection)) {
                     $result = \pg_get_result($connection);
-                    if ($result !== false) {
-                        $results[] = $result;
-                        $status = \pg_result_status($result);
-                        if ($status !== \PGSQL_COPY_IN && $status !== \PGSQL_COPY_OUT) {
-                            continue;
-                        }
-                        // COPY is not supported, the result is an error and closes the connection.
+                    if (!$result) {
+                        break;
                     }
 
-                    $operationResults = $results;
-                    $results = [];
+                    $results[] = $result;
+                }
 
-                    $deferred = null;
-                    $operation->complete($operationResults);
-
-                    if (empty($listeners)) {
-                        EventLoop::unreference($watcher);
-                    }
-
+                if (!$results) {
                     return;
+                }
+
+                $deferred->complete($results);
+                $deferred = null;
+
+                if (empty($listeners)) {
+                    EventLoop::unreference($watcher);
                 }
             } catch (SqlConnectionException $exception) {
                 $connection = null; // Marks connection as dead.
@@ -345,6 +340,10 @@ final class PgSqlHandle extends AbstractHandle
         switch ($status = \pg_result_status($result)) {
             case \PGSQL_EMPTY_QUERY:
                 throw new SqlQueryError("Empty query string");
+
+            case \PGSQL_COPY_IN:
+            case \PGSQL_COPY_OUT:
+                throw new SqlQueryError("COPY queries are currently not supported");
 
             case \PGSQL_COMMAND_OK:
                 return new PostgresCommandResult(
