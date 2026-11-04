@@ -338,9 +338,16 @@ final class PqHandle extends AbstractHandle
                 return; // Statement already deallocated.
             }
 
-            $this->send(null, $statement->deallocateAsync(...));
+            try {
+                $this->send(null, $statement->deallocateAsync(...));
+            } catch (\Throwable) {
+                // Ignore failures: the server may have already dropped the statement,
+                // e.g. via the DISCARD ALL issued when the pool resets connections.
+            }
+
             unset($this->statements[$name]);
         });
+        $storage->future->ignore();
     }
 
     #[\Override]
